@@ -1,0 +1,35 @@
+=== 실행 안 될 때 순서대로 확인 ===
+
+1. zip 파일을 압축 해제(우클릭 > 압축풀기, 더블클릭 안 됨 주의)
+
+2. 압축푼 폴더 안에 "lab_grader" 폴더가 있는지 확인.
+   그 안에 main.py, engine, parsers, labs 폴더가 보여야 정상.
+
+3. cmd(명령 프롬프트) 또는 PowerShell을 켜고, lab_grader 폴더 "안으로" 이동:
+   윈도우 탐색기에서 lab_grader 폴더를 열고 주소창에 cmd 입력 후 엔터
+   (또는: cd 경로\lab_grader)
+
+4. 환경 점검부터 실행:
+   python setup_check.py
+
+   만약 "python은 내부 또는 외부 명령... 인식할 수 없습니다" 라고 뜨면
+   -> 파이썬이 설치 안 된 것. python.org에서 설치 후 "Add to PATH" 체크 필수.
+
+5. 점검 결과에서 pyyaml 없다고 나오면:
+   pip install pyyaml
+
+6. 문제 없으면 실행:
+   python main.py --mock
+
+=== 그래도 안 되면 ===
+setup_check.py 실행했을 때 나온 화면을 그대로 캡처해서 보여주면
+정확히 뭐가 문제인지 바로 확인 가능함.
+
+=== v0.0.4 신규: 데스크톱 UI ===
+
+cmd 명령어 대신 화면으로 조작하고 싶으면:
+   python gui.py
+
+Windows 공식 파이썬 설치 프로그램에는 tkinter가 기본 포함되어 있어
+별도 설치 없이 바로 실행됨. 창이 안 뜨면 파이썬을 python.org 공식
+인스톨러로 재설치(커스텀 설치 시 "tcl/tk and IDLE" 항목 체크 확인).

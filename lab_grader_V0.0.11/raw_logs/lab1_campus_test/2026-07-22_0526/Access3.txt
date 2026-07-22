@@ -1,0 +1,3 @@
+--- show vlan brief ---
+show vlan brief 결과 (host=172.30.1.107:22)
+

@@ -1,0 +1,14 @@
+{
+  "lab": "lab1_campus",
+  "session": "2026-07-22_0252",
+  "success": [],
+  "failed": {
+    "Core1": "Core1의 IP가 비어있음 — ip_allocation.yaml 확인 필요",
+    "Agg1": "Agg1의 IP가 비어있음 — ip_allocation.yaml 확인 필요",
+    "Agg2": "Agg2의 IP가 비어있음 — ip_allocation.yaml 확인 필요",
+    "Access1": "Access1의 IP가 비어있음 — ip_allocation.yaml 확인 필요",
+    "Core2": "Core2의 IP가 비어있음 — ip_allocation.yaml 확인 필요",
+    "Access2": "Access2의 IP가 비어있음 — ip_allocation.yaml 확인 필요",
+    "Access3": "Access3의 IP가 비어있음 — ip_allocation.yaml 확인 필요"
+  }
+}

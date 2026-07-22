@@ -1,0 +1,135 @@
+- id: essential_0
+  category: essential
+  command: show version
+  description: 가동시간·모델 확인
+  enabled: true
+- id: essential_1
+  category: essential
+  command: show environment power
+  description: 전원 이중화 확인
+  enabled: true
+- id: essential_2
+  category: essential
+  command: show environment cooling
+  description: 팬 상태 확인
+  enabled: true
+- id: essential_3
+  category: essential
+  command: show environment temperature
+  description: 온도 이상 확인
+  enabled: true
+- id: essential_4
+  category: essential
+  command: show processes top once
+  description: CPU/메모리 사용률
+  enabled: true
+- id: essential_5
+  category: essential
+  command: show log
+  description: 특이 로그 확인
+  enabled: true
+- id: essential_6
+  category: essential
+  command: show interface status
+  description: 포트 링크 상태
+  enabled: true
+- id: essential_7
+  category: essential
+  command: show interfaces counters errors
+  description: CRC/에러 카운터
+  enabled: true
+- id: essential_8
+  category: essential
+  command: show interfaces transceiver
+  description: 광모듈 정상범위
+  enabled: true
+- id: essential_9
+  category: essential
+  command: show ip interface brief
+  description: 인터페이스 요약
+  enabled: true
+- id: essential_10
+  category: essential
+  command: show clock
+  description: 시간 동기화 확인
+  enabled: true
+- id: optional_0
+  category: optional
+  command: show module
+  description: 섀시형 장비 모듈 확인
+  enabled: true
+- id: optional_1
+  category: optional
+  command: show port-channel summary
+  description: LACP 이중화 확인
+  enabled: true
+- id: optional_2
+  category: optional
+  command: show mlag
+  description: MLAG 페어 상태
+  enabled: true
+- id: optional_3
+  category: optional
+  command: show vrrp brief
+  description: VRRP 이중화 확인
+  enabled: true
+- id: optional_4
+  category: optional
+  command: show ip virtual-router
+  description: VARP 이중화 확인
+  enabled: true
+- id: optional_5
+  category: optional
+  command: show spanning-tree vlan 1,100,200,999
+  description: STP 루트 확인
+  enabled: true
+- id: optional_6
+  category: optional
+  command: show bgp evpn summary
+  description: EVPN 네이버 확인
+  enabled: true
+- id: optional_7
+  category: optional
+  command: show ip bgp summary
+  description: BGP 네이버 확인
+  enabled: true
+- id: optional_8
+  category: optional
+  command: show ip ospf neighbor
+  description: OSPF 네이버 확인
+  enabled: true
+- id: optional_9
+  category: optional
+  command: show ip arp vrf all
+  description: ARP 상태 수집
+  enabled: true
+- id: optional_10
+  category: optional
+  command: show inventory
+  description: S/N·부품 확인
+  enabled: true
+- id: optional_11
+  category: optional
+  command: show running-config
+  description: 설정 변경 이력 대조용
+  enabled: true
+- id: optional_12
+  category: optional
+  command: show reload cause
+  description: 마지막 재부팅 원인
+  enabled: true
+- id: optional_13
+  category: optional
+  command: show ntp status
+  description: NTP 동기화 확인
+  enabled: true
+- id: optional_14
+  category: optional
+  command: show interfaces counters rates
+  description: 실시간 트래픽량
+  enabled: true
+- id: optional_15
+  category: optional
+  command: show interfaces description
+  description: 포트 라벨 확인
+  enabled: true

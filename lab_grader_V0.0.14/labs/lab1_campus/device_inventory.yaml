@@ -1,0 +1,39 @@
+defaults:
+  management_network: ''
+  default_ssh_port: 22
+  default_username: admin
+  default_password: admin
+  ip_pool:
+    prefix: ''
+    start: 0
+    end: 0
+devices:
+- name: thk7410
+  role: linux
+  management_ip: 172.30.1.68
+  ssh_port: 28422
+  username: thk7410
+  password: ''
+  vendor: Arista
+  model: arista_eos
+  zone: ''
+  site: ''
+  tag: []
+  memo: ''
+  enabled: true
+  auth_method: public_key
+  key_path: C:\Users\thk\.ssh\id_ed25519
+  key_content: '-----BEGIN OPENSSH PRIVATE KEY-----
+
+    b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+
+    QyNTUxOQAAACA/NMSfmQIfMidv2HNnXGG0N+rr+IyJEyCHokYRfXeH1AAAAJCq1gHUqtYB
+
+    1AAAAAtzc2gtZWQyNTUxOQAAACA/NMSfmQIfMidv2HNnXGG0N+rr+IyJEyCHokYRfXeH1A
+
+    AAAEA5z9AUHZ5n4cqHXlkiJ55lTQLOFV9PjOq5Xs9pT2tGgz80xJ+ZAh8yJ2/Yc2dcYbQ3
+
+    6uv4jIkTIIeiRhF9d4fUAAAACHRoa0BNYWluAQIDBAU=
+
+    -----END OPENSSH PRIVATE KEY-----'
+  key_passphrase: ''

@@ -1,0 +1,14 @@
+lab_name: lab1_campus
+# max_parallel_workers: 비워두면(null) benchmark.py가 추천한 값을 자동 사용.
+# 직접 지정하고 싶으면 숫자를 넣으면 됨 (상한 없음 — 장비 수 이상으로 자유 설정 가능).
+max_parallel_workers: null
+
+# role은 discovery_result.json의 inferred_tiers를 참고해 채움 (tier_1=core, tier_2=agg, tier_3=access)
+devices:
+  - { name: Core1,   role: core,   platform: arista_eos }
+  - { name: Core2,   role: core,   platform: arista_eos }
+  - { name: Agg1,    role: agg,    platform: arista_eos }
+  - { name: Agg2,    role: agg,    platform: arista_eos }
+  - { name: Access1, role: access, platform: arista_eos }
+  - { name: Access2, role: access, platform: arista_eos }
+  - { name: Access3, role: access, platform: arista_eos }

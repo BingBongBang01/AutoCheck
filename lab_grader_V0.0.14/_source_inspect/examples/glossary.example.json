@@ -1,0 +1,12 @@
+{
+  "VXLAN": "VXLAN",
+  "EVPN": "EVPN",
+  "underlay": "언더레이(underlay)",
+  "overlay": "오버레이(overlay)",
+  "leaf switch": "리프 스위치",
+  "spine switch": "스파인 스위치",
+  "route reflector": "루트 리플렉터(Route Reflector)",
+  "cutover": "컷오버(cutover)",
+  "control plane": "컨트롤 플레인",
+  "data plane": "데이터 플레인"
+}
