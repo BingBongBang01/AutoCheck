@@ -1,0 +1,14 @@
+{
+  "lab": "0723_20260723091817",
+  "session": "2026-07-23_0949",
+  "success": [
+    "Access1",
+    "Access2",
+    "Access3",
+    "core2",
+    "core1",
+    "agg1",
+    "agg2"
+  ],
+  "failed": {}
+}

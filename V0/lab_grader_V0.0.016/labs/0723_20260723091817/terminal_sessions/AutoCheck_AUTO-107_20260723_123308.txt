@@ -1,0 +1,73 @@
+=== 점검 시작 2026-07-23T12:32:38.375479 — AUTO-107 ===
+
+--- show version ---
+
+
+Access3#
+
+--- show environment power ---
+
+
+>Access3#
+
+--- show environment cooling ---
+
+
+--- show environment temperature ---
+
+
+Access3#
+
+--- show processes top once ---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ --More--
+
+--- show log ---
+log file support is not available  (press RETURN)
+
+--- show interface status ---
+log file support is not available  (press RETURN)
+
+--- show interfaces counters errors ---
+log file support is not available  (press RETURN)
+
+--- show interfaces transceiver ---
+
+
+--- show ip interface brief ---
+log file support is not available  (press RETURN)
+
+--- show clock ---

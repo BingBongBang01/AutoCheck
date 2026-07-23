@@ -1,0 +1,41 @@
+=== 점검 시작 2026-07-23T12:32:38.374928 — AUTO-104 ===
+
+--- show version ---
+
+
+Agg2#
+
+--- show environment power ---
+
+
+>Agg2#
+
+--- show environment cooling ---
+
+
+--- show environment temperature ---
+
+
+Agg2#
+
+--- show processes top once ---
+
+
+
+--- show log ---
+
+
+--- show interface status ---
+log file support is not available  (press RETURN)
+
+--- show interfaces counters errors ---
+
+
+--- show interfaces transceiver ---
+log file support is not available  (press RETURN)
+
+--- show ip interface brief ---
+log file support is not available  (press RETURN)
+
+--- show clock ---
+log file support is not available  (press RETURN)

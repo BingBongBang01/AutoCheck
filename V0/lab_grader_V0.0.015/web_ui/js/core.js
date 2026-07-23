@@ -27,6 +27,7 @@ async function call(fn, ...args) {
 }
 
 const MOCK = {
+  get_app_version: () => '0.0.15-mock',
   list_projects: () => [{ id: 'lab1_campus', display_name: 'LAB1 Campus' }],
   get_active_project: () => 'lab1_campus',
   get_dashboard: () => ({
@@ -131,6 +132,8 @@ setInterval(tickClock, 1000);
 tickClock();
 
 async function refreshStatusBar() {
+  const version = await call('get_app_version');
+  document.getElementById('sb-version').textContent = 'v' + (version || '-');
   const project = await call('get_active_project');
   const projects = await call('list_projects') || [];
   const meta = projects.find(p => p.id === project);

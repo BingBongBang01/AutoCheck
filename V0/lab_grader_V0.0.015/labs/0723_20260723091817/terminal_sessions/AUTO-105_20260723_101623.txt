@@ -1,0 +1,57 @@
+=== 점검 시작 2026-07-23T10:16:01.386843 — AUTO-105 ===
+
+--- show version ---
+show version
+[?1h=Arista vEOS-lab
+Hardware version: 
+Serial number: 4B1EA1EE652679326D2E08B6CD2141BB
+Hardware MAC address: 5001.0027.0391
+System MAC address: 5001.0027.0391
+
+Software image version: 4.35.4M
+Architecture: x86_64
+Internal build version: 4.35.4M-47365815.4354M
+Internal build ID: 3f9686d7-9c34-49e2-9884-2394cd1cc98d
+Image format version: 1.0
+Image optimization: None
+
+Uptime: 2 days, 23 hours and 30 minutes
+Total memory: 2930132 kB
+Free memory: 1593884 kB
+
+[K[?1l>Access1#
+
+--- show environment power ---
+show environment power
+[?1h=% There seem to be no power supplies connected.
+[K[?1l>Access1#
+
+--- show environment cooling ---
+show environment cooling
+% Invalid input
+Access1#
+
+--- show environment temperature ---
+
+
+--- show processes top once ---
+show processes top once
+[?1h=
+
+--- show log ---
+
+
+--- show interface status ---
+[40;1H[K[K-[Klog file: [Khh[Koo[Kww[K  [Kii[Knn[Ktt[Kee[Krr[Kff[Kaa[Kcc[Kee[K  [Kss[Ktt[Kaa[Ktt[Kuu[Kss[K[K[7mlog file support is not available  (press RETURN)[27m
+
+--- show interfaces counters errors ---
+[40;1H[K[K-[Klog file: [Khh[Koo[Kww[K  [Kii[Knn[Ktt[Kee[Krr[Kff[Kaa[Kcc[Kee[Kss[K  [Kcc[Koo[Kuu[Knn[Ktt[Kee[Krr[Kss[K  [Kee[Krr[Krr[Koo[Krr[Kss[K[K[7mlog file support is not available  (press RETURN)[27m
+
+--- show interfaces transceiver ---
+[40;1H[K[K-[Klog file: [Khh[Koo[Kww[K  [Kii[Knn[Ktt[Kee[Krr[Kff[Kaa[Kcc[Kee[Kss[K  [Ktt[Krr[Kaa[Knn[Kss[Kcc[Kee[Kii[Kvv[Kee[Krr[K[K[7mlog file support is not available  (press RETURN)[27m
+
+--- show ip interface brief ---
+[40;1H[K[K-[Klog file: [Khh[Koo[Kww[K  [Kii[Kpp[K  [Kii[Knn[Ktt[Kee[Krr[Kff[Kaa[Kcc[Kee[K  [Kbb[Krr[Kii[Kee[Kff[K[K[7mlog file support is not available  (press RETURN)[27m
+
+--- show clock ---
+[40;1H[K[K-[Klog file: [Khh[Koo[Kww[K  [Kcc[Kll[Koo[Kcc[Kkk[K[K[7mlog file support is not available  (press RETURN)[27m

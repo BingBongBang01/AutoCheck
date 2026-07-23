@@ -1,0 +1,34 @@
+=== 점검 시작 2026-07-23T10:13:34.434515 — Access2 ===
+
+--- show version ---
+[K-[Klog file: [Khh[Koo[Kww[K  [Kvv[Kee[Krr[Kss[Kii[Koo[Knn[K[K[7mlog file support is not available  (press RETURN)[27m
+
+--- show environment power ---
+[Krr[Koo[Knn[Kmm[Kee[Knn[Ktt[K  [Kpp[Koo[Kww[Kee[Krr[K[K[7mlog file support is not available  (press RETURN)[27m
+
+--- show environment cooling ---
+[40;1H[K[K-[Klog file: [Khh[Koo[Kww[K  [Kee[Knn[Kvv[Kii[Krr[Koo[Knn[Kmm[Kee[Knn[Ktt[K  [Kcc[Koo[Koo[Kll[Kii[Knn[Kgg[K[K[7mlog file support is not available  (press RETURN)[27m
+
+--- show environment temperature ---
+[40;1H[K[K-[Klog file: [Khh[Koo[Kww[K  [Kee[Knn[Kvv[Kii[Krr[Koo[Knn[Kmm[Kee[Knn[Ktt[K  [Ktt[Kee[Kmm[Kpp[Kee[Krr[Kaa[Ktt[Kuu[Krr[Kee[K[K[7mlog file support is not available  (press RETURN)[27m
+
+--- show processes top once ---
+[40;1H[K[K-[Klog file: [Khh[Koo[Kww[K  [Kpp[Krr[Koo[Kcc[Kee[Kss[Kss[Kee[Kss[K  [Ktt[Koo[Kpp[K  [Koo[Knn[Kcc[Kee[K[K[7mlog file support is not available  (press RETURN)[27m
+
+--- show log ---
+[40;1H[K[K-[Klog file: [Khh[Koo[Kww[K  [Kll[Koo[Kgg[K[K[7mlog file support is not available  (press RETURN)[27m
+
+--- show interface status ---
+
+
+--- show interfaces counters errors ---
+[40;1H[K[K-[Klog file: [Khh[Koo[Kww[K  [Kii[Knn[Ktt[Kee[Krr[Kff[Kaa[Kcc[Kee[Kss[K  [Kcc[Koo[Kuu[Knn[Ktt[Kee[Krr[Kss[K  [Kee[Krr[Krr[Koo[Krr[Kss[K[K[7mlog file support is not available  (press RETURN)[27m
+
+--- show interfaces transceiver ---
+
+
+--- show ip interface brief ---
+[40;1H[K[K-[Klog file: [Khh[Koo[Kww[K  [Kii[Kpp[K  [Kii[Knn[Ktt[Kee[Krr[Kff[Kaa[Kcc[Kee[K  [Kbb[Krr[Kii[Kee[Kff[K[K[7mlog file support is not available  (press RETURN)[27m
+
+--- show clock ---
+[40;1H[K[K-[Klog file: [Khh[Koo[Kww[K  [Kcc[Kll[Koo[Kcc[Kkk[K[K[7mlog file support is not available  (press RETURN)[27m
