@@ -113,14 +113,14 @@ def _wait_for_settled_output(sess, settle_sec=0.6, max_wait_sec=8.0):
     return collected
 
 
-def _run_one_session_inspection(session_id, commands, results_dir):
+def _run_one_session_inspection(session_id, commands, results_dirs):
     with _sessions_lock:
         sess = _sessions.get(session_id)
     if sess is None:
         return
     device = sess["device"]
     channel = sess["channel"]
-    output_lines = [f"=== 점검 시작 {datetime.datetime.now().isoformat()} — {device} ==="]
+    output_lines = [f"=== 점검 시작 — {device} ==="]
     with sess["read_lock"]:
         sess["buffer"] = []
     cancelled = False
@@ -136,7 +136,13 @@ def _run_one_session_inspection(session_id, commands, results_dir):
         try:
             channel.send(cmd + "\n")
             collected = _wait_for_settled_output(sess)
-            output_lines.append(f"\n--- {cmd} ---\n{clean_terminal_log(collected)}")
+            cleaned = clean_terminal_log(collected)
+            if not cleaned.strip():
+                # 응답 settle-wait가 타임아웃될 때까지 아무 출력도 못 받은 경우 —
+                # 예전엔 헤더만 쓰고 본문이 통째로 빈칸이라 "로그가 비어있다"로 보였음.
+                # 원인을 남겨서 빈 구간과 진짜 정상-무출력을 구분할 수 있게 한다.
+                cleaned = "(응답 없음 — 시간 초과)"
+            output_lines.append(f"\n--- {cmd} ---\n{cleaned}")
             with _inspection_lock:
                 _inspection_job["log"].append(f"[{device}] {cmd} 완료")
         except (OSError, EOFError) as e:
@@ -152,12 +158,17 @@ def _run_one_session_inspection(session_id, commands, results_dir):
             _inspection_job["log"].append(f"[{device}] 중지 — 결과 폐기됨(저장 안 함)")
         return
 
-    os.makedirs(results_dir, exist_ok=True)
-    fname = os.path.join(results_dir, f"AutoCheck_{device}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
-    with open(fname, "w", encoding="utf-8") as f:
-        f.write("\n".join(output_lines))
+    text = "\n".join(output_lines)
+    stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    saved_paths = []
+    for results_dir in results_dirs:
+        os.makedirs(results_dir, exist_ok=True)
+        fname = os.path.join(results_dir, f"AutoCheck_{device}_{stamp}.txt")
+        with open(fname, "w", encoding="utf-8") as f:
+            f.write(text)
+        saved_paths.append(fname)
     with _inspection_lock:
-        _inspection_job["log"].append(f"[{device}] 결과 저장됨: {fname}")
+        _inspection_job["log"].append(f"[{device}] 결과 저장됨: {', '.join(saved_paths)}")
 
 
 class TerminalApiMixin:
@@ -259,13 +270,24 @@ class TerminalApiMixin:
         if not valid_ids:
             return {"error": "연결된 세션이 없습니다. 먼저 접속하세요."}
 
+        from engine import log_storage
+        customer_name, profile_name = self.resolve_active_customer_profile_names()
+        log_paths = log_storage.get_profile_log_paths(customer_name, profile_name)
+        log_storage.save_config_snapshot(log_paths["root"], {
+            "commands_catalog": paths.get("commands_catalog"),
+            "lab_meta": paths.get("lab_meta"),
+        })
+
         with _inspection_lock:
             _inspection_job.update({"running": True, "done": False, "cancel_requested": False, "discard_on_cancel": False,
                                      "log": [f"점검 시작 — 대상 {len(valid_ids)}개 세션, 커맨드 {len(commands)}개"]})
 
         def worker():
-            results_dir = os.path.join("labs", project_id, "terminal_sessions")
-            threads = [threading.Thread(target=_run_one_session_inspection, args=(sid, commands, results_dir)) for sid in valid_ids]
+            # 기존 labs/{project}/terminal_sessions/(Reports·Findings·AI분석이 읽는 경로)와
+            # 신규 data/<고객사>/<프로파일>/00_orignal_log/ 양쪽에 동일한 원본을 저장 —
+            # 새 로그 저장소 요구사항을 만족시키면서 기존 보고서 파이프라인은 그대로 유지.
+            results_dirs = [log_paths["original"], os.path.join("labs", project_id, "terminal_sessions")]
+            threads = [threading.Thread(target=_run_one_session_inspection, args=(sid, commands, results_dirs)) for sid in valid_ids]
             for t in threads:
                 t.start()
             for t in threads:

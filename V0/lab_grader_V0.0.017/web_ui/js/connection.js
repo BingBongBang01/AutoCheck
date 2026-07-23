@@ -399,7 +399,7 @@ async function onTermContextMenu(e, session, term) {
   if (termCtxMenuMode === 'paste') {
     try {
       const text = await navigator.clipboard.readText();
-      if (text) await call('send_terminal_input', session.session_id, text);
+      if (text) await call('send_terminal_input', session.session_id, text + '\r');
     } catch (err) { /* 클립보드 접근 거부 — 조용히 무시 */ }
     return;
   }

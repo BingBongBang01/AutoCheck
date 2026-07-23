@@ -1,0 +1,6 @@
+=== 점검 시작 — agg1 ===
+
+--- enable ---
+(응답 없음 — 시간 초과)
+
+--- conf (오류: Socket is closed) ---
