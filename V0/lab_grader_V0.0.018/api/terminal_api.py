@@ -117,7 +117,11 @@ def _wait_for_settled_output(sess, settle_sec=0.6, max_wait_sec=8.0, prompt_grac
                 collected += "".join(sess["buffer"])
                 sess["buffer"] = []
                 idle = 0.0
-                prompt_seen_at = waited if _PROMPT_TAIL_RE.search(strip_ansi(collected)) else None
+                # 프롬프트는 항상 출력 맨 끝에 나오므로 누적된 전체 텍스트가 아니라
+                # 꼬리 일부만 검사한다 — 매 반복마다 전체 누적 텍스트를 strip_ansi하면
+                # show running-config처럼 큰 출력에서 반복 횟수 x 누적 길이로 비용이
+                # 커지는(사실상 O(n^2)) 문제가 있었다.
+                prompt_seen_at = waited if _PROMPT_TAIL_RE.search(strip_ansi(collected[-400:])) else None
             else:
                 idle += poll_interval
         if prompt_seen_at is not None and (waited - prompt_seen_at) >= prompt_grace:

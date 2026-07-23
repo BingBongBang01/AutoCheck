@@ -43,6 +43,23 @@ def mask_findings_with_mapping(findings, hostnames=None):
     return result, mapping
 
 
+_hostname_pattern_cache = {}
+
+
+def _hostname_pattern(hostnames):
+    """hostnames(장비명 목록)를 하나의 alternation 정규식으로 합쳐서 캐싱.
+    finding/field마다 매번 이름 개수만큼 정규식을 새로 컴파일하지 않도록(호출 빈도가
+    findings 수 x sensitive 필드 수만큼 반복되므로) 같은 목록이면 컴파일 결과를 재사용한다."""
+    key = tuple(sorted(name for name in hostnames if name))
+    if not key:
+        return None
+    pattern = _hostname_pattern_cache.get(key)
+    if pattern is None:
+        pattern = re.compile("|".join(re.escape(name) for name in key), re.IGNORECASE)
+        _hostname_pattern_cache[key] = pattern
+    return pattern
+
+
 def _mask_text(text, hostnames=None):
     if not isinstance(text, str):
         return text
@@ -50,9 +67,9 @@ def _mask_text(text, hostnames=None):
     text = MAC_RE.sub(MASK, text)
     text = MAC_COLON_RE.sub(MASK, text)
     if hostnames:
-        for name in hostnames:
-            if name:
-                text = re.sub(re.escape(name), MASK, text, flags=re.IGNORECASE)
+        pattern = _hostname_pattern(hostnames)
+        if pattern:
+            text = pattern.sub(MASK, text)
     return text
 
 
