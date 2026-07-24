@@ -1,0 +1,9 @@
+=== 이상탐지 결과 — AutoCheck_AUTO-103_20260724_144650.txt (2건) ===
+
+# 탐지 사유: 키워드 'TIMEOUT' 검출 (원본 591행)
+--- show logging ---
+Jul 23 14:44:47 Agg1 Lldp: %LLDP-5-NEIGHBOR_TIMEOUT: LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet4" timed out on interface Ethernet4
+
+# 탐지 사유: 키워드 'TIMEOUT' 검출 (원본 592행)
+--- show logging ---
+Jul 23 14:44:47 Agg1 Lldp: %LLDP-5-NEIGHBOR_TIMEOUT: LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet3" timed out on interface Ethernet3

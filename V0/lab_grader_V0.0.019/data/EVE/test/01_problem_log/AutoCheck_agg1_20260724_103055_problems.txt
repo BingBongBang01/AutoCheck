@@ -1,0 +1,85 @@
+interface Ethernet8
+interface Management1
+interface Vlan100
+interface Vlan200
+
+No explicit ERRORs, TIMEOUTs, or interface DOWN states were found in the provided log snippet. The spanning-tree output shows all interfaces in a forwarding state.
+
+No ERRORs, TIMEOUTs, interface DOWN states, or anomalies found. The log shows normal bridge status with all interfaces in the designated forwarding state.
+
+show environment power
+% There seem to be no power supplies connected.
+
+No ERRORs, TIMEOUTs, interface DOWN states, or explicit anomalies found in the provided log snippet. The output consists only of standard kernel/system process traces and worker threads.
+
+ERRORs: None found
+TIMEOUTs: None found
+interface DOWN states: None found
+anomalies: No explicit ERRORs, TIMEOUTs, or interface DOWN states were explicitly logged in this snippet. The log primarily shows various systemd/kernel processes and SCSI/NVMe related activity.
+
+ERROR: EosOomAdjust
+TIMEOUT: None explicitly logged
+INTERFACE DOWN: None explicitly logged
+ANOMALIES: The log shows a high number of processes and system activity, but no explicit network errors or timeouts are present in this snippet.
+
+ERRORs: None found
+TIMEOUTs: One entry shows a long duration (1:23.86 for IgmpSnooping, 5:17.84 for StpTxRx), but this is likely normal operation timing unless specified otherwise as an error/timeout threshold violation.
+interface DOWN states: None explicitly found in the provided log snippet.
+anomalies: No obvious immediate errors or interface down events are present; the log appears to be a standard process/service monitoring output with varying durations.
+
+No ERRORs, TIMEOUTs, interface DOWN states, or major anomalies found in the provided log snippet. The output consists primarily of routine process/system messages and SSH sessions.
+
+No errors timeouts interface down states or anomalies found in the provided log snippet. The log appears to be a configuration or system information dump rather than an operational event log.
+
+No errors, timeouts, interface down states, or anomalies found. The log appears to be informational/debugging level messages.
+
+LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet4" timed out on interface Ethernet4
+LLDP neighbor with chassisId 5001.00e5.e36
+
+a and portId "Ethernet3" timed out on interface Ethernet3
+LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet4" timed out on interface Ethernet4
+LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet3" timed out on interface Ethernet3
+There are multiple LLDP timeouts indicating neighbor loss or failure on interfaces Ethernet3 and Ethernet4.
+
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty9 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty11 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+
+Et8 notconnect
+
+Summary: Multiple configuration errors (%SYS-5-CONFIG_E) were logged during administrative access attempts via VTY lines, and interface Et8 is in a notconnect state. Interface counters for Et1 and Et2 show no errors or traffic statistics.
+
+Port Channel Port-Channel10: Configured, but inactive ports: Ethernet3 waiting for LACP response, Ethernet4 waiting for LACP response
+MLAG Configuration: peer-config inconsistent
+
+Summary: Two ports (Ethernet3 and Ethernet4) in Port Channel10 are waiting for LACP responses. The MLAG configuration shows an inconsistent peer-config status.
+
+ERROR: IP virtual router MAC address is not configured
+SUMMARY: One error was found indicating that the IP virtual router MAC address is not configured.
+
+Interface Et6 designated forwarding state is incomplete.
+Interface Et6 designated forwarding state is incomplete.
+
+Summary: The log shows no explicit ERRORs or TIMEOUTs, but the output for the Spanning tree instance for vlan 999 appears truncated at the end of the provided text snippet.
+
+show reload cause (응답 없음 — 시간 초과)
+Warning: displaying stale counters
+
+Interface Po10 to-Core1 has no input traffic reported.
+No explicit ERRORs, TIMEOUTs, or interface DOWN states were found in the provided log snippet. The interface counters show low utilization across all ports.
+
+Et8 down
+Po10 down lowerlayerdown to-Core1
+Summary: Interface Et8 is in a down state and Port Po10 is in a down state with a lowerlayerdown status.

@@ -1,0 +1,84 @@
+ERRORs: unsupported speed action error, unsupported error-correction action error
+ANOMALIES: No explicit ERRORs or TIMEOUTs found in the provided configuration/show commands. Interface states are not explicitly shown as DOWN.
+
+Summary: The configuration shows system warnings regarding unsupported speed and error-correction actions on system L1, but no active errors, timeouts, or interface down states were detected in this log snippet.
+
+Interface Po20 state is forwarding.
+No explicit ERRORs or TIMEOUTs were found in the provided log snippet.
+The show environment power command indicated that there seem to be no power supplies connected, which is a potential hardware anomaly requiring further investigation.
+
+No ERRORs, TIMEOUTs, interface DOWN states, or significant anomalies found. The log appears to consist primarily of system kernel threads and processes (rcu_*, kworker/*, cpuhp/*, migration/*) with normal CPU utilization metrics.
+
+No ERRORs, TIMEOUTs, interface DOWN states, or significant anomalies found in the provided log snippet. The entries appear to be standard kernel/system processes and block device activity.
+
+ERROR: EosOomAdjust
+TIMEOUT: StageMgr (1.6 seconds)
+TIMEOUT: Fru (3.8 seconds)
+
+No ERRORs, TIMEOUTs, interface DOWN states, or anomalies found. The log appears to show normal operational traffic for various services and agents.
+
+No ERRORs, TIMEOUTs, interface DOWN states, or anomalies found. The log appears to show normal process/session activity.
+
+No errors, timeouts, interface down states, or anomalies found. The provided log snippet is a configuration/logging status output and does not contain any actual event messages indicating problems.
+
+No errors, timeouts, interface down states, or significant anomalies found in the provided log snippet. The log primarily shows informational debugging messages across various network processes and features.
+
+No errors, timeouts, interface down states, or significant anomalies found. The log consists entirely of informational and debugging messages related to various network protocols and features.
+
+LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet1" timed out on interface Ethernet1
+LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet2" timed out on interface Ethernet2
+LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet2" timed out on interface Ethernet2
+LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet1" timed out on interface Ethernet1
+LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet2" timed out on interface Ethernet2
+LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet1" timed out on interface Ethernet1
+LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet2" timed out on interface Ethernet2
+LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet1" timed out on interface Ethernet1
+LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet2" timed out on interface Ethernet2
+LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet1" timed out on interface Ethernet1
+
+Summary: Multiple LLDP neighbor timeouts were recorded for the neighbor with chassisId 5001.00e5.e36a on both Ethernet1 and Ethernet2 interfaces, indicating potential connectivity or peer device issues on these ports.
+
+ERRORs: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+ERRORs: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty7 (172.16.97.123)
+ERRORs: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+ERRORs: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+ERRORs: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty7 (172.16.97.123)
+ERRORs: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty9 (172.16.97.123)
+ERRORs: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty11 (172.16.97.123)
+ERRORs: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+ERRORs: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+ERRORs: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+ERRORs: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+ERRORs: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+ERRORs: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+Interface DOWN states/Anomalies: Et5 notconnect, Et6 notconnect, Et7 notco
+
+Summary: The log primarily shows repeated CONFIG_E messages indicating attempts to enter configuration mode via VTY lines (vty5, vty7, vty9, vty11). Interface status shows that interfaces Et5 and Et6 are in a notconnect state.
+
+Et8 notconnect
+Po1 notconnect
+Port Channel Port-Channel1 Configured, but inactive ports: Ethernet1 waiting for LACP response
+Port Channel Port-Channel1 Configured, but inactive ports: Ethernet2 waiting for LACP response
+
+Summary: Several interfaces (Et8, Po1) are in a notconnect state. Port Channel 1 has inactive ports waiting for LACP responses on Ethernet1 and Ethernet2.
+
+IP virtual router MAC address is not configured
+Spanning tree instance for vlan 1
+VL1
+  Bridge ID Priority 8193 (priority 8192 sys-id-ext 1)
+
+Summary: Found an issue where the IP virtual router MAC address is not configured and a spanning tree instance for VLAN 1 is present.
+
+show reload cause
+(응답 없음 — 시간 초과)
+
+summary: The log shows a timeout when attempting to run the show reload cause command.
+
+Et5 down state
+
+Summary: Interface Et5 is in a down state.
+
+down down
+Et7 down down
+Et8 down down
+Po1 down lowerlayerdown

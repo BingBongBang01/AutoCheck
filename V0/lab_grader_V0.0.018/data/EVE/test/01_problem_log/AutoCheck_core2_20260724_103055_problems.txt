@@ -1,0 +1,49 @@
+=== 이상탐지 결과 — AutoCheck_core2_20260724_103055.txt (12건) ===
+
+# 탐지 사유: 키워드 'TIMEOUT' 검출 (원본 482행)
+--- show logging ---
+Jul 23 14:13:43 Core2 Lldp: %LLDP-5-NEIGHBOR_TIMEOUT: LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet1" timed out on interface Ethernet1
+
+# 탐지 사유: 키워드 'TIMEOUT' 검출 (원본 485행)
+--- show logging ---
+Jul 23 14:22:34 Core2 Lldp: %LLDP-5-NEIGHBOR_TIMEOUT: LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet2" timed out on interface Ethernet2
+
+# 탐지 사유: 키워드 'TIMEOUT' 검출 (원본 486행)
+--- show logging ---
+Jul 23 14:22:34 Core2 Lldp: %LLDP-5-NEIGHBOR_TIMEOUT: LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet1" timed out on interface Ethernet1
+
+# 탐지 사유: 키워드 'TIMEOUT' 검출 (원본 489행)
+--- show logging ---
+Jul 23 14:40:58 Core2 Lldp: %LLDP-5-NEIGHBOR_TIMEOUT: LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet2" timed out on interface Ethernet2
+
+# 탐지 사유: 키워드 'TIMEOUT' 검출 (원본 490행)
+--- show logging ---
+Jul 23 14:40:58 Core2 Lldp: %LLDP-5-NEIGHBOR_TIMEOUT: LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet1" timed out on interface Ethernet1
+
+# 탐지 사유: 키워드 'TIMEOUT' 검출 (원본 493행)
+--- show logging ---
+Jul 23 14:44:45 Core2 Lldp: %LLDP-5-NEIGHBOR_TIMEOUT: LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet2" timed out on interface Ethernet2
+
+# 탐지 사유: 키워드 'TIMEOUT' 검출 (원본 494행)
+--- show logging ---
+Jul 23 14:44:45 Core2 Lldp: %LLDP-5-NEIGHBOR_TIMEOUT: LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet1" timed out on interface Ethernet1
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 792행)
+--- show interfaces description ---
+Et5                            down           down
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 793행)
+--- show interfaces description ---
+Et6                            down           down
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 794행)
+--- show interfaces description ---
+Et7                            down           down
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 795행)
+--- show interfaces description ---
+Et8                            down           down
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 797행)
+--- show interfaces description ---
+Po1                            down           lowerlayerdown

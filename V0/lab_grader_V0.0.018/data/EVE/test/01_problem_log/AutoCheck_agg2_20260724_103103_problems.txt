@@ -1,0 +1,5 @@
+=== 이상탐지 결과 — AutoCheck_agg2_20260724_103103.txt (1건) ===
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 938행)
+--- show interfaces description ---
+Et8                            down           down

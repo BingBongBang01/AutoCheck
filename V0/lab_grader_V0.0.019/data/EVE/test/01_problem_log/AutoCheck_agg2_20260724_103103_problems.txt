@@ -1,0 +1,107 @@
+system l1
+   unsupported speed action error
+   unsupported error-correction action error
+
+No explicit ERRORs, TIMEOUTs, or interface DOWN states were found in the provided log snippet. The spanning-tree output shows all interfaces in a forwarding state.
+
+No ERRORs, TIMEOUTs, interface DOWN states, or anomalies found. The log shows normal bridge status with all interfaces in a designated forwarding state.
+
+show environment power
+% There seem to be no power supplies connected.
+
+summary: The system reports that there are no power supplies connected.
+
+ERRORs: None found
+TIMEOUTs: None found
+interface DOWN states: None found
+anomalies: No explicit ERRORs, TIMEOUTs, or interface DOWN states were explicitly logged in this snippet. The log primarily shows kernel threads (ksoftirqd, kworker), migration processes, and various device/driver-related tasks.
+
+ERRORs: None found
+TIMEOUTs: None found
+interface DOWN states: None found
+anomalies: No explicit errors, timeouts, or interface down states were explicitly logged in this snippet. The log primarily shows various driver/process activity (nvme, scsi, ixgbe, systemd processes).
+
+ERRORs:
+1851 root 20 0 5844 192 0 S 0.0 0.0 1:39.44 EosOomAdjust
+
+TIMEOUTs:
+(No explicit TIMEOUT messages found)
+
+interface DOWN states:
+(No explicit interface DOWN states found)
+
+anomalies:
+The log shows a high frequency of processes and agents running (e.g., python3, inotifywait, various agent/monitor processes). The line 2844 indicates a kworker process which is normal system behavior but contributes to the overall load. No immediate critical network errors are present based solely on this snippet.
+
+Summary:
+One ERROR was found related to EosOomAdjust (line 1851). No explicit TIMEOUTs or interface DOWN states were detected in this log excerpt.
+
+No ERRORs, TIMEOUTs, interface DOWN states, or anomalies found. The log appears to show normal operational traffic and process activity.
+
+ERRORs: None found
+TIMEOUTs: None found
+interface DOWN states: None found
+anomalies: No explicit errors, timeouts, or interface down states were detected in this log snippet. The log primarily shows normal process activity (conlogd, sshd-session, kworker processes) and configuration settings for logging levels.
+
+No errors, timeouts, interface down states, or anomalies found in the provided configuration snippet. It appears to be a system information/facility definition section rather than actual runtime log messages.
+
+No errors, timeouts, interface down states, or significant anomalies found in this log snippet. The log primarily shows informational and debugging messages related to various network features (IGMP snooping, routing protocols like OSPF/IS-IS, LACP, etc.).
+
+Interface Port-Channel10 instance Vl1 moving from discarding to learning
+Interface PeerPort-Channel10 instance Vl1 moving from learni
+
+Interface PeerPort-Channel10 has been removed from instance Vl1
+Interface PeerPort-Channel10 has been removed from instance Vl100
+Interface PeerPort-Channel10 has been removed from instance Vl200
+Interface PeerPort-Channel10 has been removed from instance Vl999
+Interface PeerPort-Channel10 has been removed from instance Vl4094
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty3 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty3 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty7 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty9 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty3 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty7 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty9 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty11 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty3 (172.16.97.123)
+
+Summary: Several interface removals related to PeerPort-Channel10 were logged, and multiple instances of configuration mode entry attempts via VTY lines indicate administrative access or potential configuration changes occurring across various sessions.
+
+ERRORs: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+TIMEOUTs: None
+interface DOWN states: Et8 is in a notconnect state
+anomalies: Et8 interface is in a notconnect state
+
+Summary: Several configuration mode entries were logged, and interface Et8 is showing a notconnect status.
+
+show mlag
+(응답 없음 — 시간 초과)
+
+show vrrp brief
+Vl100 default 100 2 100 3600 Backup 3d 17:04:12 ago 10.100.0.1
+Vl200 default 200 2 150 3410 Master 3d 17:04:12 ago 10.200.0.1
+
+show ip virtual-router
+IP virtual router MAC address is not configured
+
+Summary: A timeout occurred when executing show mlag, and the IP virtual router MAC address is not configured on Agg2.
+
+No explicit ERRORs, TIMEOUTs, or interface DOWN states were found in the provided log snippet. The output shows normal operational states for all listed interfaces and spanning tree instances.
+
+Interface Et5 designated forwarding 20000
+Interface Et6 designated forwarding 20000
+Interface Et7 designated forwarding 20000
+Interface PEt5 designated forwarding 20000
+Interface PEt6 designated forwarding 20000
+Interface PEt7 designated forwarding 29999 (Note: Po20 shows 19999, but the interface list shows Et5/6/7 at 20k and Po20 at 19.9k)
+
+Summary: No explicit ERRORs or TIMEOUTs were found in the provided log snippet. The output primarily details interface roles and forwarding states, which appear nominal based on the 'designated forwarding' status across all listed interfaces.
+
+Port      Name      Intvl  In Kbps      %   In Pps
+show interfaces counters rates
+Anomalies: NTP is disabled. Reload cause is unknown. No explicit ERRORs, TIMEOUTs, or interface DOWN states were found in the provided snippets.
+
+Et8 down down
+Summary: Interface Et8 is in a down state.
