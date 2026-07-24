@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 logs/*.log
+logs/
+raw_logs/
+ai_config.yaml
