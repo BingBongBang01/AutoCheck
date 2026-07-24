@@ -1,0 +1,88 @@
+Interface Ethernet3
+Interface Ethernet4
+Interface Ethernet5
+Interface Ethernet6
+Interface Ethernet7
+
+Summary: Several interfaces (Ethernet3 through Ethernet7) are configured but do not show any explicit error, timeout, or down states in the provided configuration output. No immediate errors or timeouts were found in this log snippet.
+
+Interface Et1 State discarding
+Interface Et2 State forwarding
+
+
+No ERRORs, TIMEOUTs, interface DOWN states, or obvious anomalies found in this process list. The output shows normal system processes and resource utilization.
+
+ERRORs:
+81 root -51 0 0 0 0 S 0.0 0.0 0:00.00 watchdogd
+
+TIMEOUTs or interface DOWN states or anomalies:
+No explicit ERRORs, TIMEOUTs, interface DOWN states, or obvious anomalies were found in this section of the log. The output appears to be a list of kernel threads and processes rather than direct switch device status messages.
+
+ERROR: EosOomAdjust
+SUMMARY: One ERROR was found in the log.
+
+2991 root 20 0 2186296 61376 54096 S 0.0 2.1 0:24.14 Ebra
+Summary: One line shows an 'Ebra' process, which might indicate an error or specific operational state depending on the context of this log format.
+
+No explicit ERRORs, TIMEOUTs, interface DOWN states, or major anomalies were found in the provided log snippet. The logs appear to show normal process activity and various network/system processes running without reporting critical failures.
+
+Syslog logging: enabled
+Buffer logging: level informational
+Console logging: level informational
+
+No errors, timeouts, interface down states, or anomalies found. The log appears to be a status or debugging output without explicit error messages.
+
+tunnelintf deb
+
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty3 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty3 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty3 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty3 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty8 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty7 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty9 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty13 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty15 (172.16.97.123)
+Anomalies: Frequent configuration access attempts via VTY lines indicating potential automated or repeated administrative interaction, but these are not strictly errors unless they indicate a failure to connect/authenticate which is not explicitly stated here.
+
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty18 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty21 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty23 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty24 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty25 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty27 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty28 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty29 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty31 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty37 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty39 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty40 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty3 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty7 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty3 (172.16.97.123)
+
+Interface Et3 Status is notconnect
+Interface Et4 Status is notconnect
+
+Summary: Multiple configuration errors occurred across various VTY lines. Interfaces Et3 and Et4 are in a notconnect state.
+
+Et5 notconnect
+Et6 notconnect
+Et7 notconnect
+Et8 notconnect
+Ma1 connected routed
+
+IP virtual router MAC address is not configured
+
+Spanning tree instance for vlan 100
+Et1 alternate discarding 20000
+Et2 root forwarding 20000
+
+Summary: The log indicates that the IP virtual router MAC address is not configured. There are no explicit ERRORs or TIMEOUTs found, but there are interface states noted as 'discarding' and 'forwarding' within the spanning-tree configuration for VLAN 100.
+
+show bgp evpn summary
+% BGP inactive
+show ip bgp summary
+% BGP inactive

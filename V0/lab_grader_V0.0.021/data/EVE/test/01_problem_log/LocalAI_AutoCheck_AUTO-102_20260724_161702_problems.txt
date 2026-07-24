@@ -1,0 +1,87 @@
+interface Ethernet3
+   channel-group 20 mode active
+
+summary: Interface Ethernet3 is configured with channel-group 20 in active mode. No explicit ERRORs, TIMEOUTs, or DOWN states were found in the provided configuration snippet.
+
+Interface Po20 state is forwarding
+No explicit ERRORs or TIMEOUTs found. The system reports no power supplies connected, which might be a potential issue depending on the switch configuration.
+
+ERRORs: None found
+TIMEOUTs: None found
+interface DOWN states: None found
+anomalies: The log appears to be from the kernel/systemd process list and does not show typical network switch interface errors or timeouts.
+
+No ERRORs, TIMEOUTs, interface DOWN states, or significant anomalies found in this log snippet. The entries appear to be standard kernel/system processes and device drivers running normally.
+
+ERROR: 1855 root 20 0 5844 196 0 S 0.0 0.0 1:43.82 EosOomAdjust
+SUMMARY: One ERROR found in the log related to EosOomAdjust.
+
+ERRORs: None found
+TIMEOUTs: None found
+interface DOWN states: None found
+anomalies: No explicit ERRORs, TIMEOUTs, or interface DOWN states were found in the provided log snippet. The logs appear to show normal operational entries for various processes and agents.
+
+No ERRORs, TIMEOUTs, interface DOWN states, or obvious anomalies found in the provided log snippet. The log primarily shows normal process/session activity (ndex processes and sshd-session).
+
+No explicit ERRORs, TIMEOUTs, interface DOWN states, or significant anomalies were found in the provided log snippet. The log appears to be a list of debugging/informational processes or modules being tracked by the switch system.
+
+No errors, timeouts, interface down states, or significant anomalies found. The log appears to be in a debugging/informational state across various network protocols and features.
+
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+
+Summary: Multiple CONFIG_E errors indicating an attempt to enter configuration mode via VTY5 from the IP address 172.16.97.123 across several timestamps, suggesting repeated administrative access attempts or connection issues related to this interface/VTY line.
+
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty7 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty9 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty3 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty7 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty8 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty9 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty13 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty15 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty17 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty16 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty21 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty23 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty25 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty26 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty30 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty27 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty28 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty32 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty37 (172.16.9)
+Summary: Multiple CONFIG_E errors indicating attempts to enter configuration mode via various VTY lines across the switch, suggesting administrative access or configuration changes are being performed. No explicit connection timeouts or interface down states were found in this log snippet.
+
+ERRORs: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty39 (172.16.97.123)
+ERRORs: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty40 (172.16.97.123)
+ERRORs: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty3 (172.16.97.123)
+ERRORs: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+ERRORs: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty7 (172.16.97.123)
+Interface DOWN states: Et5 notconnect, Et6 notconnect, Et7 notconnect, Et8 notconnect, Po1 notconnect
+Anomalies: Port Po1 is in a notconnect state despite being configured as a trunk.
+
+Port Channel Port-Channel1:
+  No Active Ports
+  Configured, but inactive ports:
+       Ethernet1    waiting for LACP response
+       Ethernet2    waiting for LACP response
+
+MLAG Status:
+state                              :            Disabled
+
+show ip interface brief
+Interface         IP Address               Status       Protocol           MTU    Owner
+----------------- ------------------------ ------------ -------------- ---------- -------
+Management1       192.168.205.102/21       up           up                1500
+
+Summary: The primary anomaly is that Port Channel Port-Channel1 has no active ports and its constituent physical interfaces (Ethernet1, Ethernet2) are waiting for LACP responses, indicating a potential link or LACP negotiation issue on those ports. MLAG status is Disabled.
+
+Interface Po20 in vlan 1 is designated forwarding
+Interface Po20 in vlan 999 is root forwarding
+
+Summary: No explicit ERRORs or TIMEOUTs were found. The output shows the Spanning Tree topology for VLANs 1 and 999, indicating Po20 as a forwarding interface in both instances.

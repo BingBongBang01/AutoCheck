@@ -1,0 +1,192 @@
+- id: essential_0
+  category: essential
+  check_id: enable
+  command: enable
+  description: enable
+  enabled: true
+- id: essential_1
+  category: essential
+  check_id: configure terminal
+  command: configure terminal
+  description: configure terminal
+  enabled: true
+- id: essential_2
+  category: essential
+  check_id: terminal length 0
+  command: terminal length 0
+  description: terminal length 0
+  enabled: true
+- id: essential_3
+  category: essential
+  check_id: show running-config
+  command: show running-config
+  description: show running-config
+  enabled: true
+- id: essential_4
+  category: essential
+  check_id: show spanning-tree
+  command: show spanning-tree
+  description: show spanning-tree
+  enabled: true
+- id: essential_5
+  category: essential
+  check_id: show version
+  command: show version
+  description: show version
+  enabled: true
+- id: essential_6
+  category: essential
+  check_id: show environment power
+  command: show environment power
+  description: show environment power
+  enabled: true
+- id: essential_7
+  category: essential
+  check_id: show system environment cooling
+  command: show system environment cooling
+  description: show system environment cooling
+  enabled: true
+- id: essential_8
+  category: essential
+  check_id: show environment temperature
+  command: show environment temperature
+  description: show environment temperature
+  enabled: true
+- id: essential_9
+  category: essential
+  check_id: show processes top once
+  command: show processes top once
+  description: show processes top once
+  enabled: true
+- id: essential_10
+  category: essential
+  check_id: show logging
+  command: show logging
+  description: show logging
+  enabled: true
+- id: essential_11
+  category: essential
+  check_id: show interface status
+  command: show interface status
+  description: show interface status
+  enabled: true
+- id: essential_12
+  category: essential
+  check_id: show interfaces counters errors
+  command: show interfaces counters errors
+  description: show interfaces counters errors
+  enabled: true
+- id: essential_13
+  category: essential
+  check_id: show interfaces transceiver
+  command: show interfaces transceiver
+  description: show interfaces transceiver
+  enabled: true
+- id: essential_14
+  category: essential
+  check_id: show ip interface brief
+  command: show ip interface brief
+  description: show ip interface brief
+  enabled: true
+- id: essential_15
+  category: essential
+  check_id: show clock
+  command: show clock
+  description: show clock
+  enabled: true
+- id: essential_16
+  category: essential
+  check_id: show module
+  command: show module
+  description: show module
+  enabled: true
+- id: essential_17
+  category: essential
+  check_id: show port-channel
+  command: show port-channel
+  description: show port-channel
+  enabled: true
+- id: essential_18
+  category: essential
+  check_id: show mlag
+  command: show mlag
+  description: show mlag
+  enabled: true
+- id: essential_19
+  category: essential
+  check_id: show vrrp brief
+  command: show vrrp brief
+  description: show vrrp brief
+  enabled: true
+- id: essential_20
+  category: essential
+  check_id: show ip virtual-router
+  command: show ip virtual-router
+  description: show ip virtual-router
+  enabled: true
+- id: essential_21
+  category: essential
+  check_id: show spanning-tree vlan 1,100,200,999
+  command: show spanning-tree vlan 1,100,200,999
+  description: show spanning-tree vlan 1,100,200,999
+  enabled: true
+- id: essential_22
+  category: essential
+  check_id: show bgp evpn summary
+  command: show bgp evpn summary
+  description: show bgp evpn summary
+  enabled: true
+- id: essential_23
+  category: essential
+  check_id: show ip bgp summary
+  command: show ip bgp summary
+  description: show ip bgp summary
+  enabled: true
+- id: essential_24
+  category: essential
+  check_id: show ip ospf neighbor
+  command: show ip ospf neighbor
+  description: show ip ospf neighbor
+  enabled: true
+- id: essential_25
+  category: essential
+  check_id: show ip access-lists
+  command: show ip access-lists
+  description: show ip access-lists
+  enabled: true
+- id: essential_26
+  category: essential
+  check_id: show ip arp vrf all
+  command: show ip arp vrf all
+  description: show ip arp vrf all
+  enabled: true
+- id: essential_27
+  category: essential
+  check_id: show inventory
+  command: show inventory
+  description: show inventory
+  enabled: true
+- id: essential_28
+  category: essential
+  check_id: show reload cause
+  command: show reload cause
+  description: show reload cause
+  enabled: true
+- id: essential_29
+  category: essential
+  check_id: show ntp status
+  command: show ntp status
+  description: show ntp status
+  enabled: true
+- id: essential_30
+  category: essential
+  check_id: show interfaces counters rates
+  command: show interfaces counters rates
+  description: show interfaces counters rates
+  enabled: true
+- id: essential_31
+  category: essential
+  check_id: show interfaces description
+  command: show interfaces description
+  description: show interfaces description
+  enabled: true

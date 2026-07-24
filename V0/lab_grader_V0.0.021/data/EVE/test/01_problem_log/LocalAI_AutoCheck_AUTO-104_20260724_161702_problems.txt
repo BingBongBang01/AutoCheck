@@ -1,0 +1,86 @@
+ERROR: unsupported speed action error
+ERROR: unsupported error-correction action error
+
+Summary: The configuration output shows warnings regarding unsupported speed and error-correction actions in the system settings. No explicit ERRORs, TIMEOUTs, or interface DOWN states were found in this log snippet.
+
+No ERRORs, TIMEOUTs, interface DOWN states, or anomalies found. The provided log snippets show configuration commands and spanning-tree status without any explicit error messages or link failures.
+
+No ERRORs, TIMEOUTs, interface DOWN states, or anomalies found. The log shows normal bridge and spanning tree protocol operation with all interfaces in a designated forwarding state.
+
+show environment power
+% There seem to be no power supplies connected.
+
+ERRORs: None found
+TIMEOUTs: None found
+interface DOWN states: None found
+anomalies: No explicit ERRORs, TIMEOUTs, or interface DOWN states were explicitly logged in this snippet. The log primarily shows kernel/system processes (rcu_tasks, ksoftirqd, kworker, etc.) running normally.
+
+ERRORs: None found
+TIMEOUTs: None found
+interface DOWN states: None found
+anomalies: No explicit ERRORs, TIMEOUTs, or interface DOWN states were explicitly logged in this snippet. The log primarily shows various kernel threads (kworker, systemd processes) and storage/SCSI related activity.
+
+ERRORs: 1851 root 20 0 5844 192 0 S 0.0 0.0 1:45.81 EosOomAdjust
+TIMEOUTs: None explicitly identified as TIMEOUTs in this snippet, but high duration processes are present (e.g., Etba at 59:01.87).
+interface DOWN states: None explicitly identified as interface DOWN states in this snippet.
+anomalies: The process EosOomAdjust running for 1 hour and 45 minutes (1:45.81) is a long-running process that warrants investigation depending on the system's normal operation.
+
+Summary: One potential ERROR event found involving the EosOomAdjust process with a very long runtime.
+
+No ERRORs, TIMEOUTs, interface DOWN states, or explicit anomalies found in the provided log snippet. The logs primarily show normal process activity (RouteCache, STP, BFD, various agents) with no explicit error messages present.
+
+ERRORs: None found
+TIMEOUTs: None found
+interface DOWN states: None found
+anomalies: No explicit errors, timeouts, or interface down states were found in this log snippet. The output appears to be a standard process/system log with various processes running and configuration mode indicators.
+
+No errors, timeouts, interface down states, or significant anomalies found in the provided log snippet. The log primarily shows debugging information for various network features and protocols.
+
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty7 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty9 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty3 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty7 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty8 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty9 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty13 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty16 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty15 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty17 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty21 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty23 (172.16.97.123)
+Multiple configuration access attempts were logged, indicating repeated administrative access or potential configuration issues on various VTY lines of the switch.
+
+ERRORs: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty25 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty26 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty28 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty32 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty30 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty33 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty37 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty39 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty41 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty3 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.97.123)
+%SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty7 (172.16.97.123)
+
+ANOMALIES: Et8 is in a notconnect state, indicating a potential issue with that interface or its connection.
+
+Summary: Multiple configuration errors were logged across various VTY lines during administrative access attempts. One interface (Et8) is in a notconnect state.
+
+No explicit ERRORs, TIMEOUTs, or interface DOWN states were found in the provided log snippets.
+Anomalies: The show module command is unsupported on this hardware platform.
+
+ERROR: IP virtual router MAC address is not configured
+SUMMARY: One configuration issue found regarding the IP virtual router MAC address.
+
+No ERRORs, TIMEOUTs, interface DOWN states, or anomalies found. The log shows normal spanning tree and interface status information.
+
+show bgp evpn summary
+% BGP inactive
+show ip bgp summary
+% BGP inactive
