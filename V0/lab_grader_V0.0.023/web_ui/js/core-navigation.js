@@ -30,6 +30,7 @@ async function navigate(page) {
     inspection: renderInspection,
     discovery: renderDiscovery,
     collection: renderCollection,
+    workspace: renderWorkspace,
     analysis: renderAnalysis,
     findings: renderFindings,
     reports: renderReports,

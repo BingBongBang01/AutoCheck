@@ -2,7 +2,43 @@
 
 버전 규칙: 수정할 때마다 0.0.1씩 증가. 인사평가 KPI 계획상 v1.0.0은 8월(v1.0 단계, "핵심 기능 + 전체 완성") 전까지 올리지 않음 — 지금은 전부 0.0.x 범위.
 
-## v0.0.14 (현재) — 모듈화 + 미구현 UI 3개 + Gemini Provider + IP 연결테스트
+## v0.0.15 (현재) — 워크스페이스 자동 마이그레이션 + 프로덕션 준비도 리뷰
+
+**레거시 → 신규 워크스페이스 자동 마이그레이션 (`engine/migration_manager.py`, 신규)**
+- 앱 시작 시(`gui_web.py`, `webview.create_window()` 이전) 1회 자동 실행. 레거시 데이터
+  (`labs/`, `history/`, `config_snapshots/`, `raw_logs/`, `config/`)가 있고 아직 이번
+  `migration_version`을 적용하지 않았을 때만 동작 — 이미 마이그레이션됐으면 버전 파일
+  (`data/.workspace_version.json`) 확인 한 번으로 즉시 스킵.
+- 수정 전 반드시 `migration_backup/<timestamp>/`에 레거시 트리 전체를 복사(원본은 항상
+  COPY만 하고 절대 이동/삭제하지 않음). 대상 파일이 이미 있으면 건너뜀(사용자 파일 절대
+  덮어쓰지 않음). `migration_report.json`에 migrated/skipped/failed/warnings 전부 기록.
+- `rollback_migration()`으로 되돌리기 가능(새로 만든 파일만 삭제, 원본은 애초에 손대지
+  않았으므로 안전). `schema_version`/`workspace_version`/`profile_version`/
+  `migration_version` 4종 버전 마커 도입, 향후 스키마 변경은 `UPGRADE_FUNCS`에 함수
+  추가만으로 확장.
+- 격리된 사본으로 실제 동작 검증: 1회차 마이그레이션 정상 수행 → 2회차 자동 스킵(멱등성
+  확인) → 롤백 정상 복구까지 3단계 전부 확인.
+
+**프로덕션 준비도 리뷰 (아키텍처/스레드안전/파일시스템안전/에러처리/타입힌트/설정관리/
+자원정리/성능/GUI연동/하위호환/마이그레이션 안전성 전수 검토)**
+- `ARCHITECTURE.md`, `WORKSPACE_STRUCTURE.md`, `DEVELOPER_GUIDE.md`,
+  `MIGRATION_GUIDE.md` 신규 작성 — 레이어링, 5대 매니저(ProfileManager/StorageService/
+  RunManager/LogManager/ReportManager) 책임 경계, 폴더 구조, 개발 규칙, 마이그레이션
+  안전성을 문서화.
+- `api/misc_api.py`의 `HistoryApiMixin`이 `history/{project_id}`를 CWD 상대경로로 직접
+  읽고 쓰던 버그 수정 — `engine/history.py`에 `list_sessions`/`load_session`/
+  `delete_session` 신규 추가, `AppPaths.history_root()` 경유로 통일(실행 위치가 앱
+  루트가 아니면 조용히 실패하던 문제 제거).
+- `engine/profile_manager.py._write_json`을 원자적 쓰기(임시파일 + `os.replace`)로 변경
+  — 기존에는 쓰는 도중 프로세스가 죽으면 `profile.json` 등이 잘린 채 남을 수 있었음.
+  `core/storage_service.py`가 이미 쓰던 방식과 통일.
+- 리뷰에서 발견했지만 이번 패스에서 일부러 미루고 문서에만 남긴 항목(더 큰 리팩터링이
+  필요해 단독 검토 필요): `StorageService.create_run()`과 `RunManager.create_run()`의
+  중복 구현, `api/customer_profile_api.py`가 5대 매니저를 우회해 메타 YAML을 직접
+  읽고 쓰는 문제, 사용처 없는 매니저 메서드 13개, 마이그레이션 이후에도 레거시 경로를
+  직접 읽는 3개 API 모듈 — 전부 `ARCHITECTURE.md`의 "Known follow-ups"에 정리.
+
+## v0.0.14 — 모듈화 + 미구현 UI 3개 + Gemini Provider + IP 연결테스트
 
 **모듈화(최적화)**
 - `gui_web.py`(428줄, 관심사 10개가 한 클래스) → `api/` 패키지 12개 mixin으로 분리

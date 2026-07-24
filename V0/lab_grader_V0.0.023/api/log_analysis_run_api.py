@@ -10,79 +10,29 @@ Api 인스턴스 위에서만 동작한다.
 """
 import os
 import glob
-import time
-import threading
 
 from api.log_file_browser_api import _read_text_auto
+from api.job_runner import JobRunner
 
 _JOB_KINDS = ("program", "local", "cloud")
 
 
 class LogAnalysisRunApiMixin:
     def _jobs(self):
-        if not hasattr(self, "_analysis_jobs"):
-            self._analysis_jobs = {
-                kind: {
-                    "status": "idle",  # idle | running | done | error
-                    "current": 0,
-                    "total": 0,
-                    "message": "",
-                    "start_ts": None,
-                    "end_ts": None,
-                    "error": None,
-                    "results": None,
-                }
-                for kind in _JOB_KINDS
-            }
-            self._analysis_jobs_lock = threading.Lock()
-        return self._analysis_jobs
-
-    def _set_job(self, kind, **fields):
-        jobs = self._jobs()
-        with self._analysis_jobs_lock:
-            jobs[kind].update(fields)
+        if not hasattr(self, "_analysis_job_runner"):
+            self._analysis_job_runner = JobRunner(_JOB_KINDS)
+        return self._analysis_job_runner
 
     def get_analysis_jobs_status(self):
         """상단바 진행바 폴링용 — 3개 분석 종류(program/local/cloud)의 현재 상태를 한 번에 반환.
         각 항목: {status, current, total, message, elapsed_sec, eta_sec, error}."""
-        jobs = self._jobs()
-        now = time.time()
-        out = {}
-        with self._analysis_jobs_lock:
-            for kind, job in jobs.items():
-                elapsed = None
-                eta = None
-                if job["start_ts"] is not None:
-                    end = job["end_ts"] if job["end_ts"] is not None else now
-                    elapsed = end - job["start_ts"]
-                    if job["status"] == "running" and job["current"] > 0 and job["total"] > 0:
-                        per_item = elapsed / job["current"]
-                        eta = max(0.0, per_item * (job["total"] - job["current"]))
-                out[kind] = {
-                    "status": job["status"],
-                    "current": job["current"],
-                    "total": job["total"],
-                    "message": job["message"],
-                    "elapsed_sec": elapsed,
-                    "eta_sec": eta,
-                    "error": job["error"],
-                }
-        return out
-
-    def _run_job_thread(self, kind, worker):
-        self._set_job(kind, status="running", current=0, total=0, message="준비 중...",
-                       start_ts=time.time(), end_ts=None, error=None, results=None)
-        try:
-            results = worker()
-            self._set_job(kind, status="done", end_ts=time.time(), message="완료", results=results)
-        except Exception as e:
-            self._set_job(kind, status="error", end_ts=time.time(), error=str(e), message="오류")
+        return self._jobs().status_all()
 
     # ---------- 규칙기반 분석 ----------
     def start_log_analysis(self):
         """'Log Analysis' 탭 — '분석 실행' 버튼. 즉시 반환하고 백그라운드 스레드에서 진행되며,
         진행률은 get_analysis_jobs_status()['program']으로 폴링한다."""
-        if self._jobs()["program"]["status"] == "running":
+        if self._jobs().is_running("program"):
             return {"error": "이미 규칙기반 분석이 진행 중입니다."}
         profile_paths = self._active_profile_log_paths()
         if not profile_paths:
@@ -92,12 +42,12 @@ class LogAnalysisRunApiMixin:
             from engine import log_analysis
 
             def on_progress(done, total, filename):
-                self._set_job("program", current=done, total=total, message=filename)
+                self._jobs().set("program", current=done, total=total, message=filename)
 
             return log_analysis.run_analysis(profile_paths["original"], profile_paths["problem"],
                                               progress_callback=on_progress)
 
-        threading.Thread(target=self._run_job_thread, args=("program", worker), daemon=True).start()
+        self._jobs().start("program", worker)
         return {"ok": True}
 
     # ---------- AI 분석(로컬/클라우드) ----------
@@ -109,7 +59,7 @@ class LogAnalysisRunApiMixin:
         get_analysis_jobs_status()[ai_mode]로 폴링한다."""
         if ai_mode not in self._AI_MODE_PREFIXES:
             return {"error": f"알 수 없는 AI 모드: {ai_mode}"}
-        if self._jobs()[ai_mode]["status"] == "running":
+        if self._jobs().is_running(ai_mode):
             return {"error": "이미 해당 AI 분석이 진행 중입니다."}
         profile_paths = self._active_profile_log_paths()
         if not profile_paths:
@@ -130,7 +80,7 @@ class LogAnalysisRunApiMixin:
         def worker():
             print(f"[AI 분석] 시작 mode={ai_mode}")
             if ai_mode == "local":
-                self._set_job("local", message="로컬 모델 준비 중...")
+                self._jobs().set("local", message="로컬 모델 준비 중...")
                 api_cfg = self.get_local_ai_config()
                 endpoint = api_cfg.get("endpoint")
                 model = api_cfg.get("model")
@@ -152,7 +102,7 @@ class LogAnalysisRunApiMixin:
             os.makedirs(problem_dir, exist_ok=True)
             paths = sorted(glob.glob(os.path.join(original_dir, "*.txt")))
             total = len(paths)
-            self._set_job(ai_mode, total=total, current=0, message="분석 중...")
+            self._jobs().set(ai_mode, total=total, current=0, message="분석 중...")
             for i, path in enumerate(paths):
                 raw_text = _read_text_auto(path)
                 analysis_text = analyze_raw_log_text(raw_text, ai_mode, api_cfg)
@@ -164,8 +114,8 @@ class LogAnalysisRunApiMixin:
                 with open(out_path, "w", encoding="utf-8") as f:
                     f.write(analysis_text)
                 results.append({"source": os.path.basename(path), "output": out_name})
-                self._set_job(ai_mode, current=i + 1, message=os.path.basename(path))
+                self._jobs().set(ai_mode, current=i + 1, message=os.path.basename(path))
             return results
 
-        threading.Thread(target=self._run_job_thread, args=(ai_mode, worker), daemon=True).start()
+        self._jobs().start(ai_mode, worker)
         return {"ok": True}

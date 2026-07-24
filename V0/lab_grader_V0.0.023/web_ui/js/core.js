@@ -80,6 +80,16 @@ function flashSaved(ok) {
   setTimeout(() => { el.style.opacity = 0; setTimeout(() => el.remove(), 300); }, 1500);
 }
 
+// ===== 커스텀 문구 토스트 (여러 페이지에서 공용 — flashSaved()는 고정 문구라 재사용 불가) =====
+function showToast(message, tone = 'success') {
+  const color = tone === 'error' ? 'var(--critical)' : (tone === 'warn' ? 'var(--warning)' : 'var(--success)');
+  const el = document.createElement('div');
+  el.textContent = message;
+  el.style.cssText = `position:fixed;bottom:40px;right:24px;background:${color};color:#0B1220;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;z-index:999;transition:opacity 300ms;`;
+  document.body.appendChild(el);
+  setTimeout(() => { el.style.opacity = 0; setTimeout(() => el.remove(), 300); }, 1800);
+}
+
 function renderComingSoon(title, desc) {
   document.getElementById('content').innerHTML = `
     <h1 class="page-title">${title}</h1>

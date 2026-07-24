@@ -50,6 +50,39 @@ def load_previous(lab_name, base_dir=_DEFAULT_HISTORY_DIR):
         return json.load(f)
 
 
+def list_sessions(lab_name, base_dir=_DEFAULT_HISTORY_DIR):
+    """lab_name의 전체 회차 요약 목록(session/elapsed_sec/stage_count)을 오래된 순으로 반환."""
+    lab_dir = os.path.join(base_dir, lab_name)
+    files = sorted(glob.glob(os.path.join(lab_dir, "*.json")))
+    result = []
+    for fp in files:
+        with open(fp, encoding="utf-8") as f:
+            data = json.load(f)
+        result.append({
+            "session": data["session"],
+            "elapsed_sec": data["elapsed_sec"],
+            "stage_count": len(data["stages"]),
+        })
+    return result
+
+
+def load_session(lab_name, session, base_dir=_DEFAULT_HISTORY_DIR):
+    """특정 회차 하나를 통째로 불러온다. 없으면 None."""
+    path = os.path.join(base_dir, lab_name, f"{session}.json")
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def delete_session(lab_name, session, base_dir=_DEFAULT_HISTORY_DIR):
+    """특정 회차 파일을 삭제한다. 이미 없으면 조용히 성공 처리."""
+    path = os.path.join(base_dir, lab_name, f"{session}.json")
+    if os.path.exists(path):
+        os.remove(path)
+    return True
+
+
 def compare_sessions(prev, curr):
     """
     두 회차의 채점 결과를 비교해서 stage별 PASS/FAIL 증감을 계산.

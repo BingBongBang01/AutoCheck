@@ -48,11 +48,13 @@ def pre_flight_check(target_ip, port=22, timeout=3):
 
 def collect_device(name, ip, port, username, password, commands, log_target, log_rel_path, on_update=None,
                     retry_count=3, retry_delay_sec=5, config_snapshot_target=None,
-                    config_snapshot_rel_template=None, key_path=None, key_passphrase=None):
+                    config_snapshot_rel_template=None, key_path=None, key_passphrase=None, run=None):
     """IP/계정은 이미 resolve된 값을 그대로 받는다 — 이 함수는 조회 로직을 모름(관심사 분리).
 
-    파일 저장은 전부 StorageService를 통한다:
-      log_target/log_rel_path         : 원본 로그 1건 저장 위치(raw/<device>.txt 상당)
+    파일 저장:
+      run이 있으면(프로파일 기반 실행) 원본 로그는 LogManager.save_raw_log()로 저장한다
+      (raw/<device>.txt + 체크섬 sidecar까지 LogManager가 책임짐 — 여기서 직접 쓰지 않음).
+      run이 없으면(레거시 폴백 경로) log_target/log_rel_path로 StorageService에 직접 저장한다.
       config_snapshot_target/template : running-config 스냅샷 저장 위치(exports/ 상당,
                                          template은 "...{name}_{date}.txt" 형태로 name/date를 채운다)
     """
@@ -128,7 +130,11 @@ def collect_device(name, ip, port, username, password, commands, log_target, log
 
             log_text = "".join(f"--- {cmd} ---\n{clean_terminal_log(output)}\n\n"
                                 for cmd, output in raw_outputs.items())
-            storage_service.save_text(log_target, log_rel_path, log_text, overwrite=True)
+            if run is not None:
+                from engine.log_manager import log_manager
+                log_manager.save_raw_log(run, name, log_text, overwrite=True)
+            else:
+                storage_service.save_text(log_target, log_rel_path, log_text, overwrite=True)
 
             return name, raw_outputs, None
         except Exception as e:
@@ -182,12 +188,18 @@ def collect_all(inventory_path, lab_name, commands, connection_path="connection.
             print(f"[중단] 사전점검 실패 — {reason}")
             return None, None, None
 
+    run = None
     if customer_name and profile_name:
-        # ProfileManager(-> StorageService)가 runs/<타임스탬프>/ 아래에
-        # raw/masked/parsed/analysis/reports/exports를 전부 만들어준다 — 이번 실행의 산출물은
-        # 전부 이 run 하나에만 쌓여 다른 실행과 절대 섞이지 않는다.
-        from engine.profile_manager import profile_manager
-        run = profile_manager.get_run_handle(customer_name, profile_name)
+        # RunManager가 runs/<Run ID>/ 아래에 raw/masked/parsed/analysis/reports/exports를
+        # 전부 만들고 session.json/metadata.json까지 채운다 — 이번 실행의 산출물과 상태는
+        # 전부 이 run 하나에만 쌓여 다른 실행과 절대 섞이지 않는다. 폴더는 여기서 만들지 않는다.
+        from engine.run_manager import run_manager
+        run = run_manager.create_run(
+            customer_name, profile_name,
+            device_count=len(enabled_devices), command_count=len(commands),
+            platform="arista_eos", execution_mode="ssh_collect",
+        )
+        run_manager.start_run(run)
         session_ts = run.run_id
         log_target, log_rel_prefix = run, "raw"
         config_snapshot_target = run
@@ -209,28 +221,40 @@ def collect_all(inventory_path, lab_name, commands, connection_path="connection.
 
     results, errors = {}, {}
 
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {}
-        for device in enabled_devices:
-            ip, port, username, password = di.resolve_credentials(device, inventory["defaults"])
-            log_rel_path = f"{log_rel_prefix}/{device['name']}.txt" if log_rel_prefix else f"{device['name']}.txt"
-            fut = executor.submit(
-                collect_device, device["name"], ip, port, username, password, commands,
-                log_target, log_rel_path,
-                retry_count=retry_count, retry_delay_sec=retry_delay_sec,
-                config_snapshot_target=config_snapshot_target,
-                config_snapshot_rel_template=config_snapshot_rel_template,
-                key_path=device.get("key_path") if device.get("auth_method") == "public_key" else None,
-                key_passphrase=device.get("key_passphrase") if device.get("auth_method") == "public_key" else None,
-            )
-            futures[fut] = device["name"]
+    try:
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {}
+            for device in enabled_devices:
+                ip, port, username, password = di.resolve_credentials(device, inventory["defaults"])
+                log_rel_path = f"{log_rel_prefix}/{device['name']}.txt" if log_rel_prefix else f"{device['name']}.txt"
+                fut = executor.submit(
+                    collect_device, device["name"], ip, port, username, password, commands,
+                    log_target, log_rel_path,
+                    retry_count=retry_count, retry_delay_sec=retry_delay_sec,
+                    config_snapshot_target=config_snapshot_target,
+                    config_snapshot_rel_template=config_snapshot_rel_template,
+                    key_path=device.get("key_path") if device.get("auth_method") == "public_key" else None,
+                    key_passphrase=device.get("key_passphrase") if device.get("auth_method") == "public_key" else None,
+                    run=run,
+                )
+                futures[fut] = device["name"]
 
-        for future in as_completed(futures):
-            name, output, error = future.result()
-            if error:
-                errors[name] = error
-            else:
-                results[name] = output
+            total = len(futures)
+            done = 0
+            for future in as_completed(futures):
+                name, output, error = future.result()
+                if error:
+                    errors[name] = error
+                else:
+                    results[name] = output
+                done += 1
+                if run is not None:
+                    run_manager.increment_counts(run, success=0 if error else 1, failed=1 if error else 0)
+                    run_manager.update_progress(run, progress=100.0 * done / total if total else 100.0)
+    except Exception as e:
+        if run is not None:
+            run_manager.fail_run(run, reason=str(e))
+        raise
 
     manifest = {
         "lab": lab_name, "session": session_ts,
@@ -248,6 +272,12 @@ def collect_all(inventory_path, lab_name, commands, connection_path="connection.
 
     manifest_rel = f"{log_rel_prefix}/_session_manifest.json" if log_rel_prefix else "_session_manifest.json"
     storage_service.save_json(log_target, manifest_rel, manifest)
+
+    if run is not None:
+        if errors and not results:
+            run_manager.fail_run(run, reason=f"전체 {len(errors)}대 실패")
+        else:
+            run_manager.finish_run(run)
 
     return results, errors, session_dir
 

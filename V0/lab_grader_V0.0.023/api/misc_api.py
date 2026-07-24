@@ -20,31 +20,16 @@ class HistoryApiMixin:
             project_id = self._project()
         except RuntimeError:
             return []
-        import glob, json
-        files = sorted(glob.glob(f"history/{project_id}/*.json"))
-        result = []
-        for fp in files:
-            with open(fp, encoding="utf-8") as f:
-                data = json.load(f)
-            result.append({"session": data["session"], "elapsed_sec": data["elapsed_sec"],
-                           "stage_count": len(data["stages"])})
-        return result
+        from engine.history import list_sessions
+        return list_sessions(project_id)
 
     def get_history(self, session):
-        import json, os
-        project_id = self._project()
-        path = os.path.join('history', project_id, f'{session}.json')
-        if not os.path.exists(path):
-            return None
-        with open(path, encoding='utf-8') as f:
-            return json.load(f)
+        from engine.history import load_session
+        return load_session(self._project(), session)
 
     def delete_history(self, session):
-        import os
-        path = os.path.join('history', self._project(), f'{session}.json')
-        if os.path.exists(path):
-            os.remove(path)
-        return True
+        from engine.history import delete_session
+        return delete_session(self._project(), session)
 
 
 class ArchitectureApiMixin:

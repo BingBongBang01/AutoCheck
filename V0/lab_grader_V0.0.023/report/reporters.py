@@ -65,6 +65,19 @@ class InspectionReporter(BaseReporter):
 register(InspectionReporter())
 
 
+class PdfReporter(BaseReporter):
+    """reportlab 미설치 환경에서는 build()가 None을 반환 — save_docx_report와 동일한 관례."""
+    format_id = "pdf"
+    file_extension = ".pdf"
+
+    def build(self, project_name, scored, ai_result, output_path, root_causes=None):
+        from report.pdf_report import save_pdf_report
+        return save_pdf_report(project_name, scored, ai_result, output_path, root_causes=root_causes)
+
+
+register(PdfReporter())
+
+
 if __name__ == "__main__":
     from report.base_reporter import list_formats, get_reporter
     print("등록된 리포트 형식:", list_formats())

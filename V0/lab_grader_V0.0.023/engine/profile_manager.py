@@ -18,6 +18,7 @@ data/<고객사>/<프로파일>/ 아래에 완전히 독립적인 워크스페�
 """
 import datetime
 import json
+import os
 import shutil
 import uuid
 from dataclasses import dataclass
@@ -119,10 +120,15 @@ class ProfileManager:
             return json.load(f)
 
     @staticmethod
-    def _write_json(path: Path, data):
+    def _write_json(path: Path, data) -> None:
+        """core.storage_service.StorageService와 동일한 원자적 쓰기 방식(임시파일 + os.replace)을
+        쓴다. 예전에는 path.open("w")로 바로 썼는데, 쓰는 도중 프로세스가 죽으면
+        profile.json/settings.json 같은 메타 파일이 잘린 채로 남는 문제가 있었다."""
         path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("w", encoding="utf-8") as f:
+        tmp_path = path.with_name(f".{path.name}.tmp-{uuid.uuid4().hex}")
+        with tmp_path.open("w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp_path, path)
 
     # ---- 폴더 구조 보장/복구 -----------------------------------------------
 
@@ -224,6 +230,21 @@ class ProfileManager:
         pdir = self.profile_dir(customer_name, profile_name)
         if pdir.exists():
             shutil.rmtree(pdir)
+
+    def archive_profile(self, customer_name: str, profile_name: str) -> Path:
+        """프로파일 전체(runs/history/cache 포함)를 고객사 아래 _archived_profiles/<이름>으로
+        옮긴다 — delete_profile()과 달리 되돌릴 수 있다(GUI의 'Archive Profile' 대응).
+        이름 충돌 시 타임스탬프를 붙여 기존 보관본을 덮어쓰지 않는다."""
+        src = self.profile_dir(customer_name, profile_name)
+        if not src.exists():
+            raise FileNotFoundError(f"프로파일이 없습니다: {customer_name}/{profile_name}")
+        archive_root = self.customer_dir(customer_name) / "_archived_profiles"
+        archive_root.mkdir(parents=True, exist_ok=True)
+        dst = archive_root / profile_name
+        if dst.exists():
+            dst = archive_root / f"{profile_name}_{_now().replace(':', '').replace('-', '')}"
+        shutil.move(str(src), str(dst))
+        return dst
 
     def rename_profile(self, customer_name: str, profile_name: str, new_profile_name: str) -> Path:
         new_profile_name = validate_name(new_profile_name)
@@ -346,17 +367,16 @@ class ProfileManager:
     # ---- 실행(run) ------------------------------------------------------------
 
     def create_run(self, customer_name: str, profile_name: str) -> Path:
-        """runs/ 아래 타임스탬프 Run 디렉터리를 새로 만든다. 실제 폴더 생성/session.json·
-        metadata.json 기록은 core.storage_service.StorageService.create_run()에 위임한다
-        (중복 로직 제거 — 폴더 트리를 만드는 코드는 이제 StorageService 한 곳에만 있음).
-        호출부(engine/collector.py 등) 호환을 위해 Path만 반환한다 — RunHandle이 필요하면
-        get_run_handle()을 쓸 것."""
+        """runs/ 아래 Run 디렉터리를 새로 만든다. 실제 폴더 생성/상태 관리는
+        engine.run_manager.RunManager에 위임한다(중복 로직 제거 — Run의 생명주기를 아는 코드는
+        이제 RunManager 한 곳에만 있음). 호출부(레거시 호환) 편의를 위해 Path만 반환한다 —
+        RunHandle이 필요하면 get_run_handle()을, 진행률/상태 갱신이 필요하면
+        engine.run_manager.run_manager를 직접 쓸 것."""
         return self.get_run_handle(customer_name, profile_name).path
 
     def get_run_handle(self, customer_name: str, profile_name: str) -> "RunHandle":
-        from core.storage_service import storage_service
-        profile = self.get_profile(customer_name, profile_name)
-        return storage_service.create_run(profile)
+        from engine.run_manager import run_manager
+        return run_manager.create_run(customer_name, profile_name)
 
     def list_runs(self, customer_name: str, profile_name: str) -> list:
         runs_dir = self.profile_dir(customer_name, profile_name) / "runs"

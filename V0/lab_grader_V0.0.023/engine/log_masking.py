@@ -94,10 +94,39 @@ MASK_RULES = {
         "group": ("kw1", "kw2", "fqdn"),
         "delimiters": ".",
     },
+    # 아래 4종은 LogManager(engine/log_manager.py)의 masked/ 산출물 요구사항(SNMP community,
+    # Secrets/API Key/Token, Private Key)을 채우기 위해 추가됐다 — 기존 8종의 순서/동작은
+    # 그대로 두고 MASK_KEY_ORDER 뒤에만 덧붙여 하위 호환을 유지한다.
+    "snmp_community": {
+        "label": "SNMP Community",
+        "pattern": re.compile(r"(?:snmp-server\s+community|community-string)\s+(\S+)", re.IGNORECASE),
+        "group": 1,
+        "delimiters": "",
+    },
+    "secret_token": {
+        "label": "Secrets / API Key / Token",
+        "pattern": re.compile(
+            r"(?:api[_-]?key|apikey|access[_-]?token|auth[_-]?token|bearer)\s*[:=]?\s+(\S+)",
+            re.IGNORECASE,
+        ),
+        "group": 1,
+        "delimiters": "",
+    },
+    "private_key": {
+        "label": "Private Key",
+        # PEM 블록 전체(헤더/바디/푸터)를 통째로 마스킹 — 줄바꿈만 보존해서 블록이
+        # 있었다는 사실은 남기고 내용은 전부 가린다.
+        "pattern": re.compile(
+            r"-----BEGIN (?:RSA |EC |OPENSSH |DSA |)PRIVATE KEY-----[\s\S]+?"
+            r"-----END (?:RSA |EC |OPENSSH |DSA |)PRIVATE KEY-----"
+        ),
+        "delimiters": "\n",
+    },
 }
 
 MASK_KEY_ORDER = ["ip_address", "mac_address", "password_hash", "account_name",
-                  "device_hostname", "os_version", "vlan_name", "domain_name"]
+                  "device_hostname", "os_version", "vlan_name", "domain_name",
+                  "snmp_community", "secret_token", "private_key"]
 
 # hostname 선언에서 실제 장비명을 뽑아내는 패턴 — "hostname X" 설정 줄뿐 아니라
 # running-config 맨 위 주석("! device: X (...)")에도 같은 장비명이 나온다.
@@ -160,11 +189,31 @@ def _mask_hostname_everywhere(text):
     return text
 
 
-def apply_masking(text, selected_keys):
-    """selected_keys에 있는 규칙만, 정의 순서대로 순차 적용."""
-    for key in MASK_KEY_ORDER:
-        if key in selected_keys and key in MASK_RULES:
-            text = _apply_rule(text, MASK_RULES[key])
+def _compile_custom_rule(rule: dict) -> dict:
+    """JSON에서 온 사용자 정의 규칙({"pattern": "정규식 문자열", "group": ..., "delimiters": ...})을
+    compile된 patttern을 쓰는 내부 규칙 형태로 변환한다. 이미 컴파일된 pattern이면 그대로 둔다."""
+    pattern = rule.get("pattern")
+    if isinstance(pattern, str):
+        rule = {**rule, "pattern": re.compile(pattern, re.IGNORECASE if rule.get("ignorecase", True) else 0)}
+    return rule
+
+
+def apply_masking(text, selected_keys, extra_rules: dict = None):
+    """selected_keys에 있는 규칙만, 정의 순서대로 순차 적용.
+    extra_rules: LogManager가 프로파일별 설정(settings.json의 masking_rules 등)에서 읽어온
+    사용자 정의 규칙 {key: {"label","pattern"(str/regex),"group","delimiters"}} — 내장 8+3종을
+    건드리지 않고 그 뒤에 이어 붙여 적용한다(설정 가능한 마스킹 규칙 요구사항)."""
+    order = list(MASK_KEY_ORDER)
+    rules = MASK_RULES
+    if extra_rules:
+        rules = dict(MASK_RULES)
+        for key, rule in extra_rules.items():
+            rules[key] = _compile_custom_rule(rule)
+            if key not in order:
+                order.append(key)
+    for key in order:
+        if key in selected_keys and key in rules:
+            text = _apply_rule(text, rules[key])
     if "device_hostname" in selected_keys:
         text = _mask_hostname_everywhere(text)
     return text

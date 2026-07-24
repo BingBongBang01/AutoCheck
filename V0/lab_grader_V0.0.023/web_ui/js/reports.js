@@ -131,12 +131,6 @@ async function renderRawLogReportSection(content) {
   });
 }
 
-// ===== "Export to Excel" 전용 토스트 — flashSaved()는 고정 문구('저장됨'/'저장 실패')라 재사용 불가 =====
-function showReportToast(message, tone = 'success') {
-  const color = tone === 'error' ? 'var(--critical)' : (tone === 'warn' ? 'var(--warning)' : 'var(--success)');
-  const el = document.createElement('div');
-  el.textContent = message;
-  el.style.cssText = `position:fixed;bottom:40px;right:24px;background:${color};color:#0B1220;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;z-index:999;transition:opacity 300ms;`;
-  document.body.appendChild(el);
-  setTimeout(() => { el.style.opacity = 0; setTimeout(() => el.remove(), 300); }, 1800);
-}
+// showReportToast는 core.js의 공용 showToast()로 옮겨졌다 — 이름만 남겨 하위 호환 유지
+// (다른 곳에서 showReportToast(...)로 부르던 코드를 안 건드리기 위한 얇은 별칭).
+const showReportToast = showToast;
