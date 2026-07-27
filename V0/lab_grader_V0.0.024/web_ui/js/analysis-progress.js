@@ -92,3 +92,41 @@ async function pollAnalysisJobs() {
 
 setInterval(pollAnalysisJobs, 1000);
 pollAnalysisJobs();
+
+let currentGradeJobId = null;
+
+async function pollGradeJob() {
+  const snap = await call('get_grade_progress', currentGradeJobId);
+  const wrap = document.getElementById('sb-grade-progress');
+  if (!snap || snap.status === 'no_job') {
+    if (wrap) wrap.style.display = 'none';
+    return;
+  }
+
+  // Update current job id if we didn't specify one but got one back
+  if (!currentGradeJobId && snap.job_id) {
+    currentGradeJobId = snap.job_id;
+  }
+
+  if (wrap) {
+    wrap.style.display = 'flex';
+    const pct = snap.device_total > 0 ? Math.min(100, Math.round((snap.devices_completed / snap.device_total) * 100)) : 0;
+    
+    document.getElementById('sb-grade-label').textContent = 
+      `채점 진행 중 (${snap.devices_completed}/${snap.device_total})`;
+    document.getElementById('sb-grade-bar').style.width = pct + '%';
+    document.getElementById('sb-grade-time').textContent = 
+      `경과 ${formatDuration(snap.elapsed_sec)} / 남은 ${formatDuration(snap.remaining_sec)}`;
+
+    // Auto-hide when complete
+    if (snap.devices_completed >= snap.device_total && snap.device_total > 0) {
+      setTimeout(() => {
+        wrap.style.display = 'none';
+        currentGradeJobId = null;
+      }, 3000); // hide after 3 seconds
+    }
+  }
+}
+
+setInterval(pollGradeJob, 1000);
+pollGradeJob();

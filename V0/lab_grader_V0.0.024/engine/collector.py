@@ -250,11 +250,11 @@ def collect_all(inventory_path, lab_name, commands, connection_path="connection.
 
     # Worker Pool: 장비 단위 병렬 수집(설정 가능한 max_workers), 장비 하나 안의 커맨드는
     # collect_device 내부에서 순차 실행(SSH 세션 stateful이라 병렬화 안 함).
-    job_id = session_ts
+    actual_job_id = job_id if job_id else session_ts
     device_names = [d["name"] for d in enabled_devices]
-    progress = progress_engine.get_or_create(job_id, device_names, commands_per_device=len(commands))
+    progress = progress_engine.get_or_create(actual_job_id, device_names, commands_per_device=len(commands))
     pool = WorkerPool(max_workers=max_workers, item_count=len(enabled_devices))
-    event_bus.publish("collector.started", {"job_id": job_id, "device_count": len(enabled_devices)})
+    event_bus.publish("collector.started", {"job_id": actual_job_id, "device_count": len(enabled_devices)})
 
     jobs = {}
     for device in enabled_devices:
@@ -267,7 +267,7 @@ def collect_all(inventory_path, lab_name, commands, connection_path="connection.
             config_snapshot_rel_template=config_snapshot_rel_template,
             key_path=device.get("key_path") if device.get("auth_method") == "public_key" else None,
             key_passphrase=device.get("key_passphrase") if device.get("auth_method") == "public_key" else None,
-            run=run, job_id=job_id, progress=progress,
+            run=run, job_id=actual_job_id, progress=progress,
         ))
 
     try:
@@ -285,10 +285,10 @@ def collect_all(inventory_path, lab_name, commands, connection_path="connection.
     except Exception as e:
         if run is not None:
             run_manager.fail_run(run, reason=str(e))
-        event_bus.publish("collector.failed", {"job_id": job_id, "error": str(e)})
+        event_bus.publish("collector.failed", {"job_id": actual_job_id, "error": str(e)})
         raise
 
-    event_bus.publish("collector.completed", {"job_id": job_id, "success": list(results.keys()), "failed": list(errors.keys())})
+    event_bus.publish("collector.completed", {"job_id": actual_job_id, "success": list(results.keys()), "failed": list(errors.keys())})
 
     manifest = {
         "lab": lab_name, "session": session_ts,

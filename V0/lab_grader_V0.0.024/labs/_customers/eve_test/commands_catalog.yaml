@@ -184,3 +184,9 @@
   command: show interfaces description
   description: 포트 라벨 확인
   enabled: true
+- id: custom_3
+  category: custom
+  check_id: null
+  command: show lldp neighbors
+  description: (설명 없음)
+  enabled: true

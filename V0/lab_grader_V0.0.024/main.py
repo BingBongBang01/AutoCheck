@@ -132,22 +132,29 @@ def grade(collect_fn):
     return scored
 
 
-def grade_via_pipeline(collect_fn):
+def grade_via_pipeline(collect_fn, job_id=None):
     """
     grade()의 Pipeline 버전 — main.py가 Stage 이름을 직접 호출하던 방식(OCP 위반)을
     PipelineStep 리스트로 대체. 기존 grade()는 회귀비교용으로 그대로 남겨둠.
     """
     from pipeline.pipeline import Pipeline
-    from pipeline.steps import (CollectorStep, ParserStep, RuleEngineStep, ScorerStep,
+    from pipeline.steps import (CollectorStep, ParserStep, RuleEngineStep, ScorerStep, DefaultParser,
                                   ScoreboardPrintStep, HistoryStep, AlarmStep, AIAnalysisStep, ReportStep)
+    from pipeline.base import AbstractCollector
     from core.context import ProjectContext, SessionContext
     import datetime
+
+    class CallbackCollector(AbstractCollector):
+        def __init__(self, fn):
+            self.fn = fn
+        def collect(self):
+            return self.fn()
 
     target_state, stages_cfg = load_lab_config()
     project_meta = load_project_meta(LAB_NAME)
     project_ctx = ProjectContext(project_id=LAB_NAME, mode=project_meta["mode"], meta=project_meta,
                                  paths={"target_state": str(LAB_DIR / "target_state.yaml")})
-    session_id = datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    session_id = job_id if job_id else datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")
     session_ctx = SessionContext(project=project_ctx, session_id=session_id)
 
     # 장비별 벤더 매핑 — device_inventory.yaml의 vendor 필드를 그대로 ParserStep에 전달해
@@ -162,8 +169,8 @@ def grade_via_pipeline(collect_fn):
                 device_vendors[d["name"]] = d["vendor"].lower()
 
     pipeline = Pipeline([
-        CollectorStep(collect_fn),
-        ParserStep(device_vendors=device_vendors),
+        CollectorStep(CallbackCollector(collect_fn)),
+        ParserStep(DefaultParser(device_vendors=device_vendors)),
         RuleEngineStep(target_state),
         ScorerStep(stages_cfg),
         ScoreboardPrintStep(),
@@ -187,7 +194,7 @@ def get_all_commands(stages_cfg):
     return seen
 
 
-def real_collect(customer_name=None, profile_name=None):
+def real_collect(customer_name=None, profile_name=None, job_id=None):
     from engine.collector import collect_all
     from engine.command_catalog import load_catalog, get_enabled_commands
     from engine.project_manager import project_paths
@@ -221,7 +228,7 @@ def real_collect(customer_name=None, profile_name=None):
 
     # Device Inventory에서 enabled 장비만 대상으로 수집 — IP는 collector가 직접 안 다룸
     results, errors, session_dir = collect_all(paths["device_inventory"], LAB_NAME, commands,
-                                                customer_name=customer_name, profile_name=profile_name)
+                                                customer_name=customer_name, profile_name=profile_name, job_id=job_id)
     if results is None:
         return None
     if errors:

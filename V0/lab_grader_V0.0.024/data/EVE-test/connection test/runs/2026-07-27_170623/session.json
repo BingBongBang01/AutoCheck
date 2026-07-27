@@ -1,0 +1,15 @@
+{
+  "run_id": "2026-07-27_170623",
+  "customer": "EVE-test",
+  "profile": "connection test",
+  "start_time": "2026-07-27T17:06:23",
+  "end_time": "2026-07-27T17:07:06",
+  "duration_sec": 43.0,
+  "status": "FAILED",
+  "progress": 100.0,
+  "success_count": 0,
+  "failed_count": 7,
+  "skipped_count": 0,
+  "user": "USER",
+  "app_version": "0.0.023"
+}

@@ -54,6 +54,13 @@
       </div>
       <span id="sb-analysis-time" style="font-size:11px;color:var(--sub);white-space:nowrap;"></span>
     </div>
+    <div id="sb-grade-progress" style="display:none;flex:1;align-items:center;gap:8px;min-width:0;margin-left:16px;border-left:1px solid var(--border);padding-left:16px;">
+      <span id="sb-grade-label" style="font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></span>
+      <div style="width:140px;flex:0 0 140px;height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+        <div id="sb-grade-bar" style="height:100%;width:0%;background:var(--success);transition:width .25s;"></div>
+      </div>
+      <span id="sb-grade-time" style="font-size:11px;color:var(--sub);white-space:nowrap;"></span>
+    </div>
     <span style="flex:1"></span>
     <span id="sb-clock"></span>
   </div>

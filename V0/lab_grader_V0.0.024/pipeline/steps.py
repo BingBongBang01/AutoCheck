@@ -31,6 +31,8 @@ except ImportError:
     from core.structured_log import log_event as slog_event
 
 
+from pipeline.base import AbstractCollector, AbstractParser
+
 # check_id -> collected dict 키. registry에 등록된 stage들의 collected_key와 1:1로 맞춰,
 # ParserStep이 어떤 stage 데이터를 만드는지 rule_engine/registry.py 한 곳만 보면 알 수 있게 한다.
 _CHECK_ID_TO_COLLECTED_KEY = {
@@ -42,16 +44,57 @@ _CHECK_ID_TO_COLLECTED_KEY = {
 class CollectorStep(PipelineStep):
     name = "collector"
 
-    def __init__(self, collect_fn):
-        self.collect_fn = collect_fn
+    def __init__(self, collector: AbstractCollector):
+        self.collector = collector
 
     def run(self, ctx):
         started = time.time()
-        raw = self.collect_fn()
+        raw = self.collector.collect()
         ctx.raw_by_device = raw
         ctx.data["collect_elapsed"] = time.time() - started
         return ctx
 
+
+class DefaultParser(AbstractParser):
+    def __init__(self, device_vendors=None, default_vendor="arista"):
+        self.device_vendors = device_vendors or {}
+        self.default_vendor = default_vendor
+
+    def _vendor_for(self, device):
+        return self.device_vendors.get(device, self.default_vendor)
+
+    def parse(self, raw_by_device):
+        collected_vlan, collected_stp = {}, {}
+        collected_extended = {key: {} for key in set(_CHECK_ID_TO_COLLECTED_KEY.values())}
+        parsed_count, skipped_count = 0, 0
+
+        for device, cmds in raw_by_device.items():
+            vendor = self._vendor_for(device)
+            driver = get_driver(vendor)
+            reverse_map = driver.reverse_command_map()
+            for cmd_text, raw in cmds.items():
+                check_id = reverse_map.get(cmd_text)
+                if check_id is None:
+                    continue
+                parsed = parse_cached(vendor, check_id, raw)
+                if parsed is None:
+                    skipped_count += 1
+                    continue
+                parsed_count += 1
+                if check_id == "vlan_status":
+                    collected_vlan[device] = parsed
+                elif check_id == "stp_status":
+                    collected_stp[device] = parsed
+                elif check_id in _CHECK_ID_TO_COLLECTED_KEY:
+                    collected_extended[_CHECK_ID_TO_COLLECTED_KEY[check_id]][device] = parsed
+
+        return {
+            "collected_vlan": collected_vlan,
+            "collected_stp": collected_stp,
+            "collected_extended": collected_extended,
+            "parsed_count": parsed_count,
+            "skipped_count": skipped_count
+        }
 
 class ParserStep(PipelineStep):
     """
@@ -64,45 +107,23 @@ class ParserStep(PipelineStep):
     """
     name = "parser"
 
-    def __init__(self, device_vendors=None, default_vendor="arista"):
-        self.device_vendors = device_vendors or {}
-        self.default_vendor = default_vendor
-
-    def _vendor_for(self, device):
-        return self.device_vendors.get(device, self.default_vendor)
+    def __init__(self, parser: AbstractParser):
+        self.parser = parser
 
     def run(self, ctx):
         if ctx.raw_by_device is None:
             return ctx  # 수집 실패 — 뒤 스텝들이 각자 None 체크
 
         started = time.time()
-        collected_vlan, collected_stp = {}, {}
-        collected_extended = {key: {} for key in set(_CHECK_ID_TO_COLLECTED_KEY.values())}
-        parsed_count, skipped_count = 0, 0
-
-        for device, cmds in ctx.raw_by_device.items():
-            vendor = self._vendor_for(device)
-            driver = get_driver(vendor)
-            reverse_map = driver.reverse_command_map()
-            for cmd_text, raw in cmds.items():
-                check_id = reverse_map.get(cmd_text)
-                if check_id is None:
-                    continue
-                parsed = parse_cached(vendor, check_id, raw)
-                if parsed is None:
-                    skipped_count += 1
-                    continue  # 이 (vendor, check_id) 조합의 파서가 아직 등록 안 됨
-                parsed_count += 1
-                if check_id == "vlan_status":
-                    collected_vlan[device] = parsed
-                elif check_id == "stp_status":
-                    collected_stp[device] = parsed
-                elif check_id in _CHECK_ID_TO_COLLECTED_KEY:
-                    collected_extended[_CHECK_ID_TO_COLLECTED_KEY[check_id]][device] = parsed
-
-        ctx.data["collected_vlan"] = collected_vlan
-        ctx.data["collected_stp"] = collected_stp
-        ctx.data["collected_extended"] = collected_extended
+        parsed_data = self.parser.parse(ctx.raw_by_device)
+        
+        ctx.data["collected_vlan"] = parsed_data.get("collected_vlan", {})
+        ctx.data["collected_stp"] = parsed_data.get("collected_stp", {})
+        ctx.data["collected_extended"] = parsed_data.get("collected_extended", {})
+        
+        parsed_count = parsed_data.get("parsed_count", 0)
+        skipped_count = parsed_data.get("skipped_count", 0)
+        
         slog_event("parser", "parse_step", job_id=ctx.session_id,
                    duration_ms=round((time.time() - started) * 1000, 1),
                    message=f"parsed={parsed_count} skipped(파서 미등록)={skipped_count} devices={len(ctx.raw_by_device)}")
@@ -174,7 +195,16 @@ class ScoreboardPrintStep(PipelineStep):
             return ctx
         elapsed = ctx.data.get("collect_elapsed", 0.0)
         ctx.elapsed_sec = elapsed
-        print_scoreboard(ctx.scored, session_label=f"(Pipeline 실행, {elapsed:.1f}초 소요)")
+        
+        try:
+            from report.text_renderer import render_text_report
+            if getattr(ctx, "findings", None):
+                print(render_text_report(ctx.findings))
+            else:
+                print_scoreboard(ctx.scored, session_label=f"(Pipeline 실행, {elapsed:.1f}초 소요)")
+        except ImportError:
+            print_scoreboard(ctx.scored, session_label=f"(Pipeline 실행, {elapsed:.1f}초 소요)")
+            
         return ctx
 
 

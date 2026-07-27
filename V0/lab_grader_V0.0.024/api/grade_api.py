@@ -61,10 +61,10 @@ class GradeApiMixin:
 
         def _grade_job(job):
             try:
-                collect_fn = lambda: main_module.real_collect(customer_name, profile_name)
+                collect_fn = lambda: main_module.real_collect(customer_name, profile_name, job_id=job.job_id)
                 buf = io.StringIO()
                 with contextlib.redirect_stdout(buf):
-                    result_ctx = main_module.grade_via_pipeline(collect_fn)
+                    result_ctx = main_module.grade_via_pipeline(collect_fn, job_id=job.job_id)
 
                 if customer_name and profile_name:
                     from engine.run_manager import run_manager

@@ -1,0 +1,65 @@
+{
+  "phase": 3,
+  "title": "Parser Plugin System / Parser Cache / Rule Plugin System",
+  "status": "complete",
+  "summary": "CLI -> Structured Data -> Rule Engine is now fully plugin-driven. ParserStep no longer hardcodes CLI-text matching or vendor assumptions; it resolves check_id via VendorDriver.reverse_command_map() and dispatches to plugins/parsers/registry.py, cached by content hash. RuleEngineStep's extended stages are driven by rule_engine/registry.py instead of a hardcoded stage_map, and now include NTP and SNMP.",
+  "changes": [
+    {
+      "component": "Parser Plugin System",
+      "before": "pipeline/steps.py::ParserStep matched raw CLI text with hardcoded cmd_text.startswith(...) chains, wired only to Arista-shaped output. plugins/parsers/registry.py existed but was never called from the real pipeline (dead code, only used to display a status list in api/analysis_api.py).",
+      "after": "ParserStep now: (1) resolves each device's vendor via a device_vendors map (loaded from device_inventory.yaml in main.py, default 'arista'); (2) gets that vendor's VendorDriver (plugins/vendors/*.py) and asks it for a reverse_command_map() (CLI string -> check_id); (3) looks up check_id -> parsed result via plugins/parsers/registry.py (through the new cache layer). Adding a vendor now only requires a new plugins/vendors/<vendor>.py + registering its parsers in plugins/parsers/registry.py -- pipeline/steps.py is untouched.",
+      "files": [
+        "pipeline/steps.py",
+        "plugins/vendors/base.py (added VendorDriver.reverse_command_map())",
+        "plugins/parsers/registry.py (added ntp_status/snmp_status registrations)"
+      ],
+      "ssh_boundary_verified": "Confirmed: no parser module (parsers/*.py, plugins/parsers/*.py) imports netmiko/paramiko or opens a connection. The only SSH/netmiko usage in the codebase remains engine/collector.py. ParserStep receives raw text already collected by CollectorStep and never touches the network."
+    },
+    {
+      "component": "Parser Cache",
+      "before": "Not implemented. No hashing, no memoization, no cache module existed anywhere in the codebase.",
+      "after": "New module plugins/parsers/cache.py: parse_cached(vendor, check_id, raw_text) computes a sha256 hash of raw_text as part of the cache key (vendor, check_id, hash) and returns the memoized parse result on a repeat hash instead of re-invoking the parser function. Exposes cache_stats() (hits/misses) and clear_cache() for verification/testing. Wired directly into ParserStep -- every parse call in the real pipeline goes through this cache.",
+      "files": ["plugins/parsers/cache.py"],
+      "validated": "Manually verified: parsing the identical 'show vlan brief' output for two different devices in the same run produced 1 cache hit / 3 misses (3 distinct CLI payloads across 2 devices, one payload repeated) via cache_stats()."
+    },
+    {
+      "component": "Rule Plugin System",
+      "before": "rule_engine/rules.py::run_extended_stage_rules had a hardcoded stage_map list of 5 tuples (LACP/MLAG/OSPF/VRRP/ACL). Adding a new rule required editing this function directly. NTP and SNMP were not implemented at all, despite being named in the Phase 3 goal and already present as VendorDriver command_for() entries.",
+      "after": "New rule_engine/registry.py (register/get/list_registered, mirroring the existing plugins/vendors/base.py pattern) maps stage_id -> {category, compare_fn, collected_key}. run_extended_stage_rules now just iterates rule_registry.list_registered() -- no stage names hardcoded in rules.py. Added NTP and SNMP as full new rule plugins: parsers/show_ntp.py, parsers/show_snmp.py, engine/comparators/ntp.py, engine/comparators/snmp.py, registered in both plugins/parsers/registry.py and rule_engine/registry.py.",
+      "files": [
+        "rule_engine/registry.py (new)",
+        "rule_engine/rules.py",
+        "parsers/show_ntp.py (new)",
+        "parsers/show_snmp.py (new)",
+        "engine/comparators/ntp.py (new)",
+        "engine/comparators/snmp.py (new)",
+        "engine/comparator.py (re-export)",
+        "plugins/vendors/arista.py / cisco.py (added snmp_status command mapping; ntp_status already existed)"
+      ],
+      "input_contract_verified": "Confirmed: compare_*_stage functions (engine/comparators/*.py) only ever receive already-parsed dicts/lists (e.g. collected_ntp = {device: {...}}), never raw CLI text. No comparator imports parsers/*.py's regex-parsing code."
+    },
+    {
+      "component": "ParsedDevice",
+      "before": "No unified structured-device type existed; parsers returned ad-hoc per-check dicts stored in separate collected_vlan/collected_stp/collected_extended dicts.",
+      "after": "Added core/parsed_device.py::ParsedDevice (name, vendor, checks: dict) as the formal structured-data contract mentioned in the CLI -> Structured Data -> Rule Engine flow. Existing collected_* dicts remain the actual data-passing mechanism between ParserStep and RuleEngineStep (changing that wiring further was out of scope for this pass to avoid destabilizing the working comparator/scorer contract)."
+    }
+  ],
+  "validation": {
+    "independent_parsers": "plugins/parsers/registry.py holds 19 registered (vendor, check_id) parser entries for arista, keyed independently of any SSH/collector code. plugins/vendors/{arista,cisco}.py independently define per-vendor CLI command maps (cisco parser registrations are a follow-up -- see gaps below).",
+    "independent_rules": "rule_engine/registry.py holds 7 registered stage plugins (LACP, MLAG, OSPF, VRRP, ACL, NTP, SNMP), each an independent (category, compare_fn, collected_key) entry added without modifying run_extended_stage_rules.",
+    "cache_working": "Verified via direct test: identical CLI text hashes to the same cache key and returns the memoized result without re-invoking the parser (see cache_stats() results above).",
+    "plugin_architecture_complete": true,
+    "manual_tests_run": [
+      "plugins.parsers.registry.list_registered() -> 19 entries",
+      "rule_engine.registry.list_registered() -> 7 entries",
+      "ParserStep.run() against a 2-device mock raw_by_device correctly split vlan/ntp/snmp into the right collected_* buckets and hit the cache on a repeated payload",
+      "run_extended_stage_rules() correctly produced PASS findings for mock NTP/SNMP target_state checks"
+    ]
+  },
+  "known_gaps": [
+    "Only 'arista' has registered parser functions in plugins/parsers/registry.py. plugins/vendors/cisco.py defines CLI command mappings but no corresponding parsers are registered for 'cisco' yet -- devices marked vendor: cisco in device_inventory.yaml will silently produce no structured data for any check_id today (ParserStep.parse_cached returns None and skips).",
+    "ParsedDevice (core/parsed_device.py) is defined but not yet the actual data-passing type between ParserStep and RuleEngineStep -- collected_vlan/collected_stp/collected_extended dicts remain the live contract, to avoid a larger breaking change to engine/comparators/*.py and engine/scorer.py in this pass.",
+    "Parser cache is in-memory/per-process only (no persistence across runs) -- acceptable for the 'don't parse identical CLI twice within a run' requirement, but a long-running service restart clears it.",
+    "report/textfsm_parsers/*.py remains a separate, uncoordinated parsing path used only by report/textfsm_parser.py for report generation -- out of scope for this refactor."
+  ]
+}

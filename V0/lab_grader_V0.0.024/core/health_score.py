@@ -10,7 +10,12 @@ Health Score — Finding severity에 따라 100점에서 감점하는 방식.
 (문서 예시: CPU -5, CRC -10, Power -30, Fan -20, License -5 처럼 check마다 감점폭이 다름).
 """
 
-# severity별 기본 감점 — check_id별 override가 없을 때 쓰는 안전한 기본값
+import os
+import yaml
+
+# severity별 기본 감점 및 check_id별 감점 override를 로드한다.
+# 파일이 없으면 기본값을 사용.
+_SCORING_CONFIG = None
 DEFAULT_DEDUCTION_BY_SEVERITY = {
     "Critical": 30,
     "High": 15,
@@ -18,17 +23,21 @@ DEFAULT_DEDUCTION_BY_SEVERITY = {
     "Low": 2,
     "Info": 0,
 }
+CHECK_ID_DEDUCTION_OVERRIDES = {}
 
-# check_id별 감점 override — 문서에 나온 실제 예시 그대로 반영.
-# 여기 없는 check_id는 severity 기본값으로 자동 폴백.
-CHECK_ID_DEDUCTION_OVERRIDES = {
-    "cpu_usage": 5,
-    "interface_errors": 10,     # CRC 등
-    "power_status": 30,
-    "cooling_status": 20,       # Fan
-    # license/EoS 관련 check_id는 아직 파서가 없어 미리 자리만 예약
-    "license_status": 5,
-}
+def _load_config():
+    global _SCORING_CONFIG, DEFAULT_DEDUCTION_BY_SEVERITY, CHECK_ID_DEDUCTION_OVERRIDES
+    if _SCORING_CONFIG is not None:
+        return
+    config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "rule_engine", "scoring_config.yaml")
+    if os.path.exists(config_path):
+        with open(config_path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f)
+            if cfg:
+                DEFAULT_DEDUCTION_BY_SEVERITY = cfg.get("default_severities", DEFAULT_DEDUCTION_BY_SEVERITY)
+                overrides = cfg.get("check_overrides", {})
+                CHECK_ID_DEDUCTION_OVERRIDES = {k: v.get("deduction", 0) for k, v in overrides.items()}
+    _SCORING_CONFIG = True
 
 MIN_SCORE = 0
 MAX_SCORE = 100
@@ -41,6 +50,7 @@ def _get(finding, key):
 
 def deduction_for(finding):
     """단일 Finding의 감점폭. PASS/SKIPPED는 감점 없음."""
+    _load_config()
     result = _get(finding, "result")
     if result not in ("FAIL", "UNKNOWN"):
         return 0

@@ -96,11 +96,29 @@ class Finding:
         기존 코드(comparator.py)는 안 건드림 — 이 함수가 어댑터 역할만 함.
         """
         result = verdict["result"]
-        sev = severity or _DEFAULT_SEVERITY_MAP.get(result, SEVERITY_INFO)
+        check_id = verdict["check"]
+        sev = severity
+        if not sev:
+            # 설정 파일에서 override된 severity가 있는지 확인
+            try:
+                from core.health_score import _load_config, CHECK_ID_DEDUCTION_OVERRIDES
+                import yaml
+                import os
+                config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "rule_engine", "scoring_config.yaml")
+                if os.path.exists(config_path):
+                    with open(config_path, "r", encoding="utf-8") as f:
+                        cfg = yaml.safe_load(f)
+                        if cfg and "check_overrides" in cfg and check_id in cfg["check_overrides"]:
+                            sev = cfg["check_overrides"][check_id].get("severity")
+            except Exception:
+                pass
+            if not sev:
+                sev = _DEFAULT_SEVERITY_MAP.get(result, SEVERITY_INFO)
+                
         return cls(
             project_id=project_id, session_id=session_id,
             device=verdict.get("device", "-"), category=category,
-            check_id=verdict["check"], result=result, severity=sev,
+            check_id=check_id, result=result, severity=sev,
             evidence=str(verdict.get("actual", "")),
             expected=verdict.get("expected"), actual=verdict.get("actual"),
             source=SOURCE_RULE,
