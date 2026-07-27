@@ -75,26 +75,25 @@ async function renderConnection() {
   document.getElementById('btn-term-view-tabs').addEventListener('click', () => { termViewMode = 'tabs'; renderTermArea(); });
   document.getElementById('btn-term-view-split').addEventListener('click', () => { termViewMode = 'split'; renderTermArea(); });
   document.getElementById('btn-term-auto-rename').addEventListener('click', async () => {
-    if (!termActiveId) {
-      alert("포커스된 터미널 세션이 없습니다.");
-      return;
-    }
-    const res = await call('auto_rename_device_from_session', termActiveId);
-    if (!res) {
-      alert("API 호출 오류가 발생했습니다.");
-    } else if (!res.success) {
-      alert(res.error || "이름 갱신에 실패했습니다.");
-    } else {
-      // 프론트엔드 상태 갱신
-      knownDeviceNames.delete(res.old_name);
-      knownDeviceNames.add(res.new_name);
-      if (selectedDeviceNames.has(res.old_name)) {
-        selectedDeviceNames.delete(res.old_name);
-        selectedDeviceNames.add(res.new_name);
+    const okSessions = termSessions.filter(s => s.ok);
+    if (!okSessions.length) return;
+    
+    let changed = false;
+    for (const s of okSessions) {
+      const res = await call('auto_rename_device_from_session', s.session_id);
+      if (res && res.success) {
+        knownDeviceNames.delete(res.old_name);
+        knownDeviceNames.add(res.new_name);
+        if (selectedDeviceNames.has(res.old_name)) {
+          selectedDeviceNames.delete(res.old_name);
+          selectedDeviceNames.add(res.new_name);
+        }
+        s.device = res.new_name;
+        changed = true;
       }
-      const session = termSessions.find(s => s.session_id === termActiveId);
-      if (session) session.device = res.new_name;
-      alert(`성공: '${res.old_name}' 장비의 이름이 '${res.new_name}'(으)로 갱신되었습니다.`);
+    }
+    
+    if (changed) {
       navigate('connection'); // 화면 갱신
     }
   });

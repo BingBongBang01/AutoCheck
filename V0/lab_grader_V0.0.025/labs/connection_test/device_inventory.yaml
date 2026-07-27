@@ -8,7 +8,7 @@ defaults:
     start: 101
     end: 107
 devices:
-- name: AUTO-101
+- name: Core1
   role: ''
   management_ip: 192.168.205.101
   ssh_port: 22
