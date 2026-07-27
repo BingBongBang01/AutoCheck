@@ -21,9 +21,9 @@ from core.ansi_sanitizer import strip_ansi
 # 커맨드 출력 끝에서 프롬프트로 복귀했는지 확인하는 패턴(벤더 무관 일반화):
 # 줄 시작에 호스트명/디바이스명, 선택적으로 (config)/(config-if) 등의 모드 표시,
 # 마지막에 #(enable) 또는 >(user) — 그 뒤로는 공백만 있고 그게 버퍼의 끝이어야 함.
-_PROMPT_TAIL_RE = re.compile(r"[\r\n]\s*[\w][\w.\-]*(?:\([^\r\n)]{0,40}\))?[#>]\s*$")
+_PROMPT_TAIL_RE = re.compile(r"[\r\n]\s*([\w][\w.\-]*)(?:\([^\r\n)]{0,40}\))?[#>]\s*$")
 
-_sessions = {}   # session_id -> dict(client, channel, device, buffer, read_lock, connected, error)
+_sessions = {}   # session_id -> dict(client, channel, device, buffer, read_lock, connected, error, accumulated_tail, last_hostname)
 _sessions_lock = threading.Lock()
 
 
@@ -65,6 +65,7 @@ def _open_session(session_id, target):
             _sessions[session_id] = {
                 "client": client, "channel": channel, "device": target["name"],
                 "buffer": [], "read_lock": threading.Lock(), "connected": True, "error": None,
+                "accumulated_tail": "", "last_hostname": None,
             }
         threading.Thread(target=_reader_loop, args=(session_id,), daemon=True).start()
         return True, None
@@ -87,6 +88,10 @@ def _reader_loop(session_id):
                 data = channel.recv(4096).decode("utf-8", errors="replace")
                 with sess["read_lock"]:
                     sess["buffer"].append(data)
+                    sess["accumulated_tail"] = (sess["accumulated_tail"] + data)[-400:]
+                    match = _PROMPT_TAIL_RE.search(strip_ansi(sess["accumulated_tail"]))
+                    if match:
+                        sess["last_hostname"] = match.group(1)
             else:
                 time.sleep(0.05)
         except (OSError, EOFError) as e:
@@ -228,3 +233,29 @@ class TerminalSessionApiMixin:
             except Exception:
                 pass
         return True
+
+    def auto_rename_device_from_session(self, session_id):
+        """세션에 쌓인 프롬프트 문자열을 기반으로 장비 이름을 자동 변경한다."""
+        with _sessions_lock:
+            sess = _sessions.get(session_id)
+        if not sess:
+            return {"success": False, "error": "세션이 존재하지 않습니다."}
+        
+        last_hostname = sess.get("last_hostname")
+        if not last_hostname:
+            return {"success": False, "error": "아직 프롬프트(호스트명)를 감지하지 못했습니다. 엔터 키를 한 번 눌러보세요."}
+        
+        old_name = sess["device"]
+        if old_name == last_hostname:
+            return {"success": False, "error": f"이미 호스트명({last_hostname})과 일치합니다."}
+        
+        # inventory_api.py의 rename_device 메서드를 호출하여 이름 변경
+        if hasattr(self, 'rename_device'):
+            result = self.rename_device(old_name, last_hostname)
+            if result.get("success"):
+                with _sessions_lock:
+                    if session_id in _sessions:
+                        _sessions[session_id]["device"] = last_hostname
+                return {"success": True, "old_name": old_name, "new_name": last_hostname}
+            return result
+        return {"success": False, "error": "rename_device 메서드를 찾을 수 없습니다."}

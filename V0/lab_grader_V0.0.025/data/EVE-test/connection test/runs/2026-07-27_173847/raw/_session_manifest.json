@@ -1,0 +1,18 @@
+{
+  "lab": "connection_test",
+  "session": "2026-07-27_173847",
+  "success": [],
+  "failed": {
+    "AUTO-102": "\nPattern not detected: 'Core2\\\\#' in output.\n\nThings you might try to fix this:\n1. Explicitly set your pattern using the expect_string argument.\n2. Increase the read_timeout to a larger value.\n\nYou can also look at the Netmiko session_log or debug log for more information.\n\n",
+    "AUTO-106": "\nPattern not detected: 'Access2\\\\#' in output.\n\nThings you might try to fix this:\n1. Explicitly set your pattern using the expect_string argument.\n2. Increase the read_timeout to a larger value.\n\nYou can also look at the Netmiko session_log or debug log for more information.\n\n",
+    "AUTO-107": "\nPattern not detected: 'Access3\\\\#' in output.\n\nThings you might try to fix this:\n1. Explicitly set your pattern using the expect_string argument.\n2. Increase the read_timeout to a larger value.\n\nYou can also look at the Netmiko session_log or debug log for more information.\n\n",
+    "AUTO-105": "\nPattern not detected: 'Access1\\\\#' in output.\n\nThings you might try to fix this:\n1. Explicitly set your pattern using the expect_string argument.\n2. Increase the read_timeout to a larger value.\n\nYou can also look at the Netmiko session_log or debug log for more information.\n\n",
+    "AUTO-103": "\nPattern not detected: 'Agg1\\\\#' in output.\n\nThings you might try to fix this:\n1. Explicitly set your pattern using the expect_string argument.\n2. Increase the read_timeout to a larger value.\n\nYou can also look at the Netmiko session_log or debug log for more information.\n\n",
+    "AUTO-104": "\nPattern not detected: 'Agg2\\\\#' in output.\n\nThings you might try to fix this:\n1. Explicitly set your pattern using the expect_string argument.\n2. Increase the read_timeout to a larger value.\n\nYou can also look at the Netmiko session_log or debug log for more information.\n\n",
+    "AUTO-101": "\nPattern not detected: 'Core1\\\\#' in output.\n\nThings you might try to fix this:\n1. Explicitly set your pattern using the expect_string argument.\n2. Increase the read_timeout to a larger value.\n\nYou can also look at the Netmiko session_log or debug log for more information.\n\n"
+  },
+  "events": {
+    "count": 0,
+    "group_count": 0
+  }
+}

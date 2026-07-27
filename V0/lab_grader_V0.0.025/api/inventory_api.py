@@ -172,6 +172,33 @@ class InventoryApiMixin:
         reachable = result.get(device_name, False)
         return {"reachable": reachable, "detail": f"{ip}:{port}" + (" 연결됨" if reachable else " 연결 실패")}
 
+    def rename_device(self, old_name, new_name):
+        """장비 이름을 새로운 이름으로 변경한다 (주로 터미널 호스트명 자동 갱신용)."""
+        from engine import device_inventory as di
+        try:
+            paths = self._paths()
+        except RuntimeError:
+            return {"success": False, "error": "활성 프로젝트 없음"}
+        
+        inv = self._load_inventory(paths)
+        
+        # 새 이름 중복 체크
+        if any(d["name"] == new_name for d in inv["devices"]):
+            return {"success": False, "error": f"이미 '{new_name}' 이름을 가진 장비가 존재합니다."}
+            
+        found = False
+        for d in inv["devices"]:
+            if d["name"] == old_name:
+                d["name"] = new_name
+                found = True
+                break
+                
+        if not found:
+            return {"success": False, "error": f"기존 장비 '{old_name}'을(를) 찾을 수 없습니다."}
+            
+        di.save_inventory(inv, paths["device_inventory"])
+        return {"success": True}
+
     def register_discovered_devices(self, node_names):
         """Discovery(.unl)에서 찾은 노드명을 Device Inventory에 등록 (IP는 비워둔 채, 비활성 상태로)."""
         from engine import device_inventory as di

@@ -34,6 +34,7 @@ async function renderConnection() {
         <button class="btn btn-primary" id="btn-term-connect"><span class="material-symbols-rounded">power</span>접속 (${targets.length}대 대상)</button>
         <button class="btn btn-outlined" id="btn-term-view-tabs"><span class="material-symbols-rounded">tab</span>탭 보기</button>
         <button class="btn btn-outlined" id="btn-term-view-split"><span class="material-symbols-rounded">grid_view</span>분할 보기</button>
+        <button class="btn btn-outlined" id="btn-term-auto-rename" title="터미널 프롬프트에서 호스트명을 파싱하여 장비 이름을 자동 갱신합니다."><span class="material-symbols-rounded">sync_alt</span>이름 동기화</button>
         <button class="btn btn-outlined" id="btn-term-inspect"><span class="material-symbols-rounded">fact_check</span>점검시작</button>
         <button class="btn btn-danger" id="btn-term-stop-inspect" style="display:none;"><span class="material-symbols-rounded">stop_circle</span>중지</button>
         <button class="btn btn-danger" id="btn-term-close-all"><span class="material-symbols-rounded">close</span>전체 닫기</button>
@@ -73,6 +74,30 @@ async function renderConnection() {
   document.getElementById('btn-term-connect').addEventListener('click', () => connectAllTerminals(Array.from(selectedDeviceNames)));
   document.getElementById('btn-term-view-tabs').addEventListener('click', () => { termViewMode = 'tabs'; renderTermArea(); });
   document.getElementById('btn-term-view-split').addEventListener('click', () => { termViewMode = 'split'; renderTermArea(); });
+  document.getElementById('btn-term-auto-rename').addEventListener('click', async () => {
+    if (!termActiveId) {
+      alert("포커스된 터미널 세션이 없습니다.");
+      return;
+    }
+    const res = await call('auto_rename_device_from_session', termActiveId);
+    if (!res) {
+      alert("API 호출 오류가 발생했습니다.");
+    } else if (!res.success) {
+      alert(res.error || "이름 갱신에 실패했습니다.");
+    } else {
+      // 프론트엔드 상태 갱신
+      knownDeviceNames.delete(res.old_name);
+      knownDeviceNames.add(res.new_name);
+      if (selectedDeviceNames.has(res.old_name)) {
+        selectedDeviceNames.delete(res.old_name);
+        selectedDeviceNames.add(res.new_name);
+      }
+      const session = termSessions.find(s => s.session_id === termActiveId);
+      if (session) session.device = res.new_name;
+      alert(`성공: '${res.old_name}' 장비의 이름이 '${res.new_name}'(으)로 갱신되었습니다.`);
+      navigate('connection'); // 화면 갱신
+    }
+  });
   document.getElementById('btn-term-inspect').addEventListener('click', startTerminalInspection);
   document.getElementById('btn-term-stop-inspect').addEventListener('click', stopTerminalInspection);
   document.getElementById('btn-term-close-all').addEventListener('click', closeAllTerminals);
