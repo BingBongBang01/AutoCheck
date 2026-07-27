@@ -1,0 +1,431 @@
+=== 점검 시작 — AUTO-103 ===
+
+--- show version ---
+show version
+Arista vEOS-lab
+Hardware version:
+Serial number: 678947F8E93150CFE3ECACA9BB915A39
+Hardware MAC address: 5001.00ca.7a8d
+System MAC address: 5001.00ca.7a8d
+
+Software image version: 4.35.4M
+Architecture: x86_64
+Internal build version: 4.35.4M-47365815.4354M
+Internal build ID: 3f9686d7-9c34-49e2-9884-2394cd1cc98d
+Image format version: 1.0
+Image optimization: None
+
+Uptime: 1 hour and 56 minutes
+Total memory: 2930132 kB
+Free memory: 1612312 kB
+
+Agg1#
+
+--- show environment power ---
+show environment power
+% There seem to be no power supplies connected.
+Agg1#
+
+--- show environment cooling ---
+show environment cooling
+% Invalid input
+Agg1#
+
+--- show environment temperature ---
+show environment temperature
+% Invalid input
+Agg1#
+
+--- show processes top once ---
+show processes top once
+top - 11:04:25 up  1:56,  2 users,  load average: 0.15, 0.11, 0.09
+Tasks: 158 total,   1 running, 157 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  3.0 us,  3.0 sy,  0.0 ni, 93.9 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st
+MiB Mem :   2861.5 total,    550.8 free,   1288.9 used,   1238.4 buff/cache
+MiB Swap:      0.0 total,      0.0 free,      0.0 used.   1572.6 avail Mem
+
+  PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+ 5803 admin     20   0   11936   6240   5368 R   6.2   0.2   0:00.03 top
+    1 root      20   0   24296  14668  10116 S   0.0   0.5   0:05.85 systemd
+    2 root      20   0       0      0      0 S   0.0   0.0   0:00.00 kthreadd
+    3 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 rcu_gp
+    4 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 rcu_par_gp
+    5 root      20   0       0      0      0 I   0.0   0.0   0:00.44 kworker/0:0-events_power_efficient
+    6 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker/0:0H-events_highpri
+    8 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 mm_percpu_wq
+    9 root      20   0       0      0      0 S   0.0   0.0   0:00.00 rcu_tasks_kthre
+   10 root      20   0       0      0      0 S   0.0   0.0   0:00.00 rcu_tasks_rude_
+   11 root      20   0       0      0      0 S   0.0   0.0   0:00.00 rcu_tasks_trace
+   12 root      20   0       0      0      0 S   0.0   0.0   0:00.62 ksoftirqd/0
+   13 root      20   0       0      0      0 I   0.0   0.0   0:00.58 rcu_preempt
+   14 root      rt   0       0      0      0 S   0.0   0.0   0:00.00 migration/0
+   16 root      20   0       0      0      0 S   0.0   0.0   0:00.00 cpuhp/0
+   17 root      20   0       0      0      0 S   0.0   0.0   0:00.00 cpuhp/1
+   18 root      rt   0       0      0      0 S   0.0   0.0   0:00.15 migration/1
+   19 root      20   0       0      0      0 S   0.0   0.0   0:00.24 ksoftirqd/1
+   21 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker/1:0H-kblockd
+   22 root      20   0       0      0      0 S   0.0   0.0   0:00.00 kdevtmpfs
+   23 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 netns
+   24 root      20   0       0      0      0 S   0.0   0.0   0:00.00 kauditd
+   25 root      20   0       0      0      0 S   0.0   0.0   0:00.19 khungtaskd
+   26 root      20   0       0      0      0 S   0.0   0.0   0:00.00 oom_reaper
+   27 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 writeback
+   28 root      20   0       0      0      0 S   0.0   0.0   0:00.03 kcompactd0
+   48 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 cryptd
+   75 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kintegrityd
+   76 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kblockd
+   77 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 blkcg_punt_bio
+   78 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 tpm_dev_wq
+   79 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 ata_sff
+   80 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 edac-poller
+   81 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 watchdogd
+   82 root       0 -20       0      0      0 I   0.0   0.0   0:00.07 kworker/0:1H-kblockd
+   83 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 rpciod
+   84 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker/u5:0
+   85 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 xprtiod
+   90 root      20   0       0      0      0 S   0.0   0.0   0:00.00 kswapd0
+   91 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 nfsiod
+   94 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 pcielwd
+   95 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 nvme-wq
+   96 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 nvme-reset-wq
+   97 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 nvme-delete-wq
+   98 root      20   0       0      0      0 S   0.0   0.0   0:00.00 scsi_eh_0
+   99 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 scsi_tmf_0
+  100 root      20   0       0      0      0 S   0.0   0.0   0:00.00 scsi_eh_1
+  101 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 scsi_tmf_1
+  104 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 ixgbe
+  105 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 ice
+  106 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 dm_bufio_cache
+  107 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 ipv6_addrconf
+  108 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kstrp
+  109 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 ecc_log_wq
+  424 root      20   0       0      0      0 S   0.0   0.0   0:00.01 jbd2/vda2-8
+  425 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 ext4-rsv-conver
+  702 root       0 -20       0      0      0 I   0.0   0.0   0:00.06 kworker/1:1H-kblockd
+  820 root       0 -20       0      0      0 S   0.0   0.0   0:01.62 loop0
+  922 root      20   0   27992  10372   8972 S   0.0   0.4   0:00.45 systemd-journal
+  926 root      20   0       0      0      0 I   0.0   0.0   0:18.55 kworker/1:2-events
+  938 root      20   0       0      0      0 I   0.0   0.0   0:00.02 kworker/1:3-events
+ 1086 root      20   0   33176  10520   8520 S   0.0   0.4   0:00.13 systemd-udevd
+ 1235 root      20   0    8448   4988   1856 S   0.0   0.2   0:00.35 haveged
+ 1474 root      20   0    2640   1108   1024 S   0.0   0.0   0:00.19 ProcMonitor
+ 1478 root      20   0    5856   2060   1884 S   0.0   0.1   0:00.56 SlabMonitor
+ 1479 root      20   0    2660   1792   1688 S   0.0   0.1   0:00.88 SysResMonitor
+ 1486 root      20   0    4196   3172   2936 S   0.0   0.1   0:00.00 rasdfilter.sh
+ 1491 root      20   0   19284   6924   5956 S   0.0   0.2   0:00.10 systemd-logind
+ 1499 root      20   0    2888   1176   1060 S   0.0   0.0   0:00.02 rasdaemon
+ 1500 root      20   0 2109332  11856   6900 S   0.0   0.4   0:00.04 python
+ 1514 root      20   0    5644   3404   2572 S   0.0   0.1   0:00.07 crond
+ 1535 dbus      20   0   10556   4344   3908 S   0.0   0.1   0:00.04 dbus-broker-lau
+ 1615 dbus      20   0    5004   2788   2372 S   0.0   0.1   0:00.04 dbus-broker
+ 1627 root      20   0   11920   2432   1684 S   0.0   0.1   0:00.02 xinetd
+ 1635 root      20   0    4196   3264   2996 S   0.0   0.1   0:00.00 core_annotate_u
+ 1757 root      20   0   11160   3096   2536 S   0.0   0.1   0:00.00 SaveFossil
+ 1760 root      20   0 2109532   9108   3460 S   0.0   0.3   0:00.00 python3
+ 1761 root      20   0    2784    292    236 S   0.0   0.0   0:00.00 inotifywait
+ 1770 root      20   0 2109568   9036   3384 S   0.0   0.3   0:00.01 python3
+ 1771 root      20   0    2784    292    236 S   0.0   0.0   0:00.00 inotifywait
+ 1779 root      20   0 2109548   9228   3568 S   0.0   0.3   0:00.00 python3
+ 1780 root      20   0    2864   1736   1576 S   0.0   0.1   0:00.00 inotifywait
+ 1784 root      20   0    4196   3212   2956 S   0.0   0.1   0:00.07 bash
+ 1862 root      20   0       0      0      0 I   0.0   0.0   0:00.03 kworker/0:3-cgroup_destroy
+ 1863 root      20   0 2118684  23396  12676 S   0.0   0.8   0:15.60 ProcMgr
+ 1932 root      20   0    5844    192      0 S   0.0   0.0   0:02.09 EosOomAdjust
+ 1940 root      20   0       0      0      0 S   0.0   0.0   0:00.08 rbfd_vrf_cleanu
+ 1951 root      20   0 3134508 559904 298056 S   0.0  19.1   1:36.52 ConfigAgent
+ 1952 root      20   0 2157284  47340  30804 S   0.0   1.6   0:01.19 StageMgr
+ 1953 root      20   0 2236828 112696  70104 S   0.0   3.8   0:05.32 Fru
+ 1954 root      20   0 2266008 122464  89172 S   0.0   4.2   0:06.69 Launcher
+ 1955 root      20   0 2341948 217520 158808 S   0.0   7.4   0:26.03 Sysdb
+ 1956 root      20   0 2256288 116268  93488 S   0.0   4.0   0:03.22 ProcLauncher-1
+ 1957 root      20   0 2109928   9132   8160 S   0.0   0.3   0:01.20 PerfMonitor
+ 1969 root      -2   0       0      0      0 S   0.0   0.0   0:00.14 psimon
+ 3130 root      20   0 2154524  35668  30696 S   0.0   1.2   0:00.87 ReloadCauseAgen
+ 3131 root      20   0 2296004 118048 104920 S   0.0   4.0   0:07.32 Acl
+ 3132 root      20   0 2153444  34644  29872 S   0.0   1.2   0:01.93 KernelNetworkIn
+ 3133 root      20   0 2187740  62208  54872 S   0.0   2.1   0:01.80 Ebra
+ 3135 root      20   0 2198692  67436  59092 S   0.0   2.3   0:01.96 Ira
+ 3136 root      20   0 2248152 130336  83864 S   0.0   4.4   0:10.24 SuperServer
+ 3137 root      20   0 2394832  70308  41004 S   0.0   2.4   0:03.67 Aaa
+ 3498 root       0 -20 2412596 214800 179100 S   0.0   7.3   0:34.16 Etba
+ 3499 root      20   0 2185996  62240  43668 S   0.0   2.1   0:11.01 PhyEthtool-1
+ 3943 root      20   0   12616   1392     16 S   0.0   0.0   0:00.00 nginx
+ 3944 nobody    20   0   17380   6300   4524 S   0.0   0.2   0:00.00 nginx
+ 3956 root      20   0  292988   6264   3744 S   0.0   0.2   0:00.12 rsyslogd
+ 4004 root      20   0    2504    860    768 S   0.0   0.0   0:00.00 conlogd
+ 4005 root      20   0    4196   3204   2964 S   0.0   0.1   0:00.00 sh
+ 4006 root      20   0    5896   2092   1900 S   0.0   0.1   0:00.00 LogMonUtil
+ 4007 root      20   0    3616   1104    988 S   0.0   0.0   0:00.00 sed
+ 4008 root      20   0    3028   1100   1008 S   0.0   0.0   0:00.02 agetty
+ 4009 root      20   0    2644   1044    956 S   0.0   0.0   0:00.00 mingetty
+ 4114 root      20   0 2179868  52360  38424 S   0.0   1.8   0:01.07 RouteCache
+ 4115 root      20   0 2188588  55880  48648 S   0.0   1.9   0:01.51 ConnectedRoute
+ 4116 root      20   0 2144116  28032  24188 S   0.0   1.0   0:01.04 SharedSecretPro
+ 4117 root      20   0 2214540  81684  60388 S   0.0   2.8   0:02.28 IgmpSnooping
+ 4118 root      20   0 2184156  52804  46252 S   0.0   1.8   0:00.95 LacpTxAgent
+ 4119 root      20   0 2141568  25516  21428 S   0.0   0.9   0:18.79 AgentMonitor
+ 4120 root      20   0 2190280  61400  49408 S   0.0   2.1   0:01.39 EventMgr
+ 4121 root      20   0 2239496  91040  80636 S   0.0   3.1   0:02.66 Dot1x
+ 4122 root      20   0 2177804  48436  42172 S   0.0   1.7   0:01.60 TopoAgent
+ 4125 root      20   0 2165088  40944  35428 S   0.0   1.4   0:00.95 FibServices
+ 4130 root      20   0 2190692  60916  53844 S   0.0   2.1   0:01.38 Bfd
+ 4131 root      20   0 2187540  59524  52152 S   0.0   2.0   0:01.51 Qos
+ 4132 root      20   0 2171252  45928  38892 S   0.0   1.6   0:01.93 Tunnel
+ 4133 root      20   0 2208896  64024  56308 S   0.0   2.2   0:02.02 McastCommon6
+ 4134 root      20   0 2171944  48952  42836 S   0.0   1.7   0:03.41 Stp
+ 4135 root      20   0 2251748  94044  82956 S   0.0   3.2   0:02.33 ArfaState
+ 4136 root      20   0 2180344  52856  46204 S   0.0   1.8   0:01.28 StpTopology
+ 4137 root      20   0 2213092  72948  63440 S   0.0   2.5   0:03.23 RouteInput
+ 4138 root      20   0 2151564  32500  27964 S   0.0   1.1   0:00.59 StandbyCpld
+ 4139 root      20   0 2183720  59392  52192 S   0.0   2.0   0:01.48 Lag
+ 4140 root      20   0 2209940  72184  61304 S   0.0   2.5   0:01.77 KernelFib
+ 4141 root      20   0 2165088  40632  35456 S   0.0   1.4   0:01.70 XcvrCentralAgen
+ 4142 root      20   0 2179924  53324  45384 S   0.0   1.8   0:07.98 StpTxRx
+ 4143 root      20   0 2210280  61832  53708 S   0.0   2.1   0:01.30 McastCommon
+ 4144 root      20   0 2143196  27156  23372 S   0.0   0.9   0:00.70 PowerFuse
+ 4145 root      20   0 2274772  95932  85064 S   0.0   3.3   0:03.20 ArfaAegis
+ 4146 root      20   0 2206748  69832  61268 S   0.0   2.4   0:03.46 Arp
+ 4147 root      20   0 2147208  30356  26200 S   0.0   1.0   0:01.26 Thermostat
+ 4148 root      20   0 2180872  51108  44736 S   0.0   1.7   0:01.19 PortSec
+ 4149 root      20   0 2176148  47304  41284 S   0.0   1.6   0:02.10 IfIndex
+ 4151 root      20   0 2384448  57720  39960 S   0.0   2.0   0:01.82 CapiApp
+ 4152 root      20   0 2157964  36656  31504 S   0.0   1.3   0:00.80 L2Rib
+ 4194 root      20   0 2233732  95384  79852 S   0.0   3.3   0:02.70 IpRib
+ 4195 root      20   0 2182124  54688  47876 S   0.0   1.9   0:02.53 Lldp
+ 4910 root      20   0    2664   1712   1552 S   0.0   0.1   0:00.00 anacron
+ 5030 root      20   0       0      0      0 I   0.0   0.0   0:00.01 kworker/u4:2-events_unbound
+ 5031 root      20   0    2784    284    236 S   0.0   0.0   0:00.00 inotifywait
+ 5331 root      20   0   16680  10936   9568 S   0.0   0.4   0:00.03 sshd-session
+ 5337 admin     20   0   16940   6516   4944 S   0.0   0.2   0:00.02 sshd-session
+ 5338 admin     20   0 2334716  17968   8764 S   0.0   0.6   0:00.26 CliShell
+ 5635 root      20   0       0      0      0 I   0.0   0.0   0:00.00 kworker/u4:0-events_unbound
+ 5783 root      20   0    2652   1004    916 S   0.0   0.0   0:00.00 sleep
+ 5788 root      20   0   16680  10988   9628 S   0.0   0.4   0:00.03 sshd-session
+ 5794 admin     20   0   16940   6540   4960 S   0.0   0.2   0:00.00 sshd-session
+ 5795 admin     20   0 2334584  17748   8768 S   0.0   0.6   0:00.26 CliShell
+Agg1#
+
+--- show log ---
+show log
+Syslog logging: enabled
+Buffer logging: level informational
+Console logging: level informational
+Persistent logging: disabled
+Monitor logging: level informational
+Synchronous logging: level critical
+Trap logging: level informational
+Sequence numbers: disabled
+Syslog facility: local4
+Hostname format: Hostname only
+Syslog prefix: Hostname
+Repeat logging interval: disabled
+Repeat messages: disabled
+Root login logging: disabled
+
+External configuration:
+    active:
+    inactive:
+
+Facility                   Severity            Effective Severity
+--------------------       -------------       ------------------
+aaa                        debugging           informational
+accounting                 debugging           informational
+acl                        debugging           informational
+agent                      debugging           informational
+ale                        debugging           informational
+arp                        debugging           informational
+bfd                        debugging           informational
+bgp                        debugging           informational
+bmp                        debugging           informational
+capacity                   debugging           informational
+capi                       debugging           informational
+classification             debugging           informational
+clear                      debugging           informational
+cvx                        debugging           informational
+dataplane                  debugging           informational
+dhcp                       debugging           informational
+dmf                        debugging           informational
+dot1x                      debugging           informational
+dot1xhttp                  debugging           informational
+dscp                       debugging           informational
+envmon                     debugging           informational
+eth                        debugging           informational
+eventmon                   debugging           informational
+extension                  debugging           informational
+fhrp                       debugging           informational
+flow                       debugging           informational
+flowtracking               debugging           informational
+forwarding                 debugging           informational
+fru                        debugging           informational
+fwk                        debugging           informational
+gmp                        debugging           informational
+hardware                   debugging           informational
+health                     debugging           informational
+httpservice                debugging           informational
+igmp                       debugging           informational
+igmpsnooping               debugging           informational
+influxtelemetry            debugging           informational
+int                        debugging           informational
+intf                       debugging           informational
+ip6routing                 debugging           informational
+iprib                      debugging           informational
+ira                        debugging           informational
+isis                       debugging           informational
+kernelfib                  debugging           informational
+lacp                       debugging           informational
+lag                        debugging           informational
+launcher                   debugging           informational
+ldp                        debugging           informational
+license                    debugging           informational
+lineproto                  debugging           informational
+lldp                       debugging           informational
+logmgr                     debugging           informational
+loopback                   debugging           informational
+loopprotect                debugging           informational
+mcs                        debugging           informational
+mirroring                  debugging           informational
+mka                        debugging           informational
+mlag                       debugging           informational
+mldsnooping                debugging           informational
+mmode                      debugging           informational
+monitorsecurity            debugging           informational
+mroute                     debugging           informational
+mrp                        debugging           informational
+msdp                       debugging           informational
+msrp                       debugging           informational
+msspolicymonitor           debugging           informational
+mvrp                       debugging           informational
+nat                        debugging           informational
+openconfig                 debugging           informational
+openflow                   debugging           informational
+ospf                       debugging           informational
+ospf3                      debugging           informational
+package                    debugging           informational
+pfc                        debugging           informational
+pimbsr                     debugging           informational
+portsecurity               debugging           informational
+postcardtelemetry          debugging           informational
+pseudowire                 debugging           informational
+ptp                        debugging           informational
+pwrmgmt                    debugging           informational
+qos                        debugging           informational
+queuemonitor               debugging           informational
+radius                     debugging           informational
+redundancy                 debugging           informational
+rib                        debugging           informational
+routing                    debugging           informational
+security                   debugging           informational
+servermonitor              debugging           informational
+serverprobe                debugging           informational
+sfe                        debugging           informational
+spantree                   debugging           informational
+sso                        debugging           informational
+stagemgr                   debugging           informational
+sys                        debugging           informational
+sysdb                      debugging           informational
+tapagg                     debugging           informational
+tcp                        debugging           informational
+trafficpolicy              debugging           informational
+transceiver                debugging           informational
+tunnel                     debugging           informational
+tunnelintf                 debugging           informational
+vlan                       debugging           informational
+vmtracersess               debugging           informational
+vmwarevi                   debugging           informational
+vmwarevs                   debugging           informational
+vrf                        debugging           informational
+vrrp                       debugging           informational
+vxlan                      debugging           informational
+ztp                        debugging           informational
+
+Log Buffer:
+Jul 27 09:47:53 Agg1 Stp: %SPANTREE-6-INTERFACE_STATE: Interface Ethernet1 instance Vl1 moving from forwarding to discarding
+Jul 27 09:48:55 Agg1 Stp: %SPANTREE-6-STABLE_CHANGE: Stp state is now stable
+Jul 27 09:49:43 Agg1 ConfigAgent: %SYS-5-CONFIG_STARTUP: Startup config saved from system:/running-config by admin on vty3 (172.16.96.86).
+Jul 27 09:51:53 Agg1 ConfigAgent: %SYS-5-CONFIG_I: Configured from console by admin on vty3 (172.16.96.86)
+Jul 27 09:51:54 Agg1 ConfigAgent: %SYS-5-CONFIG_STARTUP: Startup config saved from system:/running-config by admin on vty3 (172.16.96.86).
+Jul 27 10:31:04 Agg1 ConfigAgent: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty3 (172.16.96.86)
+Jul 27 10:31:30 Agg1 Stp: %SPANTREE-6-STABLE_CHANGE: Stp state is now not stable
+Jul 27 10:31:30 Agg1 Stp: %SPANTREE-6-INTERFACE_DEL: Interface Ethernet1 has been removed from instance Vl1
+Jul 27 10:31:30 Agg1 Stp: %SPANTREE-6-INTERFACE_DEL: Interface Ethernet2 has been removed from instance Vl1
+Jul 27 10:31:32 Agg1 Lag: %LAG-5-MEMBER_ADDED: Interface Ethernet2 has joined Port-Channel10
+Jul 27 10:31:32 Agg1 Lag: %LAG-5-MEMBER_ADDED: Interface Ethernet1 has joined Port-Channel10
+Jul 27 10:31:32 Agg1 Ebra: %LINEPROTO-5-UPDOWN: Line protocol on Interface Port-Channel10 (VRF default), changed state to up
+Jul 27 10:31:32 Agg1 Stp: %SPANTREE-6-INTERFACE_ADD: Interface Port-Channel10 has been added to instance Vl1
+Jul 27 10:32:06 Agg1 Stp: %SPANTREE-6-STABLE_CHANGE: Stp state is now stable
+Jul 27 10:32:55 Agg1 Stp: %SPANTREE-6-STABLE_CHANGE: Stp state is now not stable
+Jul 27 10:32:55 Agg1 Stp: %SPANTREE-6-INTERFACE_DEL: Interface Port-Channel10 has been removed from instance Vl1
+Jul 27 10:32:55 Agg1 Stp: %SPANTREE-6-INTERFACE_ADD: Interface Port-Channel10 has been added to instance Vl1
+Jul 27 10:33:29 Agg1 Stp: %SPANTREE-6-STABLE_CHANGE: Stp state is now stable
+Jul 27 10:59:58 Agg1 Stp: %SPANTREE-6-STABLE_CHANGE: Stp state is now not stable
+Jul 27 10:59:58 Agg1 Stp: %SPANTREE-6-ROOTCHANGE: Root changed for instance Vl10: new root interface is (none), new root bridge mac address is 50:01:00:ca:7a:8d (this switch)
+Jul 27 10:59:58 Agg1 Stp: %SPANTREE-6-INTERFACE_ADD: Interface Port-Channel10 has been added to instance Vl10
+Jul 27 10:59:58 Agg1 Stp: %SPANTREE-6-ROOTCHANGE: Root changed for instance Vl10: new root interface is Port-Channel10, new root bridge mac address is 50:01:00:be:ab:97
+Jul 27 10:59:58 Agg1 Stp: %SPANTREE-6-INTERFACE_STATE: Interface Port-Channel10 instance Vl10 moving from discarding to learning
+Jul 27 10:59:58 Agg1 Stp: %SPANTREE-6-INTERFACE_STATE: Interface Port-Channel10 instance Vl10 moving from learning to forwarding
+Jul 27 11:00:09 Agg1 Stp: %SPANTREE-6-ROOTCHANGE: Root changed for instance Vl20: new root interface is (none), new root bridge mac address is 50:01:00:ca:7a:8d (this switch)
+Jul 27 11:00:09 Agg1 Stp: %SPANTREE-6-INTERFACE_ADD: Interface Port-Channel10 has been added to instance Vl20
+Jul 27 11:00:10 Agg1 Stp: %SPANTREE-6-ROOTCHANGE: Root changed for instance Vl20: new root interface is Port-Channel10, new root bridge mac address is 50:01:00:be:ab:97
+Jul 27 11:00:10 Agg1 Stp: %SPANTREE-6-INTERFACE_STATE: Interface Port-Channel10 instance Vl20 moving from discarding to learning
+Jul 27 11:00:10 Agg1 Stp: %SPANTREE-6-INTERFACE_STATE: Interface Port-Channel10 instance Vl20 moving from learning to forwarding
+Jul 27 11:00:17 Agg1 ConfigAgent: %SYS-5-CONFIG_I: Configured from console by admin on vty3 (172.16.96.86)
+Jul 27 11:00:19 Agg1 ConfigAgent: %SYS-5-CONFIG_STARTUP: Startup config saved from system:/running-config by admin on vty3 (172.16.96.86).
+Jul 27 11:00:44 Agg1 Stp: %SPANTREE-6-STABLE_CHANGE: Stp state is now stable
+Agg1#
+
+--- show interface status ---
+show interface status
+Port       Name   Status       Vlan     Duplex Speed  Type            Flags Encapsulation
+Et1               connected    in Po10  full   1G     EbraTestPhyPort
+Et2               connected    in Po10  full   1G     EbraTestPhyPort
+Et3               connected    1        full   1G     EbraTestPhyPort
+Et4               connected    1        full   1G     EbraTestPhyPort
+Et5               connected    1        full   1G     EbraTestPhyPort
+Et6               connected    1        full   1G     EbraTestPhyPort
+Et7               connected    1        full   1G     EbraTestPhyPort
+Et8               connected    1        full   1G     EbraTestPhyPort
+Et9               connected    1        full   1G     EbraTestPhyPort
+Et10              notconnect   1        full   1G     EbraTestPhyPort
+Et11              notconnect   1        full   1G     EbraTestPhyPort
+Ma1               connected    routed   a-full a-1G   10/100/1000
+Po10              connected    trunk    full   2G     N/A
+
+Agg1#
+
+--- show interfaces counters errors ---
+show interfaces counters errors
+Port               FCS    Align   Symbol       Rx    Runts   Giants       Tx
+Et1                  0        0        0        0        0        0        0
+Et2                  0        0        0        0        0        0        0
+Et3                  0        0        0        0        0        0        0
+Et4                  0        0        0        0        0        0        0
+Et5                  0        0        0        0        0        0        0
+Et6                  0        0        0        0        0        0        0
+Et7                  0        0        0        0        0        0        0
+Et8                  0        0        0        0        0        0        0
+Et9                  0        0        0        0        0        0        0
+Et10                 0        0        0        0        0        0        0
+Et11                 0        0        0        0        0        0        0
+Ma1                  0        0        0        0        0        0        0
+Agg1#
+
+--- show interfaces transceiver ---
+show interfaces transceiver
+Agg1#
+
+--- show ip interface brief ---
+show ip interface brief
+                                                                                        Address
+Interface         IP Address               Status       Protocol                 MTU    Owner
+----------------- ------------------------ ------------ -------------------- ---------- -------
+Management1       192.168.205.103/21       up           up                      1500
+Vlan999           unassigned               down         lowerlayerdown          1500
+
+Agg1#
+
+--- show clock ---
+show clock
+Mon Jul 27 11:04:27 2026
+Timezone: Asia/Seoul
+Clock source: local
+Agg1#

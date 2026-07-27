@@ -1,0 +1,124 @@
+{
+  "migration_version": 1,
+  "previous_migration_version": 0,
+  "schema_version": 1,
+  "workspace_version": 1,
+  "profile_version": 1,
+  "started_at": "2026-07-27T10:28:23",
+  "finished_at": "2026-07-27T10:28:23",
+  "duration_seconds": 0.133,
+  "backup_path": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\migration_backup\\20260727T102823",
+  "migrated_files": [
+    {
+      "source": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\labs\\eve_test\\device_inventory.yaml",
+      "destination": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\data\\legacy_import\\eve_test\\inventory\\device_inventory.yaml",
+      "category": "inventory"
+    },
+    {
+      "source": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\labs\\eve_test\\commands_catalog.yaml",
+      "destination": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\data\\legacy_import\\eve_test\\commands\\commands_catalog.yaml",
+      "category": "commands"
+    },
+    {
+      "source": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\labs\\eve_test\\target_state.yaml",
+      "destination": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\data\\legacy_import\\eve_test\\baselines\\target_state.yaml",
+      "category": "baselines"
+    },
+    {
+      "source": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\labs\\eve_test\\stages.yaml",
+      "destination": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\data\\legacy_import\\eve_test\\archive\\legacy_lab_meta\\stages.yaml",
+      "category": "settings"
+    },
+    {
+      "source": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\labs\\eve_test\\lab_meta.yaml",
+      "destination": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\data\\legacy_import\\eve_test\\archive\\legacy_lab_meta\\lab_meta.yaml",
+      "category": "settings"
+    },
+    {
+      "source": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\labs\\eve_test\\project_meta.yaml",
+      "destination": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\data\\legacy_import\\eve_test\\archive\\legacy_lab_meta\\project_meta.yaml",
+      "category": "settings"
+    },
+    {
+      "source": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\labs\\eve_test\\ip_allocation.yaml",
+      "destination": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\data\\legacy_import\\eve_test\\archive\\legacy_lab_meta\\ip_allocation.yaml",
+      "category": "settings"
+    },
+    {
+      "source": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\labs\\eve_test\\terminal_sessions\\AutoCheck_AUTO-101_20260724_171913.txt",
+      "destination": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\data\\legacy_import\\eve_test\\history\\legacy_terminal_sessions\\AutoCheck_AUTO-101_20260724_171913.txt",
+      "category": "logs"
+    },
+    {
+      "source": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\labs\\eve_test\\terminal_sessions\\AutoCheck_AUTO-102_20260724_171905.txt",
+      "destination": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\data\\legacy_import\\eve_test\\history\\legacy_terminal_sessions\\AutoCheck_AUTO-102_20260724_171905.txt",
+      "category": "logs"
+    },
+    {
+      "source": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\labs\\eve_test\\terminal_sessions\\AutoCheck_AUTO-103_20260724_171905.txt",
+      "destination": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\data\\legacy_import\\eve_test\\history\\legacy_terminal_sessions\\AutoCheck_AUTO-103_20260724_171905.txt",
+      "category": "logs"
+    },
+    {
+      "source": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\labs\\eve_test\\terminal_sessions\\AutoCheck_AUTO-104_20260724_171905.txt",
+      "destination": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\data\\legacy_import\\eve_test\\history\\legacy_terminal_sessions\\AutoCheck_AUTO-104_20260724_171905.txt",
+      "category": "logs"
+    },
+    {
+      "source": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\labs\\eve_test\\terminal_sessions\\AutoCheck_AUTO-105_20260724_171905.txt",
+      "destination": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\data\\legacy_import\\eve_test\\history\\legacy_terminal_sessions\\AutoCheck_AUTO-105_20260724_171905.txt",
+      "category": "logs"
+    },
+    {
+      "source": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\labs\\eve_test\\terminal_sessions\\AutoCheck_AUTO-106_20260724_171905.txt",
+      "destination": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\data\\legacy_import\\eve_test\\history\\legacy_terminal_sessions\\AutoCheck_AUTO-106_20260724_171905.txt",
+      "category": "logs"
+    },
+    {
+      "source": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\labs\\eve_test\\terminal_sessions\\AutoCheck_AUTO-107_20260724_171913.txt",
+      "destination": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\data\\legacy_import\\eve_test\\history\\legacy_terminal_sessions\\AutoCheck_AUTO-107_20260724_171913.txt",
+      "category": "logs"
+    },
+    {
+      "source": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\history\\lab1_campus\\2026-07-22_2307.json",
+      "destination": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\data\\legacy_import\\lab1_campus\\history\\legacy_grading_history\\2026-07-22_2307.json",
+      "category": "reports"
+    },
+    {
+      "source": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\config_snapshots",
+      "destination": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\data\\legacy_import\\_unclassified_logs\\cache\\config_snapshots",
+      "category": "logs"
+    },
+    {
+      "source": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\raw_logs",
+      "destination": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\data\\legacy_import\\_unclassified_logs\\cache\\raw_logs",
+      "category": "logs"
+    },
+    {
+      "source": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\config\\active_project.yaml",
+      "destination": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\_workspace_global\\legacy_config\\active_project.yaml",
+      "category": "settings"
+    },
+    {
+      "source": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\config\\customers.yaml",
+      "destination": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\_workspace_global\\legacy_config\\customers.yaml",
+      "category": "settings"
+    },
+    {
+      "source": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\config\\scheduler.yaml",
+      "destination": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\_workspace_global\\legacy_config\\scheduler.yaml",
+      "category": "settings"
+    },
+    {
+      "source": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\config\\ui.yaml",
+      "destination": "C:\\Users\\USER\\Documents\\DWCTS\\AI인사평가\\AutoCheck\\V0\\lab_grader_V0.0.023\\_workspace_global\\legacy_config\\ui.yaml",
+      "category": "settings"
+    }
+  ],
+  "skipped_files": [],
+  "failed_files": [],
+  "warnings": [
+    "config_snapshots/raw_logs는 세션 폴더명이 실험실(lab)과 1:1로 매핑되지 않아 legacy_import/_unclassified_logs/cache/ 아래에 통째로 보관했습니다. 필요 시 수동으로 올바른 프로파일로 재배치해 주세요."
+  ],
+  "success": true
+}
