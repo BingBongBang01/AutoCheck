@@ -3,66 +3,122 @@ async function renderDashboard() {
   const data = await call('get_dashboard');
   const kpi = data.kpi;
   const content = document.getElementById('content');
+  
+  const heroColor = kpi.health >= 80 ? 'var(--success)' : kpi.health >= 50 ? 'var(--warning)' : 'var(--critical)';
+  const heroRgb = kpi.health >= 80 ? '34, 197, 94' : kpi.health >= 50 ? '245, 158, 11' : '239, 68, 68';
+  
+  let anomaliesHtml = '<div class="empty-state" style="padding:20px;">조치 필요한 이상 항목이 없습니다.</div>';
+  if (data.top_priority_anomalies && data.top_priority_anomalies.length > 0) {
+    anomaliesHtml = data.top_priority_anomalies.map(a => {
+      const isFail = a.result === 'FAIL' || a.keyword === 'FAIL' || a.keyword === 'ERROR' || a.keyword === 'CRITICAL';
+      const toneClass = isFail ? '' : 'warning';
+      const icon = isFail ? 'error' : 'warning';
+      const device = a.device || '-';
+      const check = a.check || a.rule || a.keyword || 'Unknown Check';
+      const desc = a.suggested_action || a.message || (a.actual ? `Expected ${a.expected}, but got ${a.actual}` : '수동 확인 필요');
+      return `
+        <div class="anomaly-item ${toneClass}">
+          <span class="material-symbols-rounded anomaly-icon">${icon}</span>
+          <div class="anomaly-content">
+            <div class="anomaly-title"><span class="anomaly-device">${device}</span><span>${check}</span></div>
+            <div class="anomaly-desc">${desc}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+  
+  let devicesHtml = '<div class="empty-state">장비별 채점 이력이 없습니다.</div>';
+  const deviceScores = data.device_scores || {};
+  if (Object.keys(deviceScores).length > 0) {
+    devicesHtml = Object.entries(deviceScores).sort((a, b) => a[1] - b[1]).map(([device, score]) => {
+      const status = score >= 80 ? 'success' : score >= 50 ? 'warning' : 'critical';
+      return `
+        <div class="device-tile" data-status="${status}">
+          <div class="device-tile-info">
+            <span class="device-tile-name">${device}</span>
+            <span class="device-tile-status">${status.toUpperCase()}</span>
+          </div>
+          <div class="device-tile-score">${score}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
   content.innerHTML = `
     <h1 class="page-title">대시보드</h1>
     <p class="page-sub">${await call('get_active_project') || '프로젝트 없음'}</p>
 
-    <div class="grid-cols-4" id="kpi-row">
-      ${kpiCard('전체 Health', kpi.health + '%', 'monitor_heart', kpi.health >= 80 ? 'success' : kpi.health >= 50 ? 'warning' : 'critical')}
-      ${kpiCard('Total Devices', kpi.total_devices, 'dns', 'primary')}
-      ${kpiCard('Reachable', kpi.reachable === null ? '-' : kpi.reachable, 'wifi', 'success')}
-      ${kpiCard('Offline', kpi.offline === null ? '-' : kpi.offline, 'wifi_off', 'critical')}
-    </div>
-    <div class="grid-cols-4" style="margin-top:16px;">
-      ${kpiCard('Running(Enabled)', kpi.running, 'play_circle', 'primary')}
-      ${kpiCard('Critical Findings', kpi.critical, 'error', 'critical')}
-      ${kpiCard('Warning Findings', kpi.warning, 'warning', 'warning')}
-      ${kpiCard('Sessions', kpi.sessions, 'history', 'primary')}
-    </div>
-    <button class="btn btn-outlined" id="btn-check-reach" style="margin-top:12px;">
-      <span class="material-symbols-rounded">refresh</span>Reachable/Offline 지금 확인 (소켓 체크, 몇 초 소요)
-    </button>
+    <div class="dashboard-top-row">
+      <!-- Left: Hero -->
+      <div class="dashboard-hero" style="--hero-color: ${heroColor}; --hero-rgb: ${heroRgb};">
+        <div class="dashboard-hero-title">Overall Health Score</div>
+        <div class="hero-score-circle">${kpi.health}</div>
+        <div class="hero-score-desc">${kpi.health >= 80 ? '네트워크 상태가 양호합니다' : '조치가 필요한 항목이 있습니다'}</div>
+      </div>
+      
+      <!-- Right: Stats & Top Anomalies -->
+      <div style="display: flex; flex-direction: column; gap: var(--gap-lg);">
+        <div class="dashboard-stats-grid">
+          <div class="dashboard-stat-card">
+            <div class="dashboard-stat-label"><span class="material-symbols-rounded">dns</span>Total Devices</div>
+            <div class="dashboard-stat-value">${kpi.total_devices}</div>
+          </div>
+          <div class="dashboard-stat-card">
+            <div class="dashboard-stat-label"><span class="material-symbols-rounded">wifi</span>Reachable / Offline</div>
+            <div class="dashboard-stat-value" style="font-size: 20px;">
+              <span style="color:var(--success)">${kpi.reachable === null ? '-' : kpi.reachable}</span> / 
+              <span style="color:var(--critical)">${kpi.offline === null ? '-' : kpi.offline}</span>
+            </div>
+            <button class="btn btn-outlined" id="btn-check-reach" style="height:24px; padding:0 8px; font-size:11px; margin-top:8px;">지금 확인</button>
+          </div>
+          <div class="dashboard-stat-card">
+            <div class="dashboard-stat-label"><span class="material-symbols-rounded">history</span>Inspection Sessions</div>
+            <div class="dashboard-stat-value">${kpi.sessions}</div>
+          </div>
+        </div>
 
+        <div class="card" style="flex: 1;">
+          <div class="card-header" style="margin-bottom: 8px;">
+            <div class="card-icon" style="background: rgba(239,68,68,0.14); color: var(--critical);"><span class="material-symbols-rounded">gpp_bad</span></div>
+            <div><p class="card-title">Actionable Insights (Top 5)</p><p class="card-desc">가장 시급한 조치 필요 항목</p></div>
+          </div>
+          <div class="anomaly-list">
+            ${anomaliesHtml}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Middle: Device Health Grid -->
+    <div class="card section-gap">
+      <div class="card-header">
+        <div class="card-icon"><span class="material-symbols-rounded">grid_view</span></div>
+        <div><p class="card-title">Device Health Map</p><p class="card-desc">각 장비별 상태 (점수 기준)</p></div>
+      </div>
+      <div class="device-grid">
+        ${devicesHtml}
+      </div>
+    </div>
+
+    <!-- Bottom: Stages & AI Summary -->
     <div class="section-gap grid-cols-2">
       <div class="card hoverable">
         <div class="card-header">
           <div class="card-icon"><span class="material-symbols-rounded">trending_up</span></div>
-          <div><p class="card-title">Stage 진행률</p><p class="card-desc">단계별 PASS/TOTAL</p></div>
+          <div><p class="card-title">Stage 진행률</p><p class="card-desc">단계별 통과 비율</p></div>
         </div>
         <div id="stage-bars"></div>
       </div>
       <div class="card hoverable">
         <div class="card-header">
           <div class="card-icon"><span class="material-symbols-rounded">smart_toy</span></div>
-          <div><p class="card-title">AI Summary</p><p class="card-desc">규칙기반 자동 요약</p></div>
+          <div><p class="card-title">AI Summary</p><p class="card-desc">전체 점검 내용 요약</p></div>
         </div>
-        <p style="font-size:13px;color:var(--sub);line-height:1.6;">${data.ai_summary || '이력 없음'}</p>
+        <p style="font-size:13px;color:var(--text);line-height:1.6; padding: 16px; background: rgba(59,130,246,0.05); border-radius: var(--radius-sm); border: 1px solid rgba(59,130,246,0.1);">
+          ${data.ai_summary || '이력 없음'}
+        </p>
       </div>
-    </div>
-
-    <div class="section-gap grid-cols-2">
-      <div class="card hoverable">
-        <div class="card-header">
-          <div class="card-icon"><span class="material-symbols-rounded">hub</span></div>
-          <div><p class="card-title">Topology Preview</p><p class="card-desc">Discovery 결과 요약</p></div>
-        </div>
-        <p style="font-size:12px;color:var(--sub);">Discovery 탭에서 .unl 분석 실행 시 여기 표시됩니다.</p>
-      </div>
-      <div class="card hoverable">
-        <div class="card-header">
-          <div class="card-icon"><span class="material-symbols-rounded">history</span></div>
-          <div><p class="card-title">Recent Inspection</p><p class="card-desc">최근 점검 세션</p></div>
-        </div>
-        <p style="font-size:12px;color:var(--sub);">History 탭에서 전체 이력을 확인할 수 있습니다.</p>
-      </div>
-    </div>
-
-    <div class="card section-gap" id="device-score-card" style="display:none;">
-      <div class="card-header">
-        <div class="card-icon"><span class="material-symbols-rounded">monitor_heart</span></div>
-        <div><p class="card-title">장비별 Health Score</p><p class="card-desc">100점 시작, Rule 위반마다 감점(Critical -30/High -15/Medium -5 등)</p></div>
-      </div>
-      <div id="device-score-rows"></div>
     </div>
   `;
 
@@ -73,56 +129,30 @@ async function renderDashboard() {
     const values = Object.values(reach || {});
     const reachableCount = values.filter(v => v).length;
     const offlineCount = values.length - reachableCount;
-    document.querySelectorAll('#kpi-row .kpi-value')[2].textContent = reachableCount;
-    document.querySelectorAll('#kpi-row .kpi-value')[3].textContent = offlineCount;
+    const statValEl = btn.previousElementSibling;
+    statValEl.innerHTML = \`<span style="color:var(--success)">\${reachableCount}</span> / <span style="color:var(--critical)">\${offlineCount}</span>\`;
     btn.classList.remove('loading');
   });
 
   const barsEl = document.getElementById('stage-bars');
-  data.stages.forEach(s => {
-    const ratio = s.total ? Math.round(100 * s.pass / s.total) : 0;
-    const badge = s.status === 'COMPLETE' ? 'badge-pass' : s.status === 'IN_PROGRESS' ? 'badge-fail' : 'badge-neutral';
-    const barColor = s.status === 'COMPLETE' ? 'var(--success)' : s.status === 'IN_PROGRESS' ? 'var(--critical)' : 'var(--hover)';
-    const row = document.createElement('div');
-    row.style.marginBottom = '14px';
-    row.innerHTML = `
-      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
-        <span>${s.label}</span>
-        <span class="badge ${badge}">${s.pass}/${s.total}</span>
-      </div>
-      <div style="height:6px;border-radius:4px;background:var(--hover);overflow:hidden;">
-        <div style="width:${ratio}%;height:100%;background:${barColor};transition:width 400ms var(--ease);"></div>
-      </div>`;
-    barsEl.appendChild(row);
-  });
-
-  const deviceScores = data.device_scores || {};
-  if (Object.keys(deviceScores).length > 0) {
-    document.getElementById('device-score-card').style.display = 'block';
-    const rowsEl = document.getElementById('device-score-rows');
-    Object.entries(deviceScores).sort((a, b) => a[1] - b[1]).forEach(([device, score]) => {
-      const color = score >= 80 ? 'var(--success)' : score >= 50 ? 'var(--warning)' : 'var(--critical)';
+  if (data.stages && data.stages.length > 0) {
+    data.stages.forEach(s => {
+      const ratio = s.total ? Math.round(100 * s.pass / s.total) : 0;
+      const badge = s.status === 'COMPLETE' ? 'badge-pass' : s.status === 'IN_PROGRESS' ? 'badge-fail' : 'badge-neutral';
+      const barColor = s.status === 'COMPLETE' ? 'var(--success)' : s.status === 'IN_PROGRESS' ? 'var(--critical)' : 'var(--hover)';
       const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:5px 0;';
-      row.innerHTML = `
-        <span style="width:80px;font-size:13px;">${device}</span>
-        <div style="flex:1;height:6px;border-radius:4px;background:var(--hover);overflow:hidden;">
-          <div style="width:${score}%;height:100%;background:${color};"></div>
+      row.style.marginBottom = '14px';
+      row.innerHTML = \`
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+          <span>\${s.label}</span>
+          <span class="badge \${badge}">\${s.pass}/\${s.total}</span>
         </div>
-        <span style="width:36px;text-align:right;font-size:13px;font-weight:600;color:${color};">${score}</span>`;
-      rowsEl.appendChild(row);
+        <div style="height:6px;border-radius:4px;background:var(--hover);overflow:hidden;">
+          <div style="width:\${ratio}%;height:100%;background:\${barColor};transition:width 400ms var(--ease);"></div>
+        </div>\`;
+      barsEl.appendChild(row);
     });
+  } else {
+    barsEl.innerHTML = '<div class="empty-state" style="padding:20px;">진행된 Stage 이력이 없습니다.</div>';
   }
-}
-
-function kpiCard(label, value, icon, tone) {
-  const toneColor = { success: 'var(--success)', warning: 'var(--warning)', critical: 'var(--critical)', primary: 'var(--primary)' }[tone];
-  return `
-    <div class="card hoverable">
-      <div class="card-icon" style="background:${toneColor}22;color:${toneColor};margin-bottom:10px;">
-        <span class="material-symbols-rounded">${icon}</span>
-      </div>
-      <div class="kpi-label">${label}</div>
-      <div class="kpi-value" style="color:${toneColor}">${value}</div>
-    </div>`;
 }

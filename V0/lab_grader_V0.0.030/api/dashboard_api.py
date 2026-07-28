@@ -36,7 +36,7 @@ class DashboardApiMixin:
             return {"kpi": {"health": health, "critical": critical, "warning": warning,
                              "total_devices": total_devices, "reachable": 0, "offline": 0,
                              "running": len(enabled_devices), "sessions": sessions_count},
-                    "stages": [], "ai_summary": summary, "device_scores": {}}
+                    "stages": [], "ai_summary": summary, "device_scores": {}, "top_priority_anomalies": raw_findings[:5]}
 
         stages = latest["stages"]
         findings = latest.get("findings", [])
@@ -69,4 +69,5 @@ class DashboardApiMixin:
             "stages": [{"label": s["label"], "pass": s["pass"], "total": s["total"], "status": s["status"]} for s in stages],
             "ai_summary": ai_result["summary"],
             "device_scores": device_scores,
+            "top_priority_anomalies": ai_result.get("top_priority", []),
         }
