@@ -1,0 +1,123 @@
+=== 이상탐지 결과 — AutoCheck_Agg2_20260728_171252.txt (26건) ===
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 609행)
+Vlan10            192.168.10.3/24          down         lowerlayerdown          1500
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 610행)
+Vlan20            192.168.20.3/24          down         lowerlayerdown          1500
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 611행)
+Vlan200           unassigned               down         lowerlayerdown          1500
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 613행)
+Vlan254           unassigned               down         lowerlayerdown          1500
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 614행)
+Vlan999           unassigned               down         lowerlayerdown          1500
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 615행)
+Vlan4000          unassigned               down         lowerlayerdown          1500
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 616행)
+Vlan4001          10.10.98.3/24            down         lowerlayerdown          1500
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 617행)
+Vlan4093          10.10.10.5/29            down         lowerlayerdown          1500
+
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 666행)
+Et10                           down           down
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 667행)
+Et11                           down           down
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 669행)
+Po4093                         down           lowerlayerdown     MLAG
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 670행)
+Vl10                           down           lowerlayerdown
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 671행)
+Vl20                           down           lowerlayerdown
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 672행)
+Vl200                          down           lowerlayerdown
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 674행)
+Vl254                          down           lowerlayerdown
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 675행)
+Vl999                          down           lowerlayerdown
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 676행)
+Vl4000                         down           lowerlayerdown
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 677행)
+Vl4001                         down           lowerlayerdown
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 678행)
+Vl4093                         down           lowerlayerdown     mlag svi
+
+# 탐지 사유: 키워드 'DROPS' 검출 (원본 684행)
+Number of table drops    : 0
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 711행)
+-------------------------------- ----------------- --------------
+   hitless-reload-down              Disabled                  300
+   lacp-no-portid                   Disabled                  N/A
+   lacp-rate-limit                  Disabled                  300
+   license-enforce                  Disabled                  N/A
+   link-flap                        Disabled                  300
+   mlagasu                          Disabled                  N/A
+   mlagdualprimary                  Disabled                  N/A
+   mlagissu                         Disabled                  N/A
+   mlagmaintdown                    Disabled                  N/A
+   mlagsubintf                      Disabled                  N/A
+   no-internal-vlan                 Disabled                  300
+   portchannelguard                 Disabled                  300
+   portsec                          Disabled                  300
+   stp-no-portid                    Disabled                  N/A
+   tapagg                           Disabled                  300
+   uplink-failure-detection         Disabled                  300
+
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 735행)
+--------------------------- -------------------------------- -------------------------
+   U - In Use                  D - Down
+   + - In-Sync                 - - Out-of-Sync               i - incompatible with agg
+   P - bundled in Po           s - suspended                 G - Aggregable
+   I - Individual              S - ShortTimeout              w - wait for agg
+   C - Transmit disabled       M - Exceeds maximum weight
+  E - Inactive. The number of configured port channels exceeds the config limit
+
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 753행)
+Port-Channel4093 is down, line protocol is lowerlayerdown (notconnect)
+  Hardware is Port-Channel, address is 5001.0004.0003
+  Description: MLAG
+  Ethernet MTU 9214 bytes
+  Full-duplex, Unconfigured
+  Active members in this channel: 0
+  Fallback mode is: off
+  Down 1 hour, 3 minutes, 58 seconds
+  1 link status changes since last clear
+  Last clearing of "show interface" counters never
+  5 seconds input rate 0 bps (- with framing overhead), 0 packets/sec
+  5 seconds output rate 0 bps (- with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 input errors, 0 input discards
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 output discards
+
+# 탐지 사유: 키워드 'TIMEOUT' 검출 (원본 843행)
+Heartbeat timeout               :            60000 ms
+
+# 탐지 사유: 키워드 'TIMEOUT' 검출 (원본 844행)
+Last heartbeat timeout          :         7:30:25 ago
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 869행)
+Protocol: U - Up, D - Down, T - Testing, UN - Unknown
+          NP - Not Present, LLD - Lower Layer Down
+

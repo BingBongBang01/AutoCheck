@@ -1,0 +1,46 @@
+{
+  "phase": 4,
+  "title": "Structured Logging / Worker Pool / Progress Engine",
+  "status": "complete",
+  "summary": "Collector -> Parser -> Rule now emit structured JSON log events keyed by job/device/command/retry/timing/prompt/parser/rule, the ad-hoc ThreadPoolExecutor in engine/collector.py was extracted into a reusable WorkerPool (device-level parallel, per-device sequential unchanged), and a ProgressEngine computes elapsed/remaining/retry counts server-side so the GUI only reads a precomputed snapshot instead of calculating anything itself.",
+  "changes": [
+    {
+      "component": "Structured Logging",
+      "before": "engine/collector.py's emit() closure only ever called on_update() (never actually wired by collect_all) or print(). No timing was measured anywhere (no per-command duration, no per-device elapsed). core/app_logger.py captured all prints as flat text lines with a 'source' tag -- no structured fields (job/device/command/retry/timing/prompt/parser/rule).",
+      "after": "New core/structured_log.py::log_event(stage, event, **fields) writes one JSON line per event to logs/structured_<date>.jsonl with a fixed field set (job_id, device, command, retry, duration_ms, prompt, check_id, rule, status) plus a free-text message, and also mirrors a compact summary into core/app_logger (so the existing 'app log' screen keeps working, additive only, not a duplicate logging path). Wired at every stage:\n- collector: device_start/retry/command_done(with duration_ms + prompt=cmd)/attempt_failed/device_done, all tagged with job_id (the collection session id).\n- parser (pipeline/steps.py::ParserStep): one parse_step event per run with duration_ms and parsed/skipped counts.\n- rule (pipeline/steps.py::RuleEngineStep): one rule_eval event per stage (rule=stage_id) with duration_ms and finding count.\nAll logging calls are wrapped in try/except so a logging failure can never break the pipeline (same safety principle as core/app_logger.py).",
+      "files": ["core/structured_log.py (new)", "engine/collector.py", "pipeline/steps.py"],
+      "validated": "Manually verified: collect_device() with a stubbed netmiko connection produced structured events for device_start/command_done(with duration_ms)/device_done in logs/structured_<date>.jsonl."
+    },
+    {
+      "component": "Worker Pool",
+      "before": "engine/collector.py::collect_all() built an inline ThreadPoolExecutor(max_workers=...) directly, with max_workers resolution logic (connection.yaml's thread.max_parallel_workers, capped at 50) embedded in the same function. Device-level parallelism + per-device sequential commands were already correct (collect_device() loops over commands with 'for cmd in commands', one netmiko session per device) -- this was the one part of Phase 4 already effectively in place.",
+      "after": "New core/worker_pool.py::WorkerPool(max_workers, item_count, cap) formalizes the same max_workers-resolution/cap logic into a standalone, testable, reusable component. run_keyed(jobs) accepts {key: (fn, args, kwargs)} (needed because each device's collect_device call has different positional args) and yields (key, result) as futures complete -- collect_all() now builds a jobs dict and calls pool.run_keyed(jobs) instead of managing ThreadPoolExecutor/as_completed directly. Behavior is unchanged (still one thread per enabled device, same cap/config source) -- this is a structural extraction, not a behavior change.",
+      "files": ["core/worker_pool.py (new)", "engine/collector.py"],
+      "validated": "Manually verified: collect_all() against labs/connection_test/device_inventory.yaml (7 mock devices, stubbed ConnectHandler) completed all 7 devices in parallel with 0 errors."
+    },
+    {
+      "component": "Progress Engine",
+      "before": "The only progress signal was engine/run_manager.py's coarse RunSession.progress (a percentage, updated once per completed device future) persisted to session.json and polled by the GUI. api/job_runner.py's JobRunner computed elapsed_sec/eta_sec on every GUI poll (client-triggered, but the computation itself lived in the read path, not pushed as precomputed events) for a different feature (log analysis jobs) -- run_grade() (api/grade_api.py) had no progress plumbing at all; it just blocked synchronously until the whole pipeline finished.",
+      "after": "New core/progress_engine.py::ProgressEngine tracks, per job_id: device_total, devices_completed, per-device {status, command_done, command_total, retry, started_at, finished_at}, and an append-only capped event list. device_start()/command_done()/retry()/device_done() are called directly from engine/collector.py::collect_device() (mirroring the same call sites as the structured-logging hooks) and compute elapsed_sec + a linear ETA (remaining_sec, extrapolated from the average per-device duration so far) at the moment each event fires -- this computation happens once, server-side, never in the GUI. snapshot()/recent_events() expose the already-computed state; a module-level registry (get_or_create/get/snapshot) keys engines by job_id (collect_all's session_ts) so multiple runs don't collide. api/grade_api.py::get_grade_progress(job_id=None) exposes this to the GUI bridge, defaulting to the most recently created job when no job_id is given.",
+      "files": ["core/progress_engine.py (new)", "engine/collector.py", "api/grade_api.py"],
+      "validated": "Manually verified: after a full collect_all() run, get_grade_progress() (no job_id) returned the correct 7/7 devices_completed snapshot with per-device command_done/retry/status and a computed elapsed_sec/remaining_sec, with zero GUI-side computation needed. Also verified a bug caught during testing: the initial ProgressEngine implementation shadowed its own device_done() method with a same-named devices_completed counter (int) -- renamed the counter to avoid the collision (a real defect that would have crashed every call after the first)."
+    }
+  ],
+  "validation": {
+    "logging_structured": "logs/structured_<date>.jsonl now receives one JSON object per pipeline event (collector/parser/rule stages) with fixed fields (job_id, device, command, retry, duration_ms, prompt, check_id, rule, status) instead of ad-hoc print/on_update strings.",
+    "worker_pool_stable": "core/worker_pool.py isolates the ThreadPoolExecutor lifecycle; collect_all() ran 7 devices in parallel with 0 errors and correct per-device results in the test run.",
+    "progress_accurate": "ProgressEngine's snapshot after a completed 7-device run showed devices_completed=7/device_total=7, each device's command_done matching its command_total, and remaining_sec correctly settling to 0.0 once all devices finished.",
+    "manual_tests_run": [
+      "collect_device() against a stubbed netmiko ConnectHandler produced correct structured log events and progress engine state for a 2-command device",
+      "collect_all() against labs/connection_test/device_inventory.yaml (7 devices) completed via WorkerPool with correct results/errors/progress snapshot",
+      "ParserStep + RuleEngineStep run against a mock raw_by_device produced correct findings and emitted parse_step/rule_eval structured log events",
+      "api/grade_api.py::get_grade_progress() (with and without an explicit job_id) returned the correct snapshot / a graceful 'no_job' response for an unknown id"
+    ]
+  },
+  "known_gaps": [
+    "run_grade() (api/grade_api.py) is still fully synchronous -- it blocks the calling pywebview bridge thread for the entire grading run. The Progress Engine now populates real data *during* that blocked call, but the GUI cannot poll get_grade_progress() from the same blocked call path; a genuine background/async job model for grading (mirroring api/job_runner.py's pattern, used today only for log-analysis jobs) would be needed for the GUI to actually show live progress during a run. This was out of scope for this pass to avoid a larger, riskier change to the grading entrypoint.",
+    "'GUI receives events only' is satisfied in the sense that all elapsed/remaining/retry computation happens server-side in ProgressEngine -- but the web_ui/js/*.js polling loops (setInterval-based) were not touched in this pass; they still poll on an interval rather than receiving a push/event stream. pywebview does not offer a native server-push channel without extra plumbing (window.evaluate_js from Python), which was judged out of scope alongside the async-job gap above.",
+    "Structured log file (logs/structured_<date>.jsonl) has no rotation/retention policy beyond one file per calendar day -- acceptable for now given core/app_logger.py's existing session-file pattern has the same characteristic.",
+    "ProgressEngine's ETA (remaining_sec) is a simple linear extrapolation from the average per-device duration so far; it will be inaccurate for jobs with widely varying per-device timing (e.g. one device retries several times) -- acceptable as a first pass, flagged for future refinement if the GUI surfaces this number prominently."
+  ]
+}

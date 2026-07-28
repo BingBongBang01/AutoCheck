@@ -1,0 +1,85 @@
+=== 이상탐지 결과 — AutoCheck_Core2_20260728_171252.txt (14건) ===
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 595행)
+Vlan255           unassigned               down         lowerlayerdown          1500
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 596행)
+Vlan4000          10.10.99.3/24            down         lowerlayerdown          1500
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 597행)
+Vlan4093          10.10.10.3/29            down         lowerlayerdown          1500
+
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 638행)
+Et8                            down           down
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 640행)
+Po4093                         down           lowerlayerdown     MLAG
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 642행)
+Vl255                          down           lowerlayerdown
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 643행)
+Vl4000                         down           lowerlayerdown
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 644행)
+Vl4093                         down           lowerlayerdown     mlag svi
+
+# 탐지 사유: 키워드 'DROPS' 검출 (원본 650행)
+Number of table drops    : 0
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 678행)
+-------------------------------- ----------------- --------------
+   hitless-reload-down              Disabled                  300
+   lacp-no-portid                   Disabled                  N/A
+   lacp-rate-limit                  Disabled                  300
+   license-enforce                  Disabled                  N/A
+   link-flap                        Disabled                  300
+   mlagasu                          Disabled                  N/A
+   mlagdualprimary                  Disabled                  N/A
+   mlagissu                         Disabled                  N/A
+   mlagmaintdown                    Disabled                  N/A
+   mlagsubintf                      Disabled                  N/A
+   no-internal-vlan                 Disabled                  300
+   portchannelguard                 Disabled                  300
+   portsec                          Disabled                  300
+   stp-no-portid                    Disabled                  N/A
+   tapagg                           Disabled                  300
+   uplink-failure-detection         Disabled                  300
+
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 702행)
+--------------------------- -------------------------------- -------------------------
+   U - In Use                  D - Down
+   + - In-Sync                 - - Out-of-Sync               i - incompatible with agg
+   P - bundled in Po           s - suspended                 G - Aggregable
+   I - Individual              S - ShortTimeout              w - wait for agg
+   C - Transmit disabled       M - Exceeds maximum weight
+  E - Inactive. The number of configured port channels exceeds the config limit
+
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 720행)
+Port-Channel4093 is down, line protocol is lowerlayerdown (notconnect)
+  Hardware is Port-Channel, address is 5001.0002.0003
+  Description: MLAG
+  Ethernet MTU 9214 bytes
+  Full-duplex, Unconfigured
+  Active members in this channel: 0
+  Fallback mode is: off
+  Down 1 hour, 3 minutes, 57 seconds
+  1 link status changes since last clear
+  Last clearing of "show interface" counters never
+  5 seconds input rate 0 bps (- with framing overhead), 0 packets/sec
+  5 seconds output rate 0 bps (- with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 input errors, 0 input discards
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 output discards
+
+# 탐지 사유: 키워드 'TIMEOUT' 검출 (원본 810행)
+Heartbeat timeout               :            60000 ms
+
+# 탐지 사유: 키워드 'TIMEOUT' 검출 (원본 811행)
+Last heartbeat timeout          :         7:30:18 ago

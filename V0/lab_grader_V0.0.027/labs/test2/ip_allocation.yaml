@@ -1,0 +1,4 @@
+default_credentials:
+  username: admin
+  password: admin
+allocations: []
