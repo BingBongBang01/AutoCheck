@@ -34,12 +34,7 @@ async function navigate(page) {
     loganalysis: renderLogAnalysis,
     logmasking: renderLogMasking,
     workspace: renderWorkspace,
-    analysis: renderAnalysis,
-    findings: renderFindings,
-    reports: renderReports,
-    history: renderHistory,
     knowledge: renderKnowledge,
-    architecture: renderArchitecture,
     logs: renderLogs,
     settings: renderSettings,
   };
