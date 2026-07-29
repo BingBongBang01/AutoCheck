@@ -40,23 +40,6 @@ async function renderDashboard() {
       </div>
     </div>
 
-    <div class="section-gap grid-cols-2">
-      <div class="card hoverable">
-        <div class="card-header">
-          <div class="card-icon"><span class="material-symbols-rounded">hub</span></div>
-          <div><p class="card-title">Topology Preview</p><p class="card-desc">Discovery 결과 요약</p></div>
-        </div>
-        <p style="font-size:12px;color:var(--sub);">Discovery 탭에서 .unl 분석 실행 시 여기 표시됩니다.</p>
-      </div>
-      <div class="card hoverable">
-        <div class="card-header">
-          <div class="card-icon"><span class="material-symbols-rounded">history</span></div>
-          <div><p class="card-title">Recent Inspection</p><p class="card-desc">최근 점검 세션</p></div>
-        </div>
-        <p style="font-size:12px;color:var(--sub);">History 탭에서 전체 이력을 확인할 수 있습니다.</p>
-      </div>
-    </div>
-
     <div class="card section-gap" id="device-score-card" style="display:none;">
       <div class="card-header">
         <div class="card-icon"><span class="material-symbols-rounded">monitor_heart</span></div>
