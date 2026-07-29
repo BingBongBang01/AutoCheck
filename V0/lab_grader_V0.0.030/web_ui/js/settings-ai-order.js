@@ -14,6 +14,7 @@ function renderAiOrderList() {
   `).join('');
 
   let draggedId = null;
+  const autoScroller = createDragAutoScroller();
 
   list.querySelectorAll('.ai-order-item').forEach(item => {
     item.addEventListener('dragstart', () => {
@@ -23,9 +24,11 @@ function renderAiOrderList() {
     item.addEventListener('dragend', () => {
       item.classList.remove('dragging');
       list.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+      autoScroller.stop();
     });
     item.addEventListener('dragover', (e) => {
       e.preventDefault();
+      autoScroller.update(e);
       if (item.dataset.id === draggedId) return;
       list.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
       item.classList.add('drop-target');
@@ -33,6 +36,7 @@ function renderAiOrderList() {
     item.addEventListener('drop', (e) => {
       e.preventDefault();
       item.classList.remove('drop-target');
+      autoScroller.stop();
       const targetId = item.dataset.id;
       if (!draggedId || draggedId === targetId) return;
       reorderAiProviders(draggedId, targetId);
