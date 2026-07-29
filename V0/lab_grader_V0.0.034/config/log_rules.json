@@ -1,0 +1,8 @@
+﻿{
+  "anomaly_keywords": [
+    "FAIL", "ERROR", "CRITICAL", "DOWN", "CRC", "DROPS", "ERR-DISABLED", "TIMEOUT", "UNREACHABLE"
+  ],
+  "benign_phrases": [
+    "action error", "level critical", "idle-timeout"
+  ]
+}

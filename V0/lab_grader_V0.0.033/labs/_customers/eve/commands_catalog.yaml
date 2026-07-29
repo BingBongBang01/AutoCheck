@@ -160,7 +160,7 @@
   enabled: true
 - id: essential_32
   category: essential
-  command: show spanning-tree
+  command: show spanning-tree 피무
   description: 주요 VLAN의 STP 루트와 포트 역할 확인
   enabled: true
 - id: essential_33

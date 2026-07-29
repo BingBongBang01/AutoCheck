@@ -1,0 +1,75 @@
+=== 이상탐지 결과 — AutoCheck_Core1_20260729_132218.txt (11건) ===
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 562행)
+Jul 29 12:41:45 Core1 Ebra: %LINEPROTO-5-UPDOWN: Line protocol on Interface Vlan200 (VRF default), changed state to down
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 563행)
+Jul 29 12:41:45 Core1 Ebra: %LINEPROTO-5-UPDOWN: Line protocol on Interface Vlan4093 (mlag svi) (VRF default), changed state to down
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 606행)
+Vlan4000          10.10.99.2/24            down         lowerlayerdown          1500
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 651행)
+Po200                          down           lowerlayerdown     horizen_Switch_vrrp
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 655행)
+Vl4000                         down           lowerlayerdown
+
+# 탐지 사유: 키워드 'DROPS' 검출 (원본 662행)
+Number of table drops    : 0
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 686행)
+-------------------------------- ----------------- --------------
+   hitless-reload-down              Disabled                  300
+   lacp-no-portid                   Disabled                  N/A
+   lacp-rate-limit                  Disabled                  300
+   license-enforce                  Disabled                  N/A
+   link-flap                        Disabled                  300
+   mlagasu                          Disabled                  N/A
+   mlagdualprimary                  Disabled                  N/A
+   mlagissu                         Disabled                  N/A
+   mlagmaintdown                    Disabled                  N/A
+   mlagsubintf                      Disabled                  N/A
+   no-internal-vlan                 Disabled                  300
+   portchannelguard                 Disabled                  300
+   portsec                          Disabled                  300
+   stp-no-portid                    Disabled                  N/A
+   tapagg                           Disabled                  300
+   uplink-failure-detection         Disabled                  300
+
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 710행)
+--------------------------- -------------------------------- -------------------------
+   U - In Use                  D - Down
+   + - In-Sync                 - - Out-of-Sync               i - incompatible with agg
+   P - bundled in Po           s - suspended                 G - Aggregable
+   I - Individual              S - ShortTimeout              w - wait for agg
+   C - Transmit disabled       M - Exceeds maximum weight
+  E - Inactive. The number of configured port channels exceeds the config limit
+
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 727행)
+Port-Channel200 is down, line protocol is lowerlayerdown (notconnect)
+  Hardware is Port-Channel, address is 0000.0000.0000
+  Description: horizen_Switch_vrrp
+  Ethernet MTU 9214 bytes
+  Full-duplex, Unconfigured
+  Active members in this channel: 0
+  Fallback mode is: off
+  Down 2 hours, 22 minutes, 44 seconds
+  3 link status changes since last clear
+  Last clearing of "show interface" counters never
+  5 seconds input rate 0 bps (- with framing overhead), 0 packets/sec
+  5 seconds output rate 0 bps (- with framing overhead), 0 packets/sec
+     1084 packets input, 93448 bytes
+     Received 0 broadcasts, 1084 multicast
+     0 input errors, 0 input discards
+     239 packets output, 39347 bytes
+     Sent 0 broadcasts, 239 multicast
+     0 output errors, 0 output discards
+
+# 탐지 사유: 키워드 'TIMEOUT' 검출 (원본 847행)
+Heartbeat timeout               :                60000 ms
+
+# 탐지 사유: 키워드 'TIMEOUT' 검출 (원본 848행)
+Last heartbeat timeout          :                   never
