@@ -1,9 +1,9 @@
-# AutoCheck — 네트워크 장비 자동 점검/채점 (v0.0.025)
+# AutoCheck — 네트워크 장비 자동 점검/채점 (v0.0.030)
 
 버전 이력은 `CHANGELOG.md`, 구조 설명은 `ARCHITECTURE.md`,
 설치·실행 문제는 `실행방법.txt`를 참고하세요.
 
-버전 번호는 폴더명(`V0/lab_grader_V0.0.025`) = `VERSION` 파일 = CHANGELOG 제목이
+버전 번호는 폴더명(`V0/lab_grader_V0.0.030`) = `VERSION` 파일 = CHANGELOG 제목이
 항상 같은 값을 씁니다. UI 좌하단에 표시되는 값도 `VERSION`을 그대로 읽습니다.
 
 ## 실행
