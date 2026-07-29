@@ -23,6 +23,10 @@ import json
 import logging
 import os
 import shutil
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypeVar, Union
+
+if TYPE_CHECKING:
+    from engine.profile_manager import RunHandle
 import tempfile
 import uuid
 from dataclasses import dataclass

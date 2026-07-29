@@ -80,43 +80,40 @@ async function renderCatalog() {
     await call('update_catalog_command', id, document.querySelector(`[data-edit-command="${id}"]`).value, document.querySelector(`[data-edit-description="${id}"]`).value);
     flashSaved(true);
   }));
-  document.querySelectorAll('[data-cmd-id]').forEach(inp => {
-    inp.addEventListener('pointerdown', event => {
-      if (event.button !== 0) return;
-      const inputs = [...document.querySelectorAll('[data-cmd-id]')];
-      const startIndex = inputs.indexOf(inp);
-      const startY = event.clientY;
-      let selecting = false;
+  const catalogInputs = [...document.querySelectorAll('[data-cmd-id]')];
+  const catalogRows = [...document.querySelectorAll('.catalog-row')];
+  let dragStartIdx = null;
 
-      const finish = () => {
-        document.removeEventListener('pointermove', move);
-        document.removeEventListener('pointerup', finish);
-        if (selecting) {
-          suppressCheckboxClick = true;
-          setTimeout(() => { suppressCheckboxClick = false; }, 0);
-        }
-      };
-      const move = moveEvent => {
-        if (Math.abs(moveEvent.clientY - startY) < 6) return;
-        selecting = true;
-        const nearestIndex = inputs.reduce((nearest, checkbox, index) => {
-          const distance = Math.abs((checkbox.getBoundingClientRect().top + checkbox.getBoundingClientRect().height / 2) - moveEvent.clientY);
-          return distance < nearest.distance ? { index, distance } : nearest;
-        }, { index: startIndex, distance: Infinity }).index;
-        const ids = inputs.map(checkbox => checkbox.dataset.cmdId);
-        selectCatalogRange(ids, startIndex, nearestIndex);
-        moveEvent.preventDefault();
-      };
-      document.addEventListener('pointermove', move);
-      document.addEventListener('pointerup', finish, { once: true });
+  const dragger = createDragRangeSelect({
+    container: document.getElementById('content'),
+    rowSelector: '.catalog-row',
+    rows: catalogRows,
+    applyTo: (idx) => {
+      const ids = catalogInputs.map(cb => cb.dataset.cmdId);
+      selectCatalogRange(ids, dragStartIdx, idx);
+    },
+    onEnd: (dragged) => {
+      if (dragged) {
+        suppressCheckboxClick = true;
+        setTimeout(() => { suppressCheckboxClick = false; }, 0);
+      }
+      dragStartIdx = null;
+    }
+  });
+
+  catalogInputs.forEach((inp, idx) => {
+    inp.addEventListener('mousedown', event => {
+      if (event.button !== 0) return;
+      dragStartIdx = idx;
+      dragger.begin(idx);
     });
 
     inp.addEventListener('click', async e => {
-      if (suppressCheckboxClick) {
+      if (suppressCheckboxClick || dragger.isDragging()) {
         e.preventDefault();
         return;
       }
-      const inputs = [...document.querySelectorAll('[data-cmd-id]')];
+      const inputs = catalogInputs;
       if (e.shiftKey && lastSelectedIndex !== null) {
         const current = inputs.indexOf(inp);
         const start = Math.min(current, lastSelectedIndex), end = Math.max(current, lastSelectedIndex);
