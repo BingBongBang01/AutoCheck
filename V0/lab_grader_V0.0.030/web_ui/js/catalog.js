@@ -15,8 +15,8 @@ async function renderCatalog() {
     .map(([key, label]) => `<option value="${key}" ${key === current ? 'selected' : ''}>${label}</option>`).join('');
 
   const rowHtml = (c, rank) => `
-    <div class="catalog-row${catalogSelectedIds.has(c.id) ? ' selected' : ''}${c.enabled ? '' : ' cmd-disabled'}" draggable="true" data-row-id="${c.id}" style="display:flex;align-items:center;gap:10px;padding:6px 0;">
-      <span class="material-symbols-rounded catalog-drag-handle" data-select-handle="${c.id}" title="클릭: 선택 / Shift+클릭: 범위선택 / 드래그: 이동" style="cursor:grab;color:var(--sub)">drag_indicator</span>
+    <div class="catalog-row${catalogSelectedIds.has(c.id) ? ' selected' : ''}${c.enabled ? '' : ' cmd-disabled'}" data-row-id="${c.id}" style="display:flex;align-items:center;gap:10px;padding:6px 0;">
+      <span class="material-symbols-rounded catalog-drag-handle" draggable="true" data-select-handle="${c.id}" title="클릭: 선택 / Shift+클릭: 범위선택 / 드래그: 이동" style="cursor:grab;color:var(--sub)">drag_indicator</span>
       <input type="number" min="1" class="field mono catalog-rank-input" value="${rank}" data-rank-id="${c.id}" title="순서 번호 직접 입력" style="width:44px;padding:4px 4px;text-align:center;">
       <select class="field catalog-category-select" data-category-id="${c.id}" title="카테고리 변경" style="width:96px;font-size:12px;padding:4px 4px;">${categoryOptions(c.category)}</select>
       <input type="checkbox" ${c.enabled ? 'checked' : ''} data-cmd-id="${c.id}">
