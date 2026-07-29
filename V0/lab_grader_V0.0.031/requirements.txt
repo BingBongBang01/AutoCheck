@@ -1,0 +1,13 @@
+# UI — 진입점 python main.py가 이 위에서 뜬다 (없으면 앱이 시작조차 안 됨)
+pywebview
+
+# 설정 / 장비 접속
+pyyaml
+netmiko
+paramiko
+
+# 보고서 내보내기 (보고서 탭)
+openpyxl
+pandas
+python-pptx
+reportlab

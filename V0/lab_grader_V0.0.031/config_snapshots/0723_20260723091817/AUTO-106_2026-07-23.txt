@@ -1,0 +1,80 @@
+! Command: show running-config
+! device: Access2 (vEOS-lab, EOS-4.35.4M)
+!
+! boot system flash:/vEOS-lab.swi
+!
+no aaa root
+!
+username admin privilege 15 role network-admin secret sha512 $6$AldynVy0MwXKp0PT$rMVZAe4LLBggY0RFTSnOBStcwSDj2ypE/qbF.ULbc8PyjAKgpQqN6yacJwAx9puydmpOggcpN0gwPn2aTZGcO/
+!
+management api http-commands
+   no shutdown
+!
+no service interface inactive port-id allocation disabled
+!
+load-interval default 5
+!
+service routing protocols model multi-agent
+!
+logging buffered informational
+logging console informational
+logging synchronous level critical
+!
+hostname Access2
+!
+spanning-tree mode rapid-pvst
+!
+system l1
+   unsupported speed action error
+   unsupported error-correction action error
+!
+clock timezone Asia/Seoul
+!
+vlan 100
+   name USER
+!
+vlan 200
+   name SERVER
+!
+vlan 999
+   name NATIVE_UNUSED
+!
+vrf instance MGMT
+!
+management console
+   idle-timeout 3
+!
+aaa authorization exec default local
+!
+interface Ethernet1
+   switchport trunk native vlan 999
+   switchport trunk allowed vlan 100
+   switchport mode trunk
+!
+interface Ethernet2
+   switchport trunk native vlan 999
+   switchport trunk allowed vlan 100
+   switchport mode trunk
+!
+interface Ethernet3
+!
+interface Ethernet4
+!
+interface Ethernet5
+!
+interface Ethernet6
+!
+interface Ethernet7
+!
+interface Ethernet8
+!
+interface Management1
+   vrf MGMT
+   ip address 192.168.205.106/21
+!
+ip routing
+ip routing vrf MGMT
+!
+ip route vrf MGMT 0.0.0.0/0 192.168.200.1
+!
+end
