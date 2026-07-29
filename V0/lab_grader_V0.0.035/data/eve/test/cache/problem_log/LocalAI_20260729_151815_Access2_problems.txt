@@ -1,0 +1,18 @@
+Et3 down
+link-flap Disa
+
+TIMEOUT at line 674
+link-flap Disabled 300
+no-internal-vlan Disabled 300
+portchannelguard Disabled 300
+portsec Disabled 300
+stp-no-portid Disabled N/A
+tapagg Disabled 300
+uplink-failure-detection Disabled 300
+
+DOWN at line 685 (Port-Channel dense status)
+Port-Channel Flags: D - Down
+
+TIMEOUT at line 773
+TIMEOUT at line 774
+Summary: Detected two instances of TIMEOUT related to peer communication/heartbeat mechanisms.

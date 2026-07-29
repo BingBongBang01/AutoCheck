@@ -1,0 +1,21 @@
+Po4092     core_agg_mlag notconnect   trunk     full   unconf N/A
+Vlan10            192.168.10.3/24          down         lowerlayerdown          1500
+Vlan20            192.168.20.3/24          down         lowerlayerdown          1500
+Vlan200           unassigned               down         lowerlayerdown          1500
+Et10                           down           down
+Et11                           down           down
+Po4092                         down           lowerlayerdown     core_agg_mlag
+Vl10                           down           lowerlayerdown
+Vl20                           down           lowerlayerdown
+Vl200                          down           lowerlayerdown
+   Po4092(D)          LACP(a)     Et3(G-) Et4(iG-) Et5(wG+) Et6(wG+)
+Port-Channel4092 is down, line protocol is lowerlayerdown (notconnect)
+  Active members in this channel: 0
+  Down 1 hour, 30 minutes, 58 seconds
+Last heartbeat timeout          :      1 day, 5:20:47 ago
+Heartbeat timeouts since reboot :                       1
+Vl10            default       192.168.10.1             LLD            stopped
+Vl20            default       192.168.10.1             LLD            stopped
+
+Summary:
+The network log indicates that Port-Channel 4092 (core_agg_mlag) is down with a lowerlayerdown/notconnect status and zero active members. Consequently, associated VLAN interfaces (Vlan10, Vlan20, Vlan200) and physical member ports (Et10, Et11, and LACP states on Et3-Et6) are reporting down or inactive states. Additionally, an MLAG heartbeat timeout was recorded previously (1 heartbeat timeout since reboot), causing virtual router interfaces on Vl10 and Vl20 to stop due to lower layer down issues.

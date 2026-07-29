@@ -1,0 +1,50 @@
+=== 이상탐지 결과 — 20260729_151815_raw_Access1.txt (10건) ===
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 618행)
+Et4                            down           down
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 619행)
+Et5                            down           down
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 620행)
+Et6                            down           down
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 621행)
+Et7                            down           down
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 622행)
+Et8                            down           down
+
+# 탐지 사유: 키워드 'DROPS' 검출 (원본 629행)
+Number of table drops    : 0
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 650행)
+-------------------------------- ----------------- --------------
+   hitless-reload-down              Disabled                  300
+   lacp-no-portid                   Disabled                  N/A
+   lacp-rate-limit                  Disabled                  300
+   license-enforce                  Disabled                  N/A
+   link-flap                        Disabled                  300
+   no-internal-vlan                 Disabled                  300
+   portchannelguard                 Disabled                  300
+   portsec                          Disabled                  300
+   stp-no-portid                    Disabled                  N/A
+   tapagg                           Disabled                  300
+   uplink-failure-detection         Disabled                  300
+
+
+# 탐지 사유: 키워드 'DOWN' 검출 (원본 669행)
+--------------------------- -------------------------------- -------------------------
+   U - In Use                  D - Down
+   + - In-Sync                 - - Out-of-Sync               i - incompatible with agg
+   P - bundled in Po           s - suspended                 G - Aggregable
+   I - Individual              S - ShortTimeout              w - wait for agg
+   C - Transmit disabled       M - Exceeds maximum weight
+  E - Inactive. The number of configured port channels exceeds the config limit
+
+
+# 탐지 사유: 키워드 'TIMEOUT' 검출 (원본 757행)
+Heartbeat timeout               :                0 ms
+
+# 탐지 사유: 키워드 'TIMEOUT' 검출 (원본 758행)
+Last heartbeat timeout          :               never

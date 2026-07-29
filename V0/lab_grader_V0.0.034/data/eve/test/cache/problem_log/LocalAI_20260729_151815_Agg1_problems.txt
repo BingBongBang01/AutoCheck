@@ -1,0 +1,43 @@
+%LINEPROTO-5-UPDOWN: Line protocol on Interface Port-Channel4092 (core_agg_mlag) (VRF default), changed state to down
+%LINEPROTO-5-UPDOWN: Line protocol on Interface Ethernet4 (core_agg_mlag) (VRF default), changed state to up
+%LINEPROTO-5-UPDOWN: Line protocol on Interface Ethernet4 (core_agg_mlag) (VRF default), changed state to down
+
+%LINEPROTO-5-UPDOWN: Line protocol on Interface Port-Channel4092 (core_agg_mlag) (VRF default), changed state to down
+%LINEPROTO-5-UPDOWN: Line protocol on Interface Ethernet4 (core_agg_mlag) (VRF default), changed state to up
+%LINEPROTO-5-UPDOWN: Line protocol on Interface Ethernet4 (core_agg_mlag) (VRF default), changed state to down
+
+%LAG-5-MEMBER_REMOVED: Interface Ethernet3 (core_agg_mlag) has left Port-Channel2048 due to: partner not collecting
+%LINEPROTO-5-UPDOWN: Line protocol on Interface Port-Channel2048 (VRF default), changed state to down
+%MLAG-4-INTF_INACTIVE_LOCAL: Local interface Port-Channel2048 is link down. MLAG 2048 is inactive.
+%LINEPROTO-5-UPDOWN: Line protocol on Interface Port-Channel2048 (VRF default), changed state to up
+%MLAG-6-INTF_ACTIVE: Local interface Port-Channel2048 and peer interface Port-Channel2048 are link up. MLAG 2048 is active.
+
+Summary: The logs show intermittent issues with the LAG member Ethernet3 leaving Port-Channel2048 due to a partner not collecting, causing the line protocol state to go down, followed by recovery when the member rejoins and links become up, resulting in an active MLAG configuration.
+
+INTF_INACTIVE_LOCAL: Local interface Port-Channel2048 is link down. MLAG 2048 is inactive.
+Vlan1 Status: down
+Vlan10 Status: down
+Vlan20 Status: down
+
+Et4 down down core_agg_mlag
+Et10 down down
+
+Et10 down down
+Et11 down down
+Vl10 down lowerlayerdown
+Vl20 down lowerlayerdown
+
+Errdisable Reason                Timer Status   Timer Interval
+-------------------------------- ----------------- --------------
+   link-flap                        Disabled                  300
+   uplink-failure-detection         Disabled                  300
+
+Anomaly: The log snippet indicates potential issues related to link flapping and uplink failure detection mechanisms being disabled or potentially triggering errors.
+
+TIMEOUT at line 863
+TIMEOUT at line 864
+Summary: Two instances of TIMEOUT were detected related to port-channel failover/heartbeat mechanisms.
+
+Interface Vl10 default 192.168.10.1 LLD stopped
+Interface Vl20 default 192.168.20.1 LLD stopped
+Summary: Two virtual interfaces (Vl10 and Vl20) are in a Lower Layer Down (LLD) and stopped state, indicating potential interface or VRRP configuration issues on Agg1.

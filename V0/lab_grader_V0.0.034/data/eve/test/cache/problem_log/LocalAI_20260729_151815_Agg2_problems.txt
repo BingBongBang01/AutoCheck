@@ -1,0 +1,36 @@
+Vlan10 down lowerlayerdown
+Vlan20 down lowerlayerdown
+Vlan200 down lowerlayerdown
+
+Summary: Several VLAN interfaces (Vlan10, Vlan20, Vlan200) are in a down state with the status lowerlayerdown.
+
+Vlan10 down lowerlayerdown
+Vlan20 down lowerlayerdown
+Vlan200 down lowerlayerdown
+Et10 down down
+Et11 down down
+
+Summary: Several VLANs (Vlan10, Vlan20, Vlan200) and physical interfaces (Et10, Et11) are in a DOWN state with associated errors/statuses.
+
+Et10 down down
+Et11 down down
+Vl10 down lowerlayerdown
+Vl20 down lowerlayerdown
+Vl200 down lowerlayerdown
+
+Summary: Multiple interfaces (Et10, Et11) and VLANs (Vl10, Vl20, Vl200) are in a DOWN state with associated lowerlayerdown indications.
+
+Vl10 down lowerlayerdown
+Vl20 down lowerlayerdown
+Vl200 down lowerlayerdown
+
+Summary: Three VLANs (Vl10, Vl20, Vl200) are in a down state with the reason being lowerlayerdown.
+
+tapagg Disabled 300
+uplink-failure-detection Disabled 300
+TIMEOUT detected at line 867 (Last failover change time: 1 day, 5:30:11 ago)
+TIMEOUT detected at line 868
+
+Interface Vl10 default 192.168.10.1 LLD stopped
+Interface Vl20 default 192.168.20.1 LLD stopped
+Summary: Two virtual interfaces (Vl10 and Vl20) in Agg2 are in the LLD (Lower Layer Down) state and have a 'stopped' status, indicating potential interface or VRF connectivity issues.

@@ -1,0 +1,63 @@
+=== AutoCheck 실행 방법 ===
+
+실행 진입점은 하나뿐입니다: python main.py
+실행하면 Material Design 3 웹 UI 창이 뜹니다.
+
+
+--- 처음 한 번만 ---
+
+1. 파이썬 설치 확인
+   cmd(명령 프롬프트) 또는 PowerShell에서:
+     python --version
+
+   "python은 내부 또는 외부 명령... 인식할 수 없습니다" 라고 뜨면
+   -> 파이썬이 설치 안 된 것. python.org에서 설치 후 "Add to PATH" 체크 필수.
+
+2. 프로젝트 폴더로 이동
+   윈도우 탐색기에서 폴더를 열고 주소창에 cmd 입력 후 엔터
+   (또는: cd 경로\lab_grader)
+   그 안에 main.py, engine, parsers, labs 폴더가 보여야 정상.
+
+3. 필요한 패키지 설치
+     python -m pip install -r requirements.txt
+
+   설치되는 것: pyyaml, netmiko, pywebview, openpyxl, paramiko
+   (pywebview가 UI 창을 띄우는 데 필요합니다. Windows는 시스템에 내장된
+    Edge WebView2를 자동으로 쓰기 때문에 보통 추가 설치가 필요 없습니다.)
+
+
+--- 매번 ---
+
+   python main.py
+
+   창이 뜨면 UI에서:
+     1) 고객/프로파일 선택 또는 생성
+     2) 장비·SSH 설정에서 관리 IP / 계정 입력, 사용할 장비 켜기
+     3) 커맨드 카탈로그에서 수집할 커맨드 확인
+     4) "채점 실행" 버튼
+
+   장비 접속·수집·파싱·채점·이력저장·리포트 생성이 전부 이 한 번의 실행에서
+   순서대로 처리됩니다.
+
+
+--- 정기점검(무인 실행) ---
+
+UI 없이 cron/작업 스케줄러로 주기 실행하고 싶을 때만 사용합니다.
+
+   python -m engine.scheduler          # 지금 시각에 due한 job만 1회 실행
+   python -m engine.scheduler --loop   # 자체 루프로 매분 체크
+
+일정은 config/scheduler.yaml에 정의합니다.
+UI에서 실행하든 스케줄러로 실행하든 채점 로직은 engine/grading.py 하나로 동일합니다.
+
+
+--- 그래도 안 되면 ---
+
+터미널에 찍힌 오류 메시지를 그대로 캡처해서 보여주면 원인 확인이 빠릅니다.
+
+자주 나오는 것:
+- ModuleNotFoundError: No module named 'webview'
+  -> 3번(패키지 설치)을 안 한 것. python -m pip install -r requirements.txt
+- UnicodeDecodeError: 'cp949' codec can't decode ...
+  -> 한글 Windows 인코딩 문제. 프로젝트 안의 open() 호출은 전부
+     encoding="utf-8"로 고정해 뒀으므로, 이 오류가 나면 직접 추가한 코드를 확인하세요.

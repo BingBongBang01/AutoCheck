@@ -1,0 +1,11 @@
+Et8                            down           down
+Po200                          down           lowerlayerdown     horizen_Switch_vrrp
+Po4092                         down           lowerlayerdown     core_agg_mlag
+Po4092(D)          LACP(a)     Et3(iG-) Et4(iG-) Et5(wG-) Et6(wG-)
+Port-Channel200 is down, line protocol is lowerlayerdown (notconnect)
+Port-Channel4092 is down, line protocol is lowerlayerdown (notconnect)
+Last heartbeat timeout          :       1 day, 5:20:40 ago
+Heartbeat timeouts since reboot :                        1
+
+Summary:
+The network log analysis reveals several interface and protocol issues on Core2. Physical interface Et8 and Port-Channels 200 and 4092 are down, with Po4092 showing incompatible/waiting LACP member states (Et3-Et6). Additionally, an MLAG UDP heartbeat timeout occurred previously (1 heartbeat timeout since reboot), indicating past control plane communication issues with the peer switch.
