@@ -1,0 +1,932 @@
+=== 점검 시작 — Core2 ===
+
+--- enable ---
+enable
+Core2#
+
+--- conf ---
+conf
+Core2(config)#
+
+--- terminal length 0 ---
+terminal length 0
+Pagination disabled.
+Core2(config)#
+
+--- show version ---
+show version
+Arista vEOS-lab
+Hardware version:
+Serial number: 12D78DB79593EC95B3104F8E134D34D0
+Hardware MAC address: 5001.004b.6277
+System MAC address: 5001.004b.6277
+
+Software image version: 4.35.4M
+Architecture: x86_64
+Internal build version: 4.35.4M-47365815.4354M
+Internal build ID: 3f9686d7-9c34-49e2-9884-2394cd1cc98d
+Image format version: 1.0
+Image optimization: None
+
+Uptime: 1 week, 1 day, 0 hours and 10 minutes
+Total memory: 2930132 kB
+Free memory: 1551512 kB
+
+Core2(config)#
+
+--- show clock ---
+show clock
+Tue Jul 28 10:19:54 2026
+Timezone: Asia/Seoul
+Clock source: local
+Core2(config)#
+
+--- show ntp status ---
+show ntp status
+NTP is disabled.
+Core2(config)#
+
+--- show reload cause ---
+show reload cause
+Reload Cause:
+-------------
+The system rebooted due to unknown reasons.
+
+Debugging Information:
+----------------------
+Core2(config)#
+
+--- show inventory ---
+show inventory
+System information
+  Model                    Description
+  ------------------------ ----------------------------------------------------
+  vEOS-lab                 vEOS for lab use
+
+  HW Version  Serial Number                    Mfg Date   Epoch
+  ----------- -------------------------------- ---------- -----
+              12D78DB79593EC95B3104F8E134D34D0
+
+System has 9 ports
+  Type               Count
+  ------------------ ----
+  Management         1
+  Switched           6
+  SwitchedBootstrap  2
+
+Core2(config)#
+
+--- show module ---
+show module
+% Unavailable command (not supported on this hardware platform)
+Core2(config)#
+
+--- show environment power ---
+show environment power
+% There seem to be no power supplies connected.
+Core2(config)#
+
+--- show environment cooling ---
+show environment cooling
+% Invalid input
+Core2(config)#
+
+--- show environment temperature ---
+show environment temperature
+% Invalid input
+Core2(config)#
+
+--- show processes top once ---
+show processes top once
+top - 10:19:56 up 8 days, 10 min,  1 user,  load average: 0.07, 0.22, 0.22
+Tasks: 155 total,   1 running, 154 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  0.0 us,  3.0 sy,  0.0 ni, 97.0 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st
+MiB Mem :   2861.5 total,    416.3 free,   1347.1 used,   1350.3 buff/cache
+MiB Swap:      0.0 total,      0.0 free,      0.0 used.   1514.4 avail Mem
+
+  PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+16998 admin     20   0   11936   6180   5308 R   6.2   0.2   0:00.03 top
+    1 root      20   0   24256  14696  10168 S   0.0   0.5   0:21.48 systemd
+    2 root      20   0       0      0      0 S   0.0   0.0   0:00.01 kthreadd
+    3 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 rcu_gp
+    4 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 rcu_par_gp
+    6 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker/0:0H-events_highpri
+    8 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 mm_percpu_wq
+    9 root      20   0       0      0      0 S   0.0   0.0   0:00.00 rcu_tasks_kthre
+   10 root      20   0       0      0      0 S   0.0   0.0   0:00.00 rcu_tasks_rude_
+   11 root      20   0       0      0      0 S   0.0   0.0   0:00.00 rcu_tasks_trace
+   12 root      20   0       0      0      0 S   0.0   0.0   0:12.44 ksoftirqd/0
+   13 root      20   0       0      0      0 I   0.0   0.0   0:53.51 rcu_preempt
+   14 root      rt   0       0      0      0 S   0.0   0.0   0:00.34 migration/0
+   16 root      20   0       0      0      0 S   0.0   0.0   0:00.00 cpuhp/0
+   17 root      20   0       0      0      0 S   0.0   0.0   0:00.00 cpuhp/1
+   18 root      rt   0       0      0      0 S   0.0   0.0   0:00.56 migration/1
+   19 root      20   0       0      0      0 S   0.0   0.0   0:12.97 ksoftirqd/1
+   21 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker/1:0H-kblockd
+   22 root      20   0       0      0      0 S   0.0   0.0   0:00.00 kdevtmpfs
+   23 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 netns
+   24 root      20   0       0      0      0 S   0.0   0.0   0:00.00 kauditd
+   25 root      20   0       0      0      0 S   0.0   0.0   0:19.75 khungtaskd
+   26 root      20   0       0      0      0 S   0.0   0.0   0:00.00 oom_reaper
+   27 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 writeback
+   28 root      20   0       0      0      0 S   0.0   0.0   0:02.84 kcompactd0
+   48 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 cryptd
+   75 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kintegrityd
+   76 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kblockd
+   77 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 blkcg_punt_bio
+   78 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 tpm_dev_wq
+   79 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 ata_sff
+   80 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 edac-poller
+   81 root     -51   0       0      0      0 S   0.0   0.0   0:00.00 watchdogd
+   82 root       0 -20       0      0      0 I   0.0   0.0   0:00.32 kworker/0:1H-kblockd
+   83 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 rpciod
+   84 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker/u5:0
+   85 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 xprtiod
+   90 root      20   0       0      0      0 S   0.0   0.0   0:00.00 kswapd0
+   91 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 nfsiod
+   94 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 pcielwd
+   95 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 nvme-wq
+   96 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 nvme-reset-wq
+   97 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 nvme-delete-wq
+   98 root      20   0       0      0      0 S   0.0   0.0   0:00.00 scsi_eh_0
+   99 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 scsi_tmf_0
+  100 root      20   0       0      0      0 S   0.0   0.0   0:00.00 scsi_eh_1
+  101 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 scsi_tmf_1
+  104 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 ixgbe
+  105 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 ice
+  106 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 dm_bufio_cache
+  107 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 ipv6_addrconf
+  108 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kstrp
+  109 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 ecc_log_wq
+  391 root      20   0       0      0      0 S   0.0   0.0   0:01.81 jbd2/vda2-8
+  392 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 ext4-rsv-conver
+  636 root       0 -20       0      0      0 I   0.0   0.0   0:00.35 kworker/1:1H-kblockd
+  754 root       0 -20       0      0      0 S   0.0   0.0   0:13.56 loop0
+  854 root      20   0  109704  14056  12520 S   0.0   0.5   0:22.87 systemd-journal
+ 1020 root      20   0   33020  10192   8348 S   0.0   0.3   0:00.96 systemd-udevd
+ 1136 root      20   0    8448   4948   1816 S   0.0   0.2   0:13.13 haveged
+ 1371 root      20   0    4196   3228   2948 S   0.0   0.1   0:00.11 core_annotate_u
+ 1397 root      20   0    2640   1096   1008 S   0.0   0.0   0:21.43 ProcMonitor
+ 1399 root      20   0    5856   1988   1812 S   0.0   0.1   0:55.31 SlabMonitor
+ 1400 root      20   0    2660   1836   1732 S   0.0   0.1   1:26.42 SysResMonitor
+ 1407 root      20   0    4196   3156   2916 S   0.0   0.1   0:00.00 rasdfilter.sh
+ 1412 root      20   0   19284   6844   5872 S   0.0   0.2   0:01.17 systemd-logind
+ 1419 root      20   0    2888   1096    984 S   0.0   0.0   0:00.04 rasdaemon
+ 1420 root      20   0 2109332  11956   6996 S   0.0   0.4   0:00.07 python
+ 1449 root      20   0    5640   3484   2656 S   0.0   0.1   0:06.69 crond
+ 1473 dbus      20   0   10556   4384   3952 S   0.0   0.1   0:00.07 dbus-broker-lau
+ 1487 root      20   0   11920   2388   1640 S   0.0   0.1   0:00.13 xinetd
+ 1563 dbus      20   0    5004   2892   2588 S   0.0   0.1   0:00.05 dbus-broker
+ 1672 root      20   0 2109532   9052   3404 S   0.0   0.3   0:00.00 python3
+ 1673 root      20   0    2784    288    236 S   0.0   0.0   0:00.00 inotifywait
+ 1687 root      20   0   11160   3216   2664 S   0.0   0.1   0:00.00 SaveFossil
+ 1688 root      20   0 2109568   8992   3340 S   0.0   0.3   0:02.02 python3
+ 1689 root      20   0    2784    288    236 S   0.0   0.0   0:00.24 inotifywait
+ 1697 root      20   0 2109548   9000   3340 S   0.0   0.3   0:00.00 python3
+ 1698 root      20   0    2864   1740   1584 S   0.0   0.1   0:00.00 inotifywait
+ 1707 root      20   0    4196   3236   2984 S   0.0   0.1   0:07.59 bash
+ 1781 root      20   0 2118692  23376  12616 S   0.0   0.8  24:14.46 ProcMgr
+ 1855 root      20   0    5844    196      0 S   0.0   0.0   3:21.47 EosOomAdjust
+ 1862 root      20   0       0      0      0 S   0.0   0.0   0:08.08 rbfd_vrf_cleanu
+ 1873 root      20   0 3739728 571264 300824 S   0.0  19.5  54:29.53 ConfigAgent
+ 1874 root      20   0 2157320  47308  30780 S   0.0   1.6   0:44.59 StageMgr
+ 1875 root      20   0 2236820 112656  70144 S   0.0   3.8   0:51.60 Fru
+ 1876 root      20   0 2265992 123228  89892 S   0.0   4.2   0:56.56 Launcher
+ 1877 root      20   0 2343928 220388 159116 S   0.0   7.5  26:29.76 Sysdb
+ 1878 root      20   0 2256264 117168  94356 S   0.0   4.0   0:50.97 ProcLauncher-1
+ 1879 root      20   0 2109928   9060   8088 S   0.0   0.3   1:51.59 PerfMonitor
+ 1891 root      -2   0       0      0      0 S   0.0   0.0   0:11.79 psimon
+ 3198 root      20   0 2154072  35352  30488 S   0.0   1.2   0:42.14 ReloadCauseAgen
+ 3199 root      20   0 2153444  34596  29816 S   0.0   1.2   0:39.35 KernelNetworkIn
+ 3201 root      20   0 2187652  63104  55700 S   0.0   2.2   1:34.35 Ebra
+ 3202 root      20   0 2295976 118244 105104 S   0.0   4.0   3:48.58 Acl
+ 3203 root      20   0 2198688  67976  59584 S   0.0   2.3   0:45.36 Ira
+ 3204 root      20   0 2476760  71516  41404 S   0.0   2.4   0:58.96 Aaa
+ 3205 root      20   0 2248220 130340  83604 S   0.0   4.4   5:56.10 SuperServer
+ 3551 root       0 -20 2412876 215260 179252 S   0.0   7.3  72:11.54 Etba
+ 3552 root      20   0 2185936  61948  43400 S   0.0   2.1  17:26.53 PhyEthtool-1
+ 3969 root      20   0   12616   1396     16 S   0.0   0.0   0:00.00 nginx
+ 3971 nobody    20   0   17380   6360   4576 S   0.0   0.2   0:00.00 nginx
+ 4033 root      20   0  292988   6720   3940 S   0.0   0.2   0:06.58 rsyslogd
+ 4089 root      20   0 2184848  53544  46944 S   0.0   1.8   7:02.92 LacpTxAgent
+ 4090 root      20   0 2141764  25740  21548 S   0.0   0.9  27:23.25 AgentMonitor
+ 4092 root      20   0 2179912  52572  38632 S   0.0   1.8   0:46.88 RouteCache
+ 4093 root      20   0 2187900  56732  49548 S   0.0   1.9   1:25.93 ConnectedRoute
+ 4094 root      20   0 2144044  27880  24092 S   0.0   1.0   0:39.15 SharedSecretPro
+ 4095 root      20   0 2214560  84936  63104 S   0.0   2.9   3:24.48 IgmpSnooping
+ 4100 root      20   0 2189876  63348  51124 S   0.0   2.2   1:54.62 EventMgr
+ 4108 root      20   0 2240588  88948  78600 S   0.0   3.0   1:42.95 Dot1x
+ 4110 root      20   0 2177848  49628  43480 S   0.0   1.7   1:39.42 TopoAgent
+ 4111 root      20   0 2165344  40952  35440 S   0.0   1.4   0:49.97 FibServices
+ 4113 root      20   0 2384448  57604  39848 S   0.0   2.0   0:44.22 CapiApp
+ 4114 root      20   0 2158036  37072  31944 S   0.0   1.3   0:52.94 L2Rib
+ 4115 root      20   0 2188588  59492  52504 S   0.0   2.0   1:39.35 Bfd
+ 4116 root      20   0 2187488  59736  52332 S   0.0   2.0   1:19.53 Qos
+ 4119 root      20   0    2504    992    900 S   0.0   0.0   0:00.00 conlogd
+ 4120 root      20   0    4196   3072   2840 S   0.0   0.1   0:00.00 sh
+ 4121 root      20   0    5896   2060   1868 S   0.0   0.1   0:00.04 LogMonUtil
+ 4122 root      20   0    3616   1104    984 S   0.0   0.0   0:00.00 sed
+ 4123 root      20   0    3028   1088   1004 S   0.0   0.0   0:00.02 agetty
+ 4131 root      20   0 2147172  29676  25496 S   0.0   1.0   0:34.82 Thermostat
+ 4132 root      20   0 2179468  51324  44836 S   0.0   1.8   1:42.12 PortSec
+ 4133 root      20   0 2176092  47368  41372 S   0.0   1.6   1:23.91 IfIndex
+ 4139 root      20   0 2274780  96316  85424 S   0.0   3.3   0:44.98 ArfaAegis
+ 4140 root      20   0 2207048  70436  61828 S   0.0   2.4   1:07.14 Arp
+ 4141 root      20   0 2143244  27156  23380 S   0.0   0.9   0:38.03 PowerFuse
+ 4146 root      20   0 2209444  65640  57648 S   0.0   2.2   1:28.22 McastCommon
+ 4151 root      20   0 2179936  52560  45392 S   0.0   1.8   8:39.29 StpTxRx
+ 4154 root      20   0 2185204  60544  53044 S   0.0   2.1  14:00.38 Lag
+ 4155 root      20   0 2210924  72368  61500 S   0.0   2.5   1:26.04 KernelFib
+ 4156 root      20   0 2165088  40708  35536 S   0.0   1.4   0:40.77 XcvrCentralAgen
+ 4157 root      20   0 2171600  49764  43460 S   0.0   1.7   3:02.04 Stp
+ 4158 root      20   0 2251848  93828  82560 S   0.0   3.2   1:14.21 ArfaState
+ 4159 root      20   0 2180344  52884  46220 S   0.0   1.8   0:38.15 StpTopology
+ 4160 root      20   0 2213392  72864  63364 S   0.0   2.5   1:27.98 RouteInput
+ 4161 root      20   0 2151568  31860  27284 S   0.0   1.1   0:38.42 StandbyCpld
+ 4167 root      20   0 2171256  46056  39084 S   0.0   1.6   0:57.39 Tunnel
+ 4168 root      20   0 2209332  63400  55596 S   0.0   2.2   1:27.35 McastCommon6
+ 4201 root      20   0 2182124  54476  47676 S   0.0   1.9   2:11.43 Lldp
+ 4229 root      20   0 2233900  94476  78832 S   0.0   3.2   1:10.38 IpRib
+ 4299 root      20   0       0      0      0 I   0.0   0.0   0:00.33 kworker/0:1-mm_percpu_wq
+ 4422 root      20   0    2644   1092   1008 S   0.0   0.0   0:00.00 mingetty
+15982 root      20   0       0      0      0 I   0.0   0.0   0:00.02 kworker/u4:1-events_unbound
+16696 root      20   0       0      0      0 I   0.0   0.0   0:01.70 kworker/1:0-events_power_efficient
+16752 root      20   0       0      0      0 I   0.0   0.0   0:00.00 kworker/u4:0-events_unbound
+16794 root      20   0       0      0      0 I   0.0   0.0   0:00.00 kworker/1:1
+16800 root      20   0    2784    288    236 S   0.0   0.0   0:00.00 inotifywait
+16981 root      20   0    2652   1032    948 S   0.0   0.0   0:00.00 sleep
+16982 root      20   0   16680  11172   9808 S   0.0   0.4   0:00.03 sshd-session
+16988 admin     20   0   16940   6568   5008 S   0.0   0.2   0:00.00 sshd-session
+16989 admin     20   0 2334584  17656   8676 S   0.0   0.6   0:00.25 CliShell
+21007 root      20   0       0      0      0 I   0.0   0.0   0:01.39 kworker/0:0-cgroup_destroy
+32130 root      20   0 2215500  93680  71108 S   0.0   3.2   4:17.43 Mlag
+Core2(config)#
+
+--- q ---
+q
+% Incomplete command
+Core2(config)#
+
+--- show processes top memory ---
+show processes top memory
+=(Btop - 10:19:57 up 8 days, 10 min,  1 user,  load average: 0.06, 0.21, 0.22(B(B
+Tasks:(B 155 (Btotal,(B   1 (Brunning,(B 154 (Bsleeping,(B   0 (Bstopped,(B   0 (Bzombie(B(B
+%Cpu(s):(B  6.1 (Bus,(B  3.0 (Bsy,(B  0.0 (Bni,(B 90.9 (Bid,(B  0.0 (Bwa,(B  0.0 (Bhi,(B  0.0 (Bsi,(B  0.0 (Bst(B(B
+MiB Mem :(B   2861.5 (Btotal,(B    416.3 (Bfree,(B   1347.1 (Bused,(B   1350.3 (Bbuff/cache(B(B
+MiB Swap:(B      0.0 (Btotal,(B      0.0 (Bfree,(B      0.0 (Bused.(B   1514.4 (Bavail Mem (B(B
+
+  PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND                                            (B
+(B 1873 root      20   0 3739728 571340 300824 S   0.0  19.5  54:29.58 ConfigAgent                                        (B
+(B 1877 root      20   0 2343928 220388 159116 S   0.0   7.5  26:29.78 Sysdb                                              (B
+(B 3551 root       0 -20 2412876 215260 179252 S   0.0   7.3  72:11.56 Etba                                               (B
+(B 3205 root      20   0 2248220 130340  83604 S   0.0   4.4   5:56.10 SuperServer                                        (B
+(B 1876 root      20   0 2265992 123228  89892 S   0.0   4.2   0:56.56 Launcher                                           (B
+(B 3202 root      20   0 2295976 118244 105104 S   0.0   4.0   3:48.58 Acl                                                (B
+(B 1878 root      20   0 2256264 117168  94356 S   0.0   4.0   0:50.97 ProcLauncher-1                                     (B
+(B 1875 root      20   0 2236820 112656  70144 S   0.0   3.8   0:51.60 Fru                                                (B
+(B 4139 root      20   0 2274780  96316  85424 S   0.0   3.3   0:44.98 ArfaAegis                                          (B
+(B 4229 root      20   0 2233900  94476  78832 S   0.0   3.2   1:10.38 IpRib                                              (B
+(B 4158 root      20   0 2251848  93828  82560 S   0.0   3.2   1:14.21 ArfaState                                          (B
+(B32130 root      20   0 2215500  93680  71108 S   0.0   3.2   4:17.43 Mlag                                               (B
+(B 4108 root      20   0 2240588  88948  78600 S   0.0   3.0   1:42.95 Dot1x                                              (B
+(B 4095 root      20   0 2214560  84936  63104 S   0.0   2.9   3:24.48 IgmpSnooping                                       (B
+(B 4160 root      20   0 2213392  72864  63364 S   0.0   2.5   1:27.98 RouteInput                                         (B
+(B 4155 root      20   0 2210924  72368  61500 S   0.0   2.5   1:26.04 KernelFib                                          (B
+(B 3204 root      20   0 2476760  71516  41404 S   0.0   2.4   0:58.96 Aaa                                                (B
+(B 4140 root      20   0 2207048  70436  61828 S   0.0   2.4   1:07.14 Arp                                                (B
+(B 3203 root      20   0 2198688  67976  59584 S   0.0   2.3   0:45.36 Ira                                                (B
+(B 4146 root      20   0 2209444  65640  57648 S   0.0   2.2   1:28.22 McastCommon                                        (B
+(B 4168 root      20   0 2209332  63400  55596 S   0.0   2.2   1:27.35 McastCommon6                                       (B
+(B 4100 root      20   0 2189876  63348  51124 S   0.0   2.2   1:54.62 EventMgr                                           (B
+(B 3201 root      20   0 2187652  63104  55700 S   0.0   2.2   1:34.35 Ebra                                               (B
+(B 3552 root      20   0 2185936  61948  43400 S   0.0   2.1  17:26.53 PhyEthtool-1                                       (B
+(B 4154 root      20   0 2185204  60544  53044 S   0.0   2.1  14:00.40 Lag                                                (B
+(B 4116 root      20   0 2187488  59736  52332 S   0.0   2.0   1:19.53 Qos                                                (B
+(B 4115 root      20   0 2188588  59492  52504 S   0.0   2.0   1:39.35 Bfd                                                (B
+(B 4113 root      20   0 2384448  57604  39848 S   0.0   2.0   0:44.22 CapiApp                                            (B
+(B 4093 root      20   0 2187900  56732  49548 S   0.0   1.9   1:25.93 ConnectedRoute                                     (B
+(B 4201 root      20   0 2182124  54476  47676 S   0.0   1.9   2:11.44 Lldp                                               (B
+(B 4089 root      20   0 2184848  53544  46944 S   0.0   1.8   7:02.93 LacpTxAgent                                        (B
+(B 4159 root      20   0 2180344  52884  46220 S   0.0   1.8   0:38.15 StpTopology                                        (B
+(B 4092 root      20   0 2179912  52572  38632 S   0.0   1.8   0:46.88 RouteCache                                         (B
+
+--- q ---
+>
+Core2(config)#
+
+--- show logging ---
+show logging
+Syslog logging: enabled
+Buffer logging: level informational
+Console logging: level informational
+Persistent logging: disabled
+Monitor logging: level informational
+Synchronous logging: level critical
+Trap logging: level informational
+Sequence numbers: disabled
+Syslog facility: local4
+Hostname format: Hostname only
+Syslog prefix: Hostname
+Repeat logging interval: disabled
+Repeat messages: disabled
+Root login logging: disabled
+
+External configuration:
+    active:
+    inactive:
+
+Facility                   Severity            Effective Severity
+--------------------       -------------       ------------------
+aaa                        debugging           informational
+accounting                 debugging           informational
+acl                        debugging           informational
+agent                      debugging           informational
+ale                        debugging           informational
+arp                        debugging           informational
+bfd                        debugging           informational
+bgp                        debugging           informational
+bmp                        debugging           informational
+capacity                   debugging           informational
+capi                       debugging           informational
+classification             debugging           informational
+clear                      debugging           informational
+cvx                        debugging           informational
+dataplane                  debugging           informational
+dhcp                       debugging           informational
+dmf                        debugging           informational
+dot1x                      debugging           informational
+dot1xhttp                  debugging           informational
+dscp                       debugging           informational
+envmon                     debugging           informational
+eth                        debugging           informational
+eventmon                   debugging           informational
+extension                  debugging           informational
+fhrp                       debugging           informational
+flow                       debugging           informational
+flowtracking               debugging           informational
+forwarding                 debugging           informational
+fru                        debugging           informational
+fwk                        debugging           informational
+gmp                        debugging           informational
+hardware                   debugging           informational
+health                     debugging           informational
+httpservice                debugging           informational
+igmp                       debugging           informational
+igmpsnooping               debugging           informational
+influxtelemetry            debugging           informational
+int                        debugging           informational
+intf                       debugging           informational
+ip6routing                 debugging           informational
+iprib                      debugging           informational
+ira                        debugging           informational
+isis                       debugging           informational
+kernelfib                  debugging           informational
+lacp                       debugging           informational
+lag                        debugging           informational
+launcher                   debugging           informational
+ldp                        debugging           informational
+license                    debugging           informational
+lineproto                  debugging           informational
+lldp                       debugging           informational
+logmgr                     debugging           informational
+loopback                   debugging           informational
+loopprotect                debugging           informational
+mcs                        debugging           informational
+mirroring                  debugging           informational
+mka                        debugging           informational
+mlag                       debugging           informational
+mldsnooping                debugging           informational
+mmode                      debugging           informational
+monitorsecurity            debugging           informational
+mroute                     debugging           informational
+mrp                        debugging           informational
+msdp                       debugging           informational
+msrp                       debugging           informational
+msspolicymonitor           debugging           informational
+mvrp                       debugging           informational
+nat                        debugging           informational
+openconfig                 debugging           informational
+openflow                   debugging           informational
+ospf                       debugging           informational
+ospf3                      debugging           informational
+package                    debugging           informational
+pfc                        debugging           informational
+pimbsr                     debugging           informational
+portsecurity               debugging           informational
+postcardtelemetry          debugging           informational
+pseudowire                 debugging           informational
+ptp                        debugging           informational
+pwrmgmt                    debugging           informational
+qos                        debugging           informational
+queuemonitor               debugging           informational
+radius                     debugging           informational
+redundancy                 debugging           informational
+rib                        debugging           informational
+routing                    debugging           informational
+security                   debugging           informational
+servermonitor              debugging           informational
+serverprobe                debugging           informational
+sfe                        debugging           informational
+spantree                   debugging           informational
+sso                        debugging           informational
+stagemgr                   debugging           informational
+sys                        debugging           informational
+sysdb                      debugging           informational
+tapagg                     debugging           informational
+tcp                        debugging           informational
+trafficpolicy              debugging           informational
+transceiver                debugging           informational
+tunnel                     debugging           informational
+tunnelintf                 debugging           informational
+vlan                       debugging           informational
+vmtracersess               debugging           informational
+vmwarevi                   debugging           informational
+vmwarevs                   debugging           informational
+vrf                        debugging           informational
+vrrp                       debugging           informational
+vxlan                      debugging           informational
+ztp                        debugging           informational
+
+Log Buffer:
+Jul 28 09:44:32 Core2 Lag: %LAG-5-MEMBER_ADDED: Interface Ethernet2 has joined Port-Channel1
+Jul 28 09:44:32 Core2 Lag: %LAG-5-MEMBER_ADDED: Interface Ethernet1 has joined Port-Channel1
+Jul 28 09:44:32 Core2 Ebra: %LINEPROTO-5-UPDOWN: Line protocol on Interface Port-Channel1 (VRF default), changed state to up
+Jul 28 09:44:32 Core2 Ebra: %LINEPROTO-5-UPDOWN: Line protocol on Interface Vlan4094 (VRF default), changed state to up
+Jul 28 09:44:40 Core2 Lldp: %LLDP-5-NEIGHBOR_NEW: LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet2" added on interface Ethernet2
+Jul 28 09:44:40 Core2 Lldp: %LLDP-5-NEIGHBOR_NEW: LLDP neighbor with chassisId 5001.00e5.e36a and portId "Ethernet1" added on interface Ethernet1
+Jul 28 09:44:56 Core2 Mlag: %MLAG-4-STATE_PRIMARY_PEER_LINK_UP: MLAG connection restored with peer Port-Channel1 after the peer link (10.10.10.2) came back up. MLAG will retain the primary role
+Jul 28 09:44:56 Core2 Mlag: %MLAG-4-PEER_EVENT_RECONNECT: The connection with MLAG peer 10.10.10.2 was reestablished. MLAG state remains primary.
+Jul 28 09:44:58 Core2 Mlag: %MLAG-3-PEER_HEARTBEAT_RESUMED: MLAG resumed receiving UDP heartbeats from the peer 10.10.10.2.
+Jul 28 09:45:12 Core2 Mlag: %MLAG-6-ARP_SYNC_COMPLETE: MLAG primary ARP table is synchronized with peer 10.10.10.2
+Jul 28 09:47:00 Core2 Ebra: %LINEPROTO-5-UPDOWN: Line protocol on Interface Ethernet5 (VRF default), changed state to down
+Jul 28 09:47:00 Core2 Ebra: %LINEPROTO-5-UPDOWN: Line protocol on Interface Ethernet6 (VRF default), changed state to down
+Jul 28 09:49:30 Core2 Stp: %SPANTREE-6-STABLE_CHANGE: Stp state is now not stable
+Jul 28 09:49:30 Core2 Stp: %SPANTREE-6-INTERFACE_ADD: Interface PeerEthernet8 has been added to instance Vl1
+Jul 28 09:49:30 Core2 Stp: %SPANTREE-6-INTERFACE_ADD: Interface PeerEthernet7 has been added to instance Vl1
+Jul 28 09:49:50 Core2 Stp: %SPANTREE-6-INTERFACE_STATE: Interface PeerEthernet8 instance Vl1 moving from discarding to learning
+Jul 28 09:49:50 Core2 Stp: %SPANTREE-6-INTERFACE_STATE: Interface PeerEthernet8 instance Vl1 moving from learning to forwarding
+Jul 28 09:49:50 Core2 Stp: %SPANTREE-6-INTERFACE_STATE: Interface PeerEthernet7 instance Vl1 moving from discarding to learning
+Jul 28 09:49:50 Core2 Stp: %SPANTREE-6-INTERFACE_STATE: Interface PeerEthernet7 instance Vl1 moving from learning to forwarding
+Jul 28 09:50:20 Core2 Stp: %SPANTREE-6-STABLE_CHANGE: Stp state is now stable
+Jul 28 09:51:52 Core2 Ebra: %LINEPROTO-5-UPDOWN: Line protocol on Interface Ethernet5 (VRF default), changed state to up
+Jul 28 09:51:52 Core2 Ebra: %LINEPROTO-5-UPDOWN: Line protocol on Interface Ethernet6 (VRF default), changed state to up
+Jul 28 09:51:54 Core2 Lldp: %LLDP-5-NEIGHBOR_NEW: LLDP neighbor with chassisId 5001.004b.6277 and portId "Ethernet6" added on interface Ethernet5
+Jul 28 09:51:54 Core2 Lldp: %LLDP-5-NEIGHBOR_NEW: LLDP neighbor with chassisId 5001.004b.6277 and portId "Ethernet5" added on interface Ethernet6
+Jul 28 09:51:54 Core2 Lldp: %LLDP-5-NEIGHBOR_NEW: LLDP neighbor with chassisId 5001.00ca.7a8d and portId "Ethernet6" added on interface Ethernet5
+Jul 28 09:51:54 Core2 Lldp: %LLDP-5-NEIGHBOR_NEW: LLDP neighbor with chassisId 5001.00ca.7a8d and portId "Ethernet6" added on interface Ethernet6
+Jul 28 09:52:52 Core2 Lag: %LACP-4-PARTNER_CHURN: LACP Partner Churn Detected on Ethernet5
+Jul 28 09:52:52 Core2 Lag: %LACP-4-ACTOR_CHURN: LACP Actor Churn Detected on Ethernet5
+Jul 28 09:52:52 Core2 Lag: %LACP-4-ACTOR_CHURN: LACP Actor Churn Detected on Ethernet6
+Jul 28 09:52:52 Core2 Lag: %LACP-4-PARTNER_CHURN: LACP Partner Churn Detected on Ethernet6
+Jul 28 10:09:33 Core2 ConfigAgent: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty3 (172.16.99.198)
+Jul 28 10:19:54 Core2 ConfigAgent: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty3 (172.16.99.198)
+Core2(config)#
+
+--- show interfaces status ---
+Port       Name     Status       Vlan     Duplex Speed  Type            Flags Encapsulation
+Et1                 connected    in Po1   full   1G     EbraTestPhyPort
+Et2                 connected    in Po1   full   1G     EbraTestPhyPort
+Et3                 connected    in Po10  full   1G     EbraTestPhyPort
+Et4                 connected    in Po10  full   1G     EbraTestPhyPort
+Et5                 connected    in Po20  full   1G     EbraTestPhyPort
+Et6                 connected    in Po20  full   1G     EbraTestPhyPort
+Et7                 connected    1        full   1G     EbraTestPhyPort
+Et8                 notconnect   1        full   1G     EbraTestPhyPort
+Ma1                 connected    routed   a-full a-1G   10/100/1000
+Po1                 connected    trunk    full   2G     N/A
+Po10                notconnect   routed   full   unconf N/A
+Po20       to-Core2 notconnect   routed   full   unconf N/A
+
+Core2(config)#
+
+--- show ip interface brief ---
+show ip interface brief
+                                                                                           Address
+Interface            IP Address               Status       Protocol                 MTU    Owner
+-------------------- ------------------------ ------------ -------------------- ---------- -------
+Management1          192.168.205.102/21       up           up                      1500
+Port-Channel10       10.0.21.1/30             down         lowerlayerdown          1500
+Port-Channel20       10.0.22.1/30             down         lowerlayerdown          1500
+Vlan4094             10.10.10.3/29            up           up                      1500
+
+Core2(config)#
+
+--- show interfaces counters errors ---
+show interfaces counters errors
+Port               FCS    Align   Symbol       Rx    Runts   Giants       Tx
+Et1                  0        0        0        0        0        0        0
+Et2                  0        0        0        0        0        0        0
+Et3                  0        0        0        0        0        0        0
+Et4                  0        0        0        0        0        0        0
+Et5                  0        0        0        0        0        0        0
+Et6                  0        0        0        0        0        0        0
+Et7                  0        0        0        0        0        0        0
+Et8                  0        0        0        0        0        0        0
+Ma1                  0        0        0        0        0        0        0
+Core2(config)#
+
+--- show interfaces counters queue ---
+show interfaces counters queue
+Core2(config)#
+
+--- show interfaces counters rates ---
+show interfaces counters rates
+Port      Name      Intvl  In Kbps      %   In Pps Out Kbps      %  Out Pps
+Et1                  0:05      6.8   0.0%       11      1.4   0.0%        2
+Et2                  0:05      1.4   0.0%        2     22.4   0.0%       11
+Et3                  0:05      5.7   0.0%        6      2.7   0.0%        3
+Et4                  0:05      5.8   0.0%        6      2.6   0.0%        3
+Et5                  0:05      6.2   0.0%        6      3.2   0.0%        3
+Et6                  0:05      6.5   0.0%        6      2.9   0.0%        3
+Et7                  0:05      0.0   0.0%        0      0.3   0.0%        1
+Et8                  0:05      0.0   0.0%        0      0.0   0.0%        0
+Ma1                  0:05     12.0   0.0%       21     76.5   0.0%       38
+Po1                  0:05      7.5   0.0%       12     20.6   0.0%       11
+Po10                 0:05      0.0      -        0      0.0      -        0
+Po20      to-Core2   0:05      0.0      -        0      0.0      -        0
+Core2(config)#
+
+--- show interfaces transceiver ---
+show interfaces transceiver
+Core2(config)#
+
+--- show interfaces description ---
+show interfaces description
+Interface                      Status         Protocol           Description
+Et1                            up             up
+Et2                            up             up
+Et3                            up             up
+Et4                            up             up
+Et5                            up             up
+Et6                            up             up
+Et7                            up             up
+Et8                            down           down
+Ma1                            up             up
+Po1                            up             up
+Po10                           down           lowerlayerdown
+Po20                           down           lowerlayerdown     to-Core2
+Vl4094                         up             up
+Core2(config)#
+
+--- show lldp neighbors ---
+show lldp neighbors
+Last table change time   : 0:28:03 ago
+Number of table inserts  : 36
+Number of table deletes  : 26
+Number of table drops    : 0
+Number of table age-outs : 22
+
+Port Neighbor Device ID Neighbor Port ID TTL
+---- ------------------ ---------------- ---
+Et1  Core1              Ethernet1        120
+Et2  Core1              Ethernet2        120
+Et3  Core2              Ethernet4        120
+Et3  Agg2               Ethernet4        120
+Et4  Core2              Ethernet3        120
+Et4  Agg2               Ethernet4        120
+Et5  Core2              Ethernet6        120
+Et5  Agg1               Ethernet6        120
+Et6  Core2              Ethernet5        120
+Et6  Agg1               Ethernet6        120
+
+Core2(config)#
+
+--- show errdisable recovery ---
+show errdisable recovery
+   Errdisable Reason                Timer Status   Timer Interval
+-------------------------------- ----------------- --------------
+   acl                              Disabled                  300
+   arp-inspection                   Disabled                  300
+   bpduguard                        Disabled                  300
+   dot1x-coa                        Disabled                  N/A
+   dot1x-phone-classification       Disabled                  N/A
+   dot1x-session-replace            Disabled                  300
+   fabric-link-failure              Disabled                  N/A
+   fabric-link-flap                 Disabled                  N/A
+   hitless-reload-down              Disabled                  300
+   lacp-no-portid                   Disabled                  N/A
+   lacp-rate-limit                  Disabled                  300
+   license-enforce                  Disabled                  N/A
+   link-flap                        Disabled                  300
+   mlagasu                          Disabled                  N/A
+   mlagdualprimary                  Disabled                  N/A
+   mlagissu                         Disabled                  N/A
+   mlagmaintdown                    Disabled                  N/A
+   mlagsubintf                      Disabled                  N/A
+   no-internal-vlan                 Disabled                  300
+   portchannelguard                 Disabled                  300
+   portsec                          Disabled                  300
+   stp-no-portid                    Disabled                  N/A
+   tapagg                           Disabled                  300
+   uplink-failure-detection         Disabled                  300
+
+Core2(config)#
+
+--- show port-channel dense ---
+show port-channel dense
+
+                   Flags
+--------------------------- -------------------------------- -------------------------
+   a - LACP Active             p - LACP Passive              * - static fallback
+   F - Fallback enabled        f - Fallback configured       ^ - individual fallback
+   U - In Use                  D - Down
+   + - In-Sync                 - - Out-of-Sync               i - incompatible with agg
+   P - bundled in Po           s - suspended                 G - Aggregable
+   I - Individual              S - ShortTimeout              w - wait for agg
+   C - Transmit disabled       M - Exceeds maximum weight
+  E - Inactive. The number of configured port channels exceeds the config limit
+
+Number of channels in use: 1
+Number of aggregators: 1
+
+   Port-Channel       Protocol    Ports
+------------------ -------------- ------------------
+   Po1(U)             LACP(a)     Et1(PG+) Et2(PG+)
+   Po10(D)            LACP(a)     Et3(G-) Et4(G-)
+   Po20(D)            LACP(a)     Et5(G-) Et6(G-)
+
+Core2(config)#
+
+--- show interfaces Port-Channel10 ---
+show interfaces Port-Channel10
+Port-Channel10 is down, line protocol is lowerlayerdown (notconnect)
+  Hardware is Port-Channel, address is 5001.004b.6277
+  Internet address is 10.0.21.1/30
+  Broadcast address is 255.255.255.255
+  IP MTU 1500 bytes (default)
+  Full-duplex, Unconfigured
+  Active members in this channel: 0
+  Fallback mode is: off
+  Down 18 hours, 54 minutes, 54 seconds
+  1 link status changes since last clear
+  Last clearing of "show interface" counters never
+  5 seconds input rate 0 bps (- with framing overhead), 0 packets/sec
+  5 seconds output rate 0 bps (- with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 input errors, 0 input discards
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 output discards
+Core2(config)#
+
+--- show lacp interface Ethernet3 ---
+show lacp interface Ethernet3
+State: A = Active, P = Passive; S=ShortTimeout, L=LongTimeout;
+       G = Aggregable, I = Individual; s+=InSync, s-=OutOfSync;
+       C = Collecting, X = state machine expired,
+       D = Distributing, d = default neighbor state
+                    |                       Partner                                              Actor
+Port   Status       | Sys-id                  Port#   State   OperKey   PortPri   Port#   State   OperKey  PortPriority
+----- --------------|------------------------ ------ ------- --------- --------- ------- ------- --------- ------------
+Port Channel Port-Channel10:
+Et3    No Aggregate | 8000,50-01-00-4b-62-77      4   ALGs-    0x000a     32768       3   ALGs-    0x000a         32768
+
+Core2(config)#
+
+--- show lacp interface Ethernet4 ---
+show lacp interface Ethernet4
+State: A = Active, P = Passive; S=ShortTimeout, L=LongTimeout;
+       G = Aggregable, I = Individual; s+=InSync, s-=OutOfSync;
+       C = Collecting, X = state machine expired,
+       D = Distributing, d = default neighbor state
+                    |                       Partner                                              Actor
+Port   Status       | Sys-id                  Port#   State   OperKey   PortPri   Port#   State   OperKey  PortPriority
+----- --------------|------------------------ ------ ------- --------- --------- ------- ------- --------- ------------
+Port Channel Port-Channel10:
+Et4    No Aggregate | 8000,50-01-00-4b-62-77      3   ALGs-    0x000a     32768       4   ALGs-    0x000a         32768
+
+Core2(config)#
+
+--- show mlag ---
+show mlag
+MLAG Configuration:
+domain-id                          :           CORE_MLAG
+local-interface                    :            Vlan4094
+peer-address                       :          10.10.10.2
+peer-link                          :       Port-Channel1
+hb-peer-address                    :             0.0.0.0
+peer-config                        :          consistent
+
+MLAG Status:
+state                              :              Active
+negotiation status                 :           Connected
+peer-link status                   :                  Up
+local-int status                   :                  Up
+system-id                          :   52:01:00:4b:62:77
+dual-primary detection             :            Disabled
+dual-primary interface errdisabled :               False
+
+MLAG Ports:
+Disabled                           :                   0
+Configured                         :                   0
+Inactive                           :                   0
+Active-partial                     :                   0
+Active-full                        :                   0
+
+Core2(config)#
+
+--- show mlag detail ---
+show mlag detail
+MLAG Configuration:
+domain-id                          :           CORE_MLAG
+local-interface                    :            Vlan4094
+peer-address                       :          10.10.10.2
+peer-link                          :       Port-Channel1
+hb-peer-address                    :             0.0.0.0
+peer-config                        :          consistent
+
+MLAG Status:
+state                              :              Active
+negotiation status                 :           Connected
+peer-link status                   :                  Up
+local-int status                   :                  Up
+system-id                          :   52:01:00:4b:62:77
+dual-primary detection             :            Disabled
+dual-primary interface errdisabled :               False
+
+MLAG Ports:
+Disabled                           :                   0
+Configured                         :                   0
+Inactive                           :                   0
+Active-partial                     :                   0
+Active-full                        :                   0
+
+MLAG Detailed Status:
+State                           :                  primary
+Peer State                      :                secondary
+State changes                   :                        2
+Last state change time          :             21:02:28 ago
+Hardware ready                  :                     True
+Failover                        :                    False
+Failover Cause(s)               :                  Unknown
+Last failover change time       :              0:35:05 ago
+Secondary from failover         :                    False
+Peer MAC address                :        50:01:00:e5:e3:6a
+Peer MAC routing supported      :                    False
+Reload delay                    :              300 seconds
+Non-MLAG reload delay           :              300 seconds
+Peer ports errdisabled          :                    False
+Lacp standby                    :                    False
+Configured heartbeat interval   :                  4000 ms
+Effective heartbeat interval    :                  4000 ms
+Heartbeat timeout               :                 60000 ms
+Last heartbeat timeout          :              0:38:00 ago
+Heartbeat timeouts since reboot :                        1
+UDP heartbeat alive             :                     True
+Heartbeats sent/received        :              20495/18877
+Peer monotonic clock offset     :   -689512.458110 seconds
+Agent should be running         :                     True
+P2p mount state changes         :                        3
+Fast MAC redirection enabled    :                    False
+Peer-link forwarding restricted :                    False
+Interface activation interlock  :              unsupported
+
+Core2(config)#
+
+--- show mlag interfaces ---
+show mlag interfaces
+No MLAG ports configured
+Core2(config)#
+
+--- show vrrp brief ---
+show vrrp brief
+Interface VRF        ID  Ver Pri Time  State  Last Transition     VR IP Addresses
+--------- ---------- --- --- --- ----- ------ ------------------- ---------------
+Core2(config)#
+
+--- show ip virtual-router ---
+show ip virtual-router
+IP virtual router MAC address is not configured
+Core2(config)#
+
+--- show spanning-tree vlan 1,100,200,999 ---
+show spanning-tree vlan 1,100,200,999
+Spanning tree instance for vlan 1
+VL1
+  Spanning tree enabled protocol rapid-pvst
+  Root ID    Priority    4097
+             Address     5201.004b.6277
+             This bridge is the root
+
+  Bridge ID  Priority     4097  (priority 4096 sys-id-ext 1)
+             Address     5201.004b.6277
+             Hello Time  2.000 sec  Max Age 20 sec  Forward Delay 15 sec
+
+Interface        Role       State      Cost      Prio.Nbr Type
+---------------- ---------- ---------- --------- -------- --------------------
+Et7              designated forwarding 20000     128.7    P2p Edge
+PEt7             designated forwarding 20000     128.207  P2p Edge
+PEt8             designated forwarding 20000     128.208  P2p Edge
+
+Core2(config)#
+
+--- show spanning-tree detail ---
+show spanning-tree detail
+ VL1 is executing the rapid-pvst Spanning Tree protocol
+  Bridge Identifier has priority 4096, sysid 1, address 5201.004b.6277
+  Configured hello time 2.000, max age 20, forward delay 15, transmit hold-count 6
+  We are the root of the spanning tree
+  Number of topology changes 88 last change occurred 68074 seconds ago
+          from Ethernet5
+
+ Port 7 (Ethernet7) of VL1 is designated forwarding
+   Port path cost 20000, Port priority 128, Port Identifier 128.7.
+   Designated root has priority 4097, address 5201.004b.6277
+   Designated bridge has priority 4097, address 5201.004b.6277
+   Designated port id is 128.7, designated path cost 0 (Ext) 0 (Int)
+   Timers: message age 0, forward delay 15, hold 20
+   Number of transitions to forwarding state: 3
+   Link type is point-to-point by default, Internal
+   BPDU: sent 37083, received 0, taggedErr 0, otherErr 0, rateLimiterCount 0
+   Rate-Limiter: enabled, Window: 10 sec, Max-BPDU: 400
+
+ Port 207 (PeerEthernet7) of VL1 is designated forwarding
+   Port path cost 20000, Port priority 128, Port Identifier 128.207.
+   Designated root has priority 4097, address 5201.004b.6277
+   Designated bridge has priority 4097, address 5201.004b.6277
+   Designated port id is 128.207, designated path cost 0 (Ext) 0 (Int)
+   Timers: message age 0, forward delay 15, hold 20
+   Number of transitions to forwarding state: 1
+   Link type is point-to-point by default, Internal
+   BPDU: sent 895, received 0, taggedErr 0, otherErr 0, rateLimiterCount 0
+   Rate-Limiter: enabled, Window: 0 sec, Max-BPDU: 0
+
+ Port 208 (PeerEthernet8) of VL1 is designated forwarding
+   Port path cost 20000, Port priority 128, Port Identifier 128.208.
+   Designated root has priority 4097, address 5201.004b.6277
+   Designated bridge has priority 4097, address 5201.004b.6277
+   Designated port id is 128.208, designated path cost 0 (Ext) 0 (Int)
+   Timers: message age 0, forward delay 15, hold 20
+   Number of transitions to forwarding state: 1
+   Link type is point-to-point by default, Internal
+   BPDU: sent 896, received 0, taggedErr 0, otherErr 0, rateLimiterCount 0
+   Rate-Limiter: enabled, Window: 0 sec, Max-BPDU: 0
+
+
+ VL4094 is executing the rapid-pvst Spanning Tree protocol
+  Bridge Identifier has priority 32768, sysid 4094, address 5201.004b.6277
+  Configured hello time 2.000, max age 20, forward delay 15, transmit hold-count 6
+  We are the root of the spanning tree
+
+
+Core2(config)#
+
+--- show ip access-lists ---
+show ip access-lists
+
+
+--- show ip arp vrf all ---
+show ip arp vrf all
+
+
+--- show ip route vrf all summary brief ---
+show ip route vrf all summary brief
+
+
+--- show ip bgp summary ---
+show ip bgp summary
+
+
+--- show bgp evpn summary ---
+show bgp evpn summary
+
+
+--- show interfaces vxlan 1 ---
+show interfaces vxlan 1
+
+
+--- show ip ospf neighbor ---
+show ip ospf neighbor
+
+
+--- show ip ospf interface brief ---
+show ip ospf interface brief
+
+
+--- show ip route bgp ---
+show ip route bgp
+
+
+--- show ip route vrf all bgp ---
+show ip route vrf all bgp
+
+
+--- show ip route ospf ---
+show ip route ospf
+
+
+--- show ip route vrf all static ---
+show ip route vrf all static
+
+
+--- show running-config | grep 'ip route' ---
+show running-config | grep 'ip route'
+
+
+--- show running-config ---
+show running-config
+
+
+--- show startup-config ---
+show startup-config
