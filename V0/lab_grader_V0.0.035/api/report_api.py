@@ -47,16 +47,30 @@ from engine.log_analysis import ANOMALY_KEYWORDS as _ANOMALY_KEYWORDS
 
 
 def _scan_anomalies(text):
-    """텍스트를 줄 단위로 훑어 이상 징후 키워드가 포함된 줄만 뽑아낸다(대소문자 무시)."""
+    """텍스트를 명령 섹션별로 훑어 이상 징후 줄만 뽑아낸다.
+
+    예전에는 여기서 자체적으로 대문자 부분문자열 매칭(`kw in upper`)을 했는데, 그러면
+    "SHUTDOWN"의 DOWN이나 값이 0인 카운터까지 전부 걸려 Log Analysis 탭 결과와 어긋났다.
+    판정은 규칙 엔진 한 곳(engine/log_rule_engine.py)에만 두고 여기서는 섹션 정보만 붙인다."""
     from report.textfsm_parser import split_raw_log
+    from engine.log_rule_engine import ContextTracker, get_engine
+
+    engine = get_engine()
     sections = split_raw_log(text) or {"(전체)": text}
     findings = []
     for command, output in sections.items():
+        # 섹션 단위로 맥락을 새로 잡는다 — 명령이 이미 키로 주어져 있으므로 그걸 심어준다.
+        ctx = ContextTracker()
+        ctx.command = command
+        ctx.is_config = bool(ContextTracker._CONFIG_CMD_RE.search(command or ""))
         for line_no, line in enumerate(output.splitlines(), start=1):
-            upper = line.upper()
-            hit = next((kw for kw in _ANOMALY_KEYWORDS if kw in upper), None)
-            if hit:
-                findings.append({"command": command, "line_no": line_no, "line": line.strip(), "keyword": hit})
+            if ctx.feed(line):
+                continue
+            verdict = engine.evaluate(line, ctx)
+            if verdict:
+                findings.append({"command": command, "line_no": line_no, "line": line.strip(),
+                                 "keyword": verdict["keyword"], "severity": verdict["severity"],
+                                 "reason": verdict["reason"]})
     return findings
 
 

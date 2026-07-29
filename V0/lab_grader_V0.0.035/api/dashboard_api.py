@@ -11,9 +11,16 @@ from collections import Counter
 
 from engine import project_manager as pm
 
-# 이상 징후 키워드를 심각도 2단계로 나눈다 — 서비스 중단/실패를 직접 뜻하는 키워드는 Critical,
-# 성능 열화·오류 카운터 성격은 Warning. config/log_rules.json에 키워드가 추가되면 기본은 Warning.
-CRITICAL_KEYWORDS = {"FAIL", "ERROR", "CRITICAL", "DOWN", "TIMEOUT", "UNREACHABLE"}
+# 심각도는 더 이상 대시보드가 키워드로 직접 판정하지 않는다 — config/log_rules.json의
+# keyword_severity/signatures를 읽는 규칙 엔진이 판정하고, 여기서는 표시용으로 접기만 한다.
+# 규칙 엔진은 4단계(critical/major/minor/info)로 판정하지만 대시보드 배지는 2단계뿐이라
+# 접어서 보여준다 — 서비스에 실제 영향이 있는 두 등급만 critical로 올린다.
+_DASHBOARD_SEVERITY = {"critical": "critical", "major": "critical",
+                       "minor": "warning", "info": "warning"}
+
+
+def _dashboard_severity(engine_severity):
+    return _DASHBOARD_SEVERITY.get(engine_severity, "warning")
 
 # 요약 지표는 초 단위 실시간성이 필요 없다 — 동일 결과 재계산을 막는 캐시 TTL(초).
 _SCAN_CACHE_TTL = 30.0
@@ -46,7 +53,7 @@ def _scan_latest_logs(project_id):
     """
     from api.report_api import _latest_terminal_log_paths_by_device
     from api.log_file_browser_api import _read_text_auto
-    from engine.log_analysis import classify_line
+    from engine.log_analysis import analyze_text
 
     paths_by_device = _latest_terminal_log_paths_by_device(project_id)
     key = (project_id,
@@ -59,36 +66,45 @@ def _scan_latest_logs(project_id):
     devices = {}
     total_lines = abnormal_lines = 0
     keyword_counts = Counter()
+    keyword_severity = {}
     for device, (mtime, path) in paths_by_device.items():
         text = _read_text_auto(path)
         lines = text.splitlines()
-        hits = [kw for kw in (classify_line(line) for line in lines) if kw]
-        crit = sum(1 for kw in hits if kw.upper() in CRITICAL_KEYWORDS)
-        # 같은 원인이 수백 줄 반복되는 걸 그대로 세면 알람 피로도만 키운다 — (장비, 키워드)를
-        # 하나의 '인시던트'로 묶고 반복 횟수는 속성으로만 남긴다.
-        per_keyword = Counter(kw.upper() for kw in hits)
+        # 줄 단위 classify_line 대신 analyze_text를 쓴다 — 규칙 엔진이 명령 맥락(어떤 show의
+        # 출력인지)과 표 헤더를 봐야 0인 카운터/기능 목록표 같은 오탐을 걸러낼 수 있고,
+        # 심각도도 엔진이 판정한 값을 그대로 쓰는 편이 Log Analysis 탭 결과와 어긋나지 않는다.
+        findings = analyze_text(text)
+        # 같은 원인이 수백 줄 반복되는 건 엔진이 이미 하나로 접어(repeat) 준다 — 알람 피로 억제.
+        hit_count = sum(f.get("repeat", 1) for f in findings)
+        crit = sum(f.get("repeat", 1) for f in findings
+                   if _dashboard_severity(f.get("severity")) == "critical")
+        per_keyword = Counter()
+        for f in findings:
+            per_keyword[f["keyword"].upper()] += f.get("repeat", 1)
+            keyword_severity[f["keyword"].upper()] = _dashboard_severity(f.get("severity"))
         devices[device] = {
             "device": device,
             "incidents": [{"keyword": kw, "count": c,
-                           "severity": "critical" if kw in CRITICAL_KEYWORDS else "warning"}
+                           "severity": keyword_severity.get(kw, "warning")}
                           for kw, c in per_keyword.most_common()],
             "collected_at": datetime.datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S"),
             "mtime": mtime,
             "lines": len(lines),
-            "abnormal": len(hits),
+            "abnormal": hit_count,
             "critical": crit,
-            "warning": len(hits) - crit,
+            "warning": hit_count - crit,
             "size": os.path.getsize(path) if os.path.exists(path) else 0,
         }
         total_lines += len(lines)
-        abnormal_lines += len(hits)
-        keyword_counts.update(kw.upper() for kw in hits)
+        abnormal_lines += hit_count
+        keyword_counts.update(per_keyword)
 
     value = {
         "devices": devices,
         "total_lines": total_lines,
         "abnormal_lines": abnormal_lines,
         "keyword_counts": keyword_counts,
+        "keyword_severity": keyword_severity,
         "latest_mtime": max((d["mtime"] for d in devices.values()), default=None),
     }
     _scan_cache.update({"key": key, "at": now, "value": value})
@@ -159,7 +175,7 @@ class DashboardApiMixin:
 
         # --- 5) 에러 유형 Top N / 비정상 상위 장비 ---------------------------------------
         error_types = [{"keyword": kw, "count": c,
-                        "severity": "critical" if kw in CRITICAL_KEYWORDS else "warning",
+                        "severity": scan["keyword_severity"].get(kw, "warning"),
                         "pct": _pct(c, abnormal_lines)}
                        for kw, c in scan["keyword_counts"].most_common(10)]
         top_hosts = sorted((d for d in log_devices.values() if d["abnormal"]),
