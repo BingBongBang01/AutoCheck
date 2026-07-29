@@ -85,6 +85,44 @@ function showToast(message, tone = 'success') {
   setTimeout(() => { el.style.opacity = 0; setTimeout(() => el.remove(), 300); }, 1800);
 }
 
+
+// ===== 드래그 정렬 중 가장자리 자동 스크롤 =====
+// 목록이 화면보다 길어도, 드래그한 채 콘텐츠 영역의 위·아래 가장자리로 가져가면 계속 이동할 수 있다.
+function createDragAutoScroller(scrollElement = document.getElementById('content'), edgeSize = 72, maxSpeed = 24) {
+  let frameId = null;
+  let speed = 0;
+
+  const tick = () => {
+    if (!speed || !scrollElement) { frameId = null; return; }
+    const before = scrollElement.scrollTop;
+    scrollElement.scrollTop += speed;
+    if (scrollElement.scrollTop === before) { frameId = null; return; }
+    frameId = requestAnimationFrame(tick);
+  };
+
+  return {
+    update(event) {
+      if (!scrollElement) return;
+      const rect = scrollElement.getBoundingClientRect();
+      const topDistance = event.clientY - rect.top;
+      const bottomDistance = rect.bottom - event.clientY;
+      if (topDistance >= 0 && topDistance < edgeSize) {
+        speed = -Math.ceil(((edgeSize - topDistance) / edgeSize) * maxSpeed);
+      } else if (bottomDistance >= 0 && bottomDistance < edgeSize) {
+        speed = Math.ceil(((edgeSize - bottomDistance) / edgeSize) * maxSpeed);
+      } else {
+        speed = 0;
+      }
+      if (speed && !frameId) frameId = requestAnimationFrame(tick);
+    },
+    stop() {
+      speed = 0;
+      if (frameId) cancelAnimationFrame(frameId);
+      frameId = null;
+    },
+  };
+}
+
 function renderComingSoon(title, desc) {
   document.getElementById('content').innerHTML = `
     <h1 class="page-title">${title}</h1>
