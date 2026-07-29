@@ -7,6 +7,20 @@ async function renderCatalog() {
   const catalog = await call('get_catalog') || [];
   let lastSelectedIndex = null;
   let lastRankClickId = null;
+  let suppressCheckboxClick = false;
+
+  const updateCatalogSelection = () => {
+    document.querySelectorAll('[data-row-id]').forEach(row => {
+      row.classList.toggle('selected', catalogSelectedIds.has(row.dataset.rowId));
+    });
+  };
+
+  const selectCatalogRange = (ids, startIndex, endIndex) => {
+    catalogSelectedIds.clear();
+    ids.slice(Math.min(startIndex, endIndex), Math.max(startIndex, endIndex) + 1)
+      .forEach(id => catalogSelectedIds.add(id));
+    updateCatalogSelection();
+  };
   // 선택 상태는 화면이 다시 그려져도 유지하되, 사라진 id는 정리.
   const allIds = new Set(catalog.map(c => c.id));
   catalogSelectedIds.forEach(id => { if (!allIds.has(id)) catalogSelectedIds.delete(id); });
@@ -29,7 +43,7 @@ async function renderCatalog() {
   content.innerHTML = `
     <h1 class="page-title">커맨드 카탈로그</h1>
     <p class="page-sub">필수·선택사항·커스텀을 하나로 합친 통합 목록입니다. 체크된 커맨드가 Collection 시 함께 실행됩니다.
-      손잡이(⠿) 클릭으로 여러 행을 선택(Shift=범위선택)한 뒤 드래그하면 한번에 이동하고, 순서 칸의 숫자로 바로 순위를 바꿀 수 있으며, 카테고리 배지로 필수/선택사항/커스텀 분류만 바꿀 수 있습니다.</p>
+      체크박스는 클릭으로 실행 여부를 바꾸고, 체크박스 영역을 위·아래로 드래그하면 여러 행을 선택합니다. 선택한 행은 손잡이(⠿)로 한 번에 이동할 수 있으며, 순서 칸의 숫자로 바로 순위를 바꿀 수 있습니다.</p>
     <div class="card">
       <div id="catalog-rows" class="catalog-drop-zone" style="min-height:24px;">${catalog.map((c, i) => rowHtml(c, i + 1)).join('')}</div>
       <div style="display:flex;gap:8px;margin-top:10px;">
@@ -66,17 +80,53 @@ async function renderCatalog() {
     await call('update_catalog_command', id, document.querySelector(`[data-edit-command="${id}"]`).value, document.querySelector(`[data-edit-description="${id}"]`).value);
     flashSaved(true);
   }));
-  document.querySelectorAll('[data-cmd-id]').forEach(inp => inp.addEventListener('click', async e => {
-    const inputs = [...document.querySelectorAll('[data-cmd-id]')];
-    if (e.shiftKey && lastSelectedIndex !== null) {
-      const current = inputs.indexOf(inp);
-      const start = Math.min(current, lastSelectedIndex), end = Math.max(current, lastSelectedIndex);
-      for (let i = start; i <= end; i++) inputs[i].checked = inp.checked;
-    }
-    lastSelectedIndex = inputs.indexOf(inp);
-    inputs.forEach(cb => cb.closest('.catalog-row')?.classList.toggle('cmd-disabled', !cb.checked));
-    if (document.getElementById('catalog-autosave').checked) await saveCatalogState();
-  }));
+  document.querySelectorAll('[data-cmd-id]').forEach(inp => {
+    inp.addEventListener('pointerdown', event => {
+      if (event.button !== 0) return;
+      const inputs = [...document.querySelectorAll('[data-cmd-id]')];
+      const startIndex = inputs.indexOf(inp);
+      const startY = event.clientY;
+      let selecting = false;
+
+      const finish = () => {
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', finish);
+        if (selecting) {
+          suppressCheckboxClick = true;
+          setTimeout(() => { suppressCheckboxClick = false; }, 0);
+        }
+      };
+      const move = moveEvent => {
+        if (Math.abs(moveEvent.clientY - startY) < 6) return;
+        selecting = true;
+        const nearestIndex = inputs.reduce((nearest, checkbox, index) => {
+          const distance = Math.abs((checkbox.getBoundingClientRect().top + checkbox.getBoundingClientRect().height / 2) - moveEvent.clientY);
+          return distance < nearest.distance ? { index, distance } : nearest;
+        }, { index: startIndex, distance: Infinity }).index;
+        const ids = inputs.map(checkbox => checkbox.dataset.cmdId);
+        selectCatalogRange(ids, startIndex, nearestIndex);
+        moveEvent.preventDefault();
+      };
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', finish, { once: true });
+    });
+
+    inp.addEventListener('click', async e => {
+      if (suppressCheckboxClick) {
+        e.preventDefault();
+        return;
+      }
+      const inputs = [...document.querySelectorAll('[data-cmd-id]')];
+      if (e.shiftKey && lastSelectedIndex !== null) {
+        const current = inputs.indexOf(inp);
+        const start = Math.min(current, lastSelectedIndex), end = Math.max(current, lastSelectedIndex);
+        for (let i = start; i <= end; i++) inputs[i].checked = inp.checked;
+      }
+      lastSelectedIndex = inputs.indexOf(inp);
+      inputs.forEach(cb => cb.closest('.catalog-row')?.classList.toggle('cmd-disabled', !cb.checked));
+      if (document.getElementById('catalog-autosave').checked) await saveCatalogState();
+    });
+  });
   document.querySelectorAll('[data-category-id]').forEach(sel => sel.addEventListener('change', async () => {
     await call('set_catalog_category', sel.dataset.categoryId, sel.value);
     flashSaved(true);
@@ -98,7 +148,7 @@ async function renderCatalog() {
         if (!onlyThisSelected) catalogSelectedIds.add(id);
       }
       lastRankClickId = id;
-      document.querySelectorAll('[data-row-id]').forEach(r => r.classList.toggle('selected', catalogSelectedIds.has(r.dataset.rowId)));
+      updateCatalogSelection();
     });
   });
 
@@ -147,6 +197,7 @@ function wireDragAndDrop() {
   const container = document.getElementById('catalog-rows');
   if (!container) return;
   let draggingIds = [];
+  const autoScroller = createDragAutoScroller();
 
   const clearDropTargets = () => document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
 
@@ -165,11 +216,13 @@ function wireDragAndDrop() {
     row.addEventListener('dragend', () => {
       document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
       clearDropTargets();
+      autoScroller.stop();
       draggingIds = [];
     });
     row.addEventListener('dragover', e => {
       e.preventDefault();
       e.stopPropagation();
+      autoScroller.update(e);
       if (draggingIds.includes(row.dataset.rowId)) return;
       clearDropTargets();
       row.classList.add('drop-target');
@@ -178,6 +231,7 @@ function wireDragAndDrop() {
       e.preventDefault();
       e.stopPropagation();
       row.classList.remove('drop-target');
+      autoScroller.stop();
       const targetId = row.dataset.rowId;
       if (!draggingIds.length || draggingIds.includes(targetId)) return;
       const siblings = [...container.querySelectorAll('[data-row-id]')].map(r => r.dataset.rowId).filter(id => !draggingIds.includes(id));
@@ -187,6 +241,7 @@ function wireDragAndDrop() {
 
   container.addEventListener('dragover', e => {
     e.preventDefault();
+    autoScroller.update(e);
     if (e.target !== container) return;
     clearDropTargets();
     container.classList.add('drop-target');
@@ -197,6 +252,7 @@ function wireDragAndDrop() {
   container.addEventListener('drop', async e => {
     e.preventDefault();
     container.classList.remove('drop-target');
+    autoScroller.stop();
     if (e.target !== container) return; // 행 위에 놓은 경우는 그 행의 drop 핸들러가 처리
     if (!draggingIds.length) return;
     await performCatalogMove(draggingIds, null);
