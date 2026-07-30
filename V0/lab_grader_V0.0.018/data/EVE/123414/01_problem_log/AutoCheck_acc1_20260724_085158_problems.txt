@@ -1,5 +1,0 @@
-=== 이상탐지 결과 — AutoCheck_acc1_20260724_085158.txt (1건) ===
-
-# 탐지 사유: 키워드 'TIMEOUT' 검출 (원본 520행)
---- show log ---
-Jul 23 15:54:02 Access1 SuperServer: %SECURITY-6-SESSION_IDLE_TIMEOUT: Session for user admin on service console terminated due to idle timeout.

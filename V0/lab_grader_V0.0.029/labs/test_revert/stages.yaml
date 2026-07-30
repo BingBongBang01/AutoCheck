@@ -1,5 +1,0 @@
-stages:
-- id: stage_1
-  label: Stage 1
-  depends_on: []
-  commands: []

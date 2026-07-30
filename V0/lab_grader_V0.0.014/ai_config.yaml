@@ -1,6 +1,0 @@
-providers:
-- type: rule_based
-- type: api
-  api_key_env: ANTHROPIC_API_KEY
-- type: local
-  endpoint: http://localhost:13305

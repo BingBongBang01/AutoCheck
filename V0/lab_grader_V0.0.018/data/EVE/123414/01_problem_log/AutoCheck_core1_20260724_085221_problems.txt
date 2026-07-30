@@ -1,9 +1,0 @@
-=== 이상탐지 결과 — AutoCheck_core1_20260724_085221.txt (2건) ===
-
-# 탐지 사유: 키워드 'DOWN' 검출 (원본 429행)
---- show log ---
-Jul 23 15:51:05 Core1 Ebra: %LINEPROTO-5-UPDOWN: Line protocol on Interface Management1 (VRF MGMT), changed state to down
-
-# 탐지 사유: 키워드 'TIMEOUT' 검출 (원본 448행)
---- show log ---
-Jul 23 15:54:14 Core1 SuperServer: %SECURITY-6-SESSION_IDLE_TIMEOUT: Session for user admin on service console terminated due to idle timeout.

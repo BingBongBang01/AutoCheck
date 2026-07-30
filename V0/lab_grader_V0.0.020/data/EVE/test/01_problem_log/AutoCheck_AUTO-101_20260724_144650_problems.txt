@@ -1,5 +1,0 @@
-=== 이상탐지 결과 — AutoCheck_AUTO-101_20260724_144650.txt (1건) ===
-
-# 탐지 사유: 키워드 'TIMEOUT' 검출 (원본 463행)
---- show logging ---
-Jul 23 15:54:14 Core1 SuperServer: %SECURITY-6-SESSION_IDLE_TIMEOUT: Session for user admin on service console terminated due to idle timeout.

@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(xargs grep -l \"QApplication\\\\|PySide\\\\|PyQt\")",
-      "Bash(python -m py_compile api/pdf_translate_api.py api/settings_api.py api/connection_api.py api/inventory_api.py api/analysis_api.py gui_web.py)",
-      "Bash(python -c \"import json,yaml\")"
-    ]
-  }
-}

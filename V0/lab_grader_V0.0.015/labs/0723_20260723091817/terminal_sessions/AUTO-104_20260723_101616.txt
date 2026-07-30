@@ -1,81 +1,0 @@
-=== 점검 시작 2026-07-23T10:16:01.386512 — AUTO-104 ===
-
---- show version ---
-show version
-
-
---- show environment power ---
-show environment power
-[?1h=% There seem to be no power supplies connected.
-[K[?1l>Agg2#
-
---- show environment cooling ---
-show environment cooling
-% Invalid input
-Agg2#
-
---- show environment temperature ---
-show environment temperature
-% Invalid input
-Agg2#
-
---- show processes top once ---
-show processes top once
-[?1h=top - 10:16:07 up 2 days, 23:58,  2 users,  load average: 0.14, 0.11, 0.09
-Tasks: 163 total,   1 running, 162 sleeping,   0 stopped,   0 zombie
-%Cpu(s):  2.9 us,  5.7 sy,  0.0 ni, 88.6 id,  0.0 wa,  0.0 hi,  2.9 si,  0.0 st
-MiB Mem :   2861.5 total,    436.6 free,   1347.4 used,   1315.2 buff/cache
-MiB Swap:      0.0 total,      0.0 free,      0.0 used.   1514.0 avail Mem 
-
-  PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
- 4015 root      20   0 2179728  52524  45272 S   6.2   1.8   4:44.37 StpTxRx
-24840 admin     20   0   11936   6088   5212 R   6.2   0.2   0:00.03 top
-    1 root      20   0   24256  14628  10096 S   0.0   0.5   0:11.57 systemd
-    2 root      20   0       0      0      0 S   0.0   0.0   0:00.00 kthreadd
-    3 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 rcu_gp
-    4 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 rcu_par_gp
-    6 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker/0:0H-events_highpri
-    8 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 mm_percpu_wq
-    9 root      20   0       0      0      0 S   0.0   0.0   0:00.00 rcu_tasks_kthre
-   10 root      20   0       0      0      0 S   0.0   0.0   0:00.00 rcu_tasks_rude_
-   11 root      20   0       0      0      0 S   0.0   0.0   0:00.00 rcu_tasks_trace
-   12 root      20   0       0      0      0 S   0.0   0.0   0:02.51 ksoftirqd/0
-   13 root      20   0       0      0      0 I   0.0   0.0   0:20.00 rcu_preempt
-   14 root      rt   0       0      0      0 S   0.0   0.0   0:00.12 migration/0
-   16 root      20   0       0      0      0 S   0.0   0.0   0:00.00 cpuhp/0
-   17 root      20   0       0      0      0 S   0.0   0.0   0:00.00 cpuhp/1
-   18 root      rt   0       0      0      0 S   0.0   0.0   0:00.71 migration/1
-   19 root      20   0       0      0      0 S   0.0   0.0   0:14.77 ksoftirqd/1
-   21 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker/1:0H-kblockd
-   22 root      20   0       0      0      0 S   0.0   0.0   0:00.00 kdevtmpfs
-   23 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 netns
-   24 root      20   0       0      0      0 S   0.0   0.0   0:00.00 kauditd
-   25 root      20   0       0      0      0 S   0.0   0.0   0:07.29 khungtaskd
-   26 root      20   0       0      0      0 S   0.0   0.0   0:00.00 oom_reaper
-   27 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 writeback
-   28 root      20   0       0      0      0 S   0.0   0.0   0:01.08 kcompactd0
-   48 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 cryptd
-   75 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kintegrityd
-   76 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kblockd
-   77 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 blkcg_punt_bio
-   78 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 tpm_dev_wq
-   79 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 ata_sff
-[7m --More-- [27m[K
-
---- show log ---
-[K-[Klog file: [Khh[Koo[Kww[K  [Kll[Koo[Kgg[K[K[7mlog file support is not available  (press RETURN)[27m
-
---- show interface status ---
-[40;1H[K[K-[Klog file: [Khh[Koo[Kww[K  [Kii[Knn[Ktt[Kee[Krr[Kff[Kaa[Kcc[Kee[K  [Kss[Ktt[Kaa[Ktt[Kuu[Kss[K[K[7mlog file support is not available  (press RETURN)[27m
-
---- show interfaces counters errors ---
-
-
---- show interfaces transceiver ---
-[40;1H[K[K-[Klog file: [Khh[Koo[Kww[K  [Kii[Knn[Ktt[Kee[Krr[Kff[Kaa[Kcc[Kee[Kss[K  [Ktt[Krr[Kaa[Knn[Kss[Kcc[Kee[Kii[Kvv[Kee[Krr[K[K[7mlog file support is not available  (press RETURN)[27m
-
---- show ip interface brief ---
-[40;1H[K[K-[Klog file: [Khh[Koo[Kww[K  [Kii[Kpp[K  [Kii[Knn[Ktt[Kee[Krr[Kff[Kaa[Kcc[Kee[K  [Kbb[Krr[Kii[Kee[Kff[K[K[7mlog file support is not available  (press RETURN)[27m
-
---- show clock ---
-[40;1H[K[K-[Klog file: [Khh[Koo[Kww[K  [Kcc[Kll[Koo[Kcc[Kkk[K[K[7mlog file support is not available  (press RETURN)[27m

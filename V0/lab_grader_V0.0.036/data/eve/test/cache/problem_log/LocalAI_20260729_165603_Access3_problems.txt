@@ -1,8 +1,0 @@
-[AI 분석 오류 - 파트 1] HTTP 오류: 500
-
-Here are the extracted problem lines:
-
-- Line 948: protocol_not_running
-- Line 1001: Interface does not exist
-
-Summary: The extracted problem lines indicate a protocol issue and an interface non-existence issue. The protocol_not_running error is related to the BGP protocol, while the Interface does not exist error is related to the non-existence of the specified VXLAN interface.

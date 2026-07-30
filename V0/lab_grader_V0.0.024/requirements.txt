@@ -1,5 +1,0 @@
-pyyaml
-netmiko
-pywebview
-openpyxl
-paramiko

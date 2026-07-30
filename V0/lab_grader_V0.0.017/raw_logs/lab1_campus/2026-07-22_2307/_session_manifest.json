@@ -1,8 +1,0 @@
-{
-  "lab": "lab1_campus",
-  "session": "2026-07-22_2307",
-  "success": [],
-  "failed": {
-    "sssss": "Authentication to device failed.\n\nCommon causes of this problem are:\n1. Invalid username and password\n2. Incorrect SSH-key file\n3. Connecting to the wrong device\n\nDevice settings: arista_eos 172.30.1.68:28422\n\n\nBad authentication type; allowed types: ['publickey']"
-  }
-}

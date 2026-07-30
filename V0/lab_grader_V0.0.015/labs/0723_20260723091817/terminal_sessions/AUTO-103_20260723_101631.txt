@@ -1,57 +1,0 @@
-=== 점검 시작 2026-07-23T10:16:01.386124 — AUTO-103 ===
-
---- show version ---
-show version
-[?1h=Arista vEOS-lab
-Hardware version: 
-Serial number: 678947F8E93150CFE3ECACA9BB915A39
-Hardware MAC address: 5001.00ca.7a8d
-System MAC address: 5001.00ca.7a8d
-
-Software image version: 4.35.4M
-Architecture: x86_64
-Internal build version: 4.35.4M-47365815.4354M
-Internal build ID: 3f9686d7-9c34-49e2-9884-2394cd1cc98d
-Image format version: 1.0
-Image optimization: None
-
-Uptime: 3 days, 0 hours and 1 minute
-Total memory: 2930132 kB
-Free memory: 1550320 kB
-
-[K[?1l>Agg1#
-
---- show environment power ---
-show environment power
-[?1h=% There seem to be no power supplies connected.
-[K[?1l>Agg1#
-
---- show environment cooling ---
-show environment cooling
-% Invalid input
-Agg1#
-
---- show environment temperature ---
-
-
---- show processes top once ---
-show processes top once
-[?1h=
-
---- show log ---
-
-
---- show interface status ---
-[40;1H[K[K-[Klog file: [Khh[Koo[Kww[K  [Kii[Knn[Ktt[Kee[Krr[Kff[Kaa[Kcc[Kee[K  [Kss[Ktt[Kaa[Ktt[Kuu[Kss[K[K[7mlog file support is not available  (press RETURN)[27m
-
---- show interfaces counters errors ---
-[40;1H[K[K-[Klog file: [Khh[Koo[Kww[K  [Kii[Knn[Ktt[Kee[Krr[Kff[Kaa[Kcc[Kee[Kss[K  [Kcc[Koo[Kuu[Knn[Ktt[Kee[Krr[Kss[K  [Kee[Krr[Krr[Koo[Krr[Kss[K[K[7mlog file support is not available  (press RETURN)[27m
-
---- show interfaces transceiver ---
-
-
---- show ip interface brief ---
-[40;1H[K[K-[Klog file: [Khh[Koo[Kww[K  [Kii[Kpp[K  [Kii[Knn[Ktt[Kee[Krr[Kff[Kaa[Kcc[Kee[K  [Kbb[Krr[Kii[Kee[Kff[K[K[7mlog file support is not available  (press RETURN)[27m
-
---- show clock ---
-[40;1H[K[K-[Klog file: [Khh[Koo[Kww[K  [Kcc[Kll[Koo[Kcc[Kkk[K[K[7mlog file support is not available  (press RETURN)[27m
