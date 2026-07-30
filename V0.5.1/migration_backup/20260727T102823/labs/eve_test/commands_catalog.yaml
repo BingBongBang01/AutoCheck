@@ -1,0 +1,168 @@
+- id: essential_0
+  category: essential
+  check_id: version_info
+  command: show version
+  description: 가동시간·모델 확인
+  enabled: true
+- id: essential_1
+  category: essential
+  check_id: power_status
+  command: show environment power
+  description: 전원 이중화 확인
+  enabled: true
+- id: essential_2
+  category: essential
+  check_id: cooling_status
+  command: show environment cooling
+  description: 팬 상태 확인
+  enabled: true
+- id: essential_3
+  category: essential
+  check_id: temperature_status
+  command: show environment temperature
+  description: 온도 이상 확인
+  enabled: true
+- id: essential_4
+  category: essential
+  check_id: cpu_usage
+  command: show processes top once
+  description: CPU/메모리 사용률
+  enabled: true
+- id: essential_5
+  category: essential
+  check_id: log_check
+  command: show log
+  description: 특이 로그 확인
+  enabled: true
+- id: essential_6
+  category: essential
+  check_id: interface_status
+  command: show interface status
+  description: 포트 링크 상태
+  enabled: true
+- id: essential_7
+  category: essential
+  check_id: interface_errors
+  command: show interfaces counters errors
+  description: CRC/에러 카운터
+  enabled: true
+- id: essential_8
+  category: essential
+  check_id: interface_transceiver
+  command: show interfaces transceiver
+  description: 광모듈 정상범위
+  enabled: true
+- id: essential_9
+  category: essential
+  check_id: interface_brief
+  command: show ip interface brief
+  description: 인터페이스 요약
+  enabled: true
+- id: essential_10
+  category: essential
+  check_id: clock_status
+  command: show clock
+  description: 시간 동기화 확인
+  enabled: true
+- id: optional_0
+  category: optional
+  check_id: module_status
+  command: show module
+  description: 섀시형 장비 모듈 확인
+  enabled: false
+- id: optional_1
+  category: optional
+  check_id: port_channel_status
+  command: show port-channel summary
+  description: LACP 이중화 확인
+  enabled: false
+- id: optional_2
+  category: optional
+  check_id: mlag_status
+  command: show mlag
+  description: MLAG 페어 상태
+  enabled: false
+- id: optional_3
+  category: optional
+  check_id: vrrp_status
+  command: show vrrp brief
+  description: VRRP 이중화 확인
+  enabled: false
+- id: optional_4
+  category: optional
+  check_id: varp_status
+  command: show ip virtual-router
+  description: VARP 이중화 확인
+  enabled: false
+- id: optional_5
+  category: optional
+  check_id: stp_status
+  command: show spanning-tree vlan 1,100,200,999
+  description: STP 루트 확인
+  enabled: false
+- id: optional_6
+  category: optional
+  check_id: evpn_summary
+  command: show bgp evpn summary
+  description: EVPN 네이버 확인
+  enabled: false
+- id: optional_7
+  category: optional
+  check_id: bgp_summary
+  command: show ip bgp summary
+  description: BGP 네이버 확인
+  enabled: false
+- id: optional_8
+  category: optional
+  check_id: ospf_neighbor
+  command: show ip ospf neighbor
+  description: OSPF 네이버 확인
+  enabled: false
+- id: optional_9
+  category: optional
+  check_id: acl_status
+  command: show ip access-lists
+  description: ACL 설정/명시적 deny 확인
+  enabled: false
+- id: optional_10
+  category: optional
+  check_id: arp_status
+  command: show ip arp vrf all
+  description: ARP 상태 수집
+  enabled: false
+- id: optional_11
+  category: optional
+  check_id: inventory_status
+  command: show inventory
+  description: S/N·부품 확인
+  enabled: false
+- id: optional_12
+  category: optional
+  check_id: running_config
+  command: show running-config
+  description: 설정 변경 이력 대조용
+  enabled: false
+- id: optional_13
+  category: optional
+  check_id: reload_cause
+  command: show reload cause
+  description: 마지막 재부팅 원인
+  enabled: false
+- id: optional_14
+  category: optional
+  check_id: ntp_status
+  command: show ntp status
+  description: NTP 동기화 확인
+  enabled: false
+- id: optional_15
+  category: optional
+  check_id: interface_rates
+  command: show interfaces counters rates
+  description: 실시간 트래픽량
+  enabled: false
+- id: optional_16
+  category: optional
+  check_id: interface_description
+  command: show interfaces description
+  description: 포트 라벨 확인
+  enabled: false

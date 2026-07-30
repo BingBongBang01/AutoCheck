@@ -1,0 +1,50 @@
+=== 이상탐지 결과 — 20260729_165603_raw_Access3.txt (총 12건) : 중대 4건 / 경미 5건 / 정보 3건 ===
+
+# [중대] NTP 미동기 — 장비 간 로그 타임스탬프 상관분석이 불가능해짐 (원본 33행)
+--- show ntp status ---
+NTP is disabled.
+
+# [중대] 비정상 재기동 이력 (원본 38행)
+--- show reload cause ---
+The system rebooted due to unknown reasons.
+
+
+# [중대] STP 토폴로지 변화 — 루프/루트 변경 가능성 (원본 540행)
+--- show logging ---
+Jul 29 16:39:52 Access3 Stp: %SPANTREE-6-ROOTCHANGE: Root changed for instance Vl1: new root interface is Ethernet2, new root bridge mac address is 52:01:00:4b:62:77
+
+# [중대] 인터페이스 비정상 down(관리자 shutdown이 아님) — 동일 사유 4회 반복(원본 627~630행)
+--- show interfaces description ---
+Et5                            down           down
+
+# [경미] 점검 명령이 장비에서 거부됨 — 해당 항목은 미수집 상태 (원본 62행)
+--- show module ---
+% Unavailable command (not supported on this hardware platform)
+
+# [경미] 점검 명령이 장비에서 거부됨 — 해당 항목은 미수집 상태 (원본 68행)
+--- show environment cooling ---
+% Invalid input
+
+# [경미] 점검 명령이 장비에서 거부됨 — 해당 항목은 미수집 상태 (원본 71행)
+--- show environment temperature ---
+% Invalid input
+
+# [경미] 점검 구간 내 설정 변경 이력 (원본 571행)
+--- show logging ---
+Jul 29 16:55:43 Access3 ConfigAgent: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.103.228)
+
+# [경미] 점검 명령이 장비에서 거부됨 — 해당 항목은 미수집 상태 (원본 788행)
+--- show spanning-tree 피무 ---
+% Invalid input
+
+# [정보] 해당 하드웨어 리소스 없음(가상 장비일 가능성) — 점검 항목 미적용 (원본 65행)
+--- show environment power ---
+% There seem to be no power supplies connected.
+
+# [정보] 해당 라우팅/오버레이 프로토콜 미구성 — 점검 항목 미적용 (원본 945행)
+--- show ip bgp summary ---
+% BGP inactive
+
+# [정보] 해당 라우팅/오버레이 프로토콜 미구성 — 점검 항목 미적용 (원본 948행)
+--- show bgp evpn summary ---
+% BGP inactive

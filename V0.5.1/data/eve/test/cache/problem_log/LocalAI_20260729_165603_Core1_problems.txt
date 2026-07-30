@@ -1,0 +1,44 @@
+[AI 분석 오류 - 파트 1] HTTP 오류: 500
+
+ERRORs, TIMEOUTs, interface DOWN states, or anomalies:
+
+- Interface Ethernet5 (core_agg_mlag) has left Port-Channel2048 due to: link down in LACP negotiation
+- Interface Ethernet6 (core_agg_mlag) has left Port-Channel2048 due to: link down in LACP negotiation
+- Interface Ethernet5 (core_agg_mlag) has left Port-Channel2048 due to: LACP negotiated incompatible aggregate (check config)
+- Interface Ethernet6 (core_agg_mlag) has left Port-Channel2048 due to: LACP negotiated incompatible aggregate (check config)
+- Interface Ethernet4 (core_agg_mlag) has joined Port-Channel2048, but the previous line indicates that it left the channel due to an incompatible aggregate.
+- Interface Ethernet8 is down, but the reason for this is not specified.
+- The reload cause is unknown, with a cause of 1.
+- The system reloads, but the reason for this is not specified.
+- The system enters configuration mode from console by admin on vty5 (172.16.103.228), but the reason for this is not specified.
+- The system is in a state of unknown cause, with a cause of 1, after the reload.
+
+Here are the extracted problem lines:
+
+ERRORs:
+- % Invalid input (line 926)
+- % BGP inactive (line 1101, 1103, 1105, 1107, 1109)
+- % BGP inactive (line 1111, 1113, 1115, 1117, 1119)
+- % BGP inactive (line 1121, 1123, 1125, 1127, 1129)
+
+TIMEOUTs:
+- 22 minutes, 29 seconds (Port-Channel200 down, line protocol is lowerlayerdown)
+
+interface DOWN states:
+- Port-Channel200 (down, line protocol is lowerlayerdown)
+- Port-Channel2038 (down, line protocol is lowerlayerdown)
+- Vl4000 (down, line protocol is lowerlayerdown)
+
+anomalies:
+- 1 link status changes since last clear (Port-Channel200)
+- 1 link status changes since last clear (Port-Channel2038)
+- Last table change time   : 0:15:50 ago (Core1(config)#show lldp neighbors)
+- Last clearing of "show interface" counters never (Port-Channel200)
+- 5 seconds input rate 0 bps (- with framing overhead), 0 packets/sec (Port-Channel200)
+- 5 seconds output rate 0 bps (- with framing overhead), 0 packets/sec (Port-Channel200)
+- 0 packets input, 0 bytes (Port-Channel200)
+- 0 packets output, 0 bytes (Port-Channel200)
+- 0 output errors, 0 output discards (Port-Channel200)
+- 0 packets input, 0 bytes (Port-Channel2038)
+- 0 packets output, 0 bytes (Port-Channel2038)
+- 0 output errors, 0 output discards (Port-Channel2038)
