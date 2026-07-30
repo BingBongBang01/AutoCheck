@@ -1,0 +1,44 @@
+Reload Cause:
+-------------
+The system rebooted due to unknown reasons.
+
+Jul 29 16:48:29 Agg1 ReloadCauseAgent: %SYS-6-SYSTEM_INFO: Reload Cause 1: Unknown
+
+Agg1(config)#show module
+% Unavailable command (not supported on this hardware platform)
+
+Agg1(config)#show environment power
+% There seem to be no power supplies connected.
+
+Agg1(config)#show environment cooling
+% Invalid input
+
+Agg1(config)#show environment temperature
+% Invalid input
+
+Vlan10            192.168.10.2/24          down         lowerlayerdown          1500
+Vlan20            192.168.20.2/24          down         lowerlayerdown          1500
+
+Et10                           down           down
+Et11                           down           down
+
+Vl10                           down           lowerlayerdown
+Vl20                           down           lowerlayerdown
+
+Vl10            default       192.168.10.1             LLD            stopped
+Vl20            default       192.168.20.1             LLD            stopped
+
+Agg1(config)#show spanning-tree 피무
+% Invalid input
+
+Agg1(config)#show ip bgp summary
+% BGP inactive
+
+Agg1(config)#show bgp evpn summary
+% BGP inactive
+
+Agg1(config)#show interfaces vxlan 1-7
+% Interface does not exist
+
+Summary:
+The switch experienced an unexpected warm start/reload due to an unknown cause. Hardware monitoring commands failed due to platform incompatibility or missing power supply detection. Several interfaces and SVLs (Ethernet 10-11, Vlan 10, Vlan 20) are in down/lowerlayerdown states, causing VRRP to stop (LLD). BGP routing processes are inactive, and VXLAN interfaces do not exist.

@@ -1,0 +1,71 @@
+=== 이상탐지 결과 — 20260729_165603_raw_Core2.txt (총 13건) : 중대 5건 / 경미 5건 / 정보 3건 ===
+
+# [중대] NTP 미동기 — 장비 간 로그 타임스탬프 상관분석이 불가능해짐 (원본 33행)
+--- show ntp status ---
+NTP is disabled.
+
+# [중대] 비정상 재기동 이력 (원본 38행)
+--- show reload cause ---
+The system rebooted due to unknown reasons.
+
+
+# [중대] 인터페이스 비정상 down(관리자 shutdown이 아님) (원본 648행)
+--- show interfaces description ---
+Po200                          down           lowerlayerdown     horizen_Switch_vrrp
+
+# [중대] 인터페이스 비정상 down(관리자 shutdown이 아님) (원본 649행)
+--- show interfaces description ---
+Po2038                         down           lowerlayerdown
+
+# [중대] 인터페이스 링크 다운 — 동일 사유 2회 반복(원본 728~746행)
+--- show interfaces Port-Channel 1-999999 ---
+Port-Channel200 is down, line protocol is lowerlayerdown (notconnect)
+  Hardware is Port-Channel, address is 0000.0000.0000
+  Description: horizen_Switch_vrrp
+  Ethernet MTU 9214 bytes
+  Full-duplex, Unconfigured
+  Active members in this channel: 0
+  Fallback mode is: off
+  Down 17 minutes, 17 seconds
+  1 link status changes since last clear
+  Last clearing of "show interface" counters never
+  5 seconds input rate 0 bps (- with framing overhead), 0 packets/sec
+  5 seconds output rate 0 bps (- with framing overhead), 0 packets/sec
+     0 packets input, 0 bytes
+     Received 0 broadcasts, 0 multicast
+     0 input errors, 0 input discards
+     0 packets output, 0 bytes
+     Sent 0 broadcasts, 0 multicast
+     0 output errors, 0 output discards
+
+# [경미] 점검 명령이 장비에서 거부됨 — 해당 항목은 미수집 상태 (원본 62행)
+--- show module ---
+% Unavailable command (not supported on this hardware platform)
+
+# [경미] 점검 명령이 장비에서 거부됨 — 해당 항목은 미수집 상태 (원본 68행)
+--- show environment cooling ---
+% Invalid input
+
+# [경미] 점검 명령이 장비에서 거부됨 — 해당 항목은 미수집 상태 (원본 71행)
+--- show environment temperature ---
+% Invalid input
+
+# [경미] 점검 구간 내 설정 변경 이력 (원본 575행)
+--- show logging ---
+Jul 29 16:55:42 Core2 ConfigAgent: %SYS-5-CONFIG_E: Enter configuration mode from console by admin on vty5 (172.16.103.228)
+
+# [경미] 점검 명령이 장비에서 거부됨 — 해당 항목은 미수집 상태 (원본 925행)
+--- show spanning-tree 피무 ---
+% Invalid input
+
+# [정보] 해당 하드웨어 리소스 없음(가상 장비일 가능성) — 점검 항목 미적용 (원본 65행)
+--- show environment power ---
+% There seem to be no power supplies connected.
+
+# [정보] 해당 라우팅/오버레이 프로토콜 미구성 — 점검 항목 미적용 (원본 1100행)
+--- show ip bgp summary ---
+% BGP inactive
+
+# [정보] 해당 라우팅/오버레이 프로토콜 미구성 — 점검 항목 미적용 (원본 1103행)
+--- show bgp evpn summary ---
+% BGP inactive

@@ -1,0 +1,18 @@
+[AI 분석 오류 - 파트 1] timed out
+
+Port-Channel2038 is down, line protocol is lowerlayerdown (notconnect)
+  Hardware is Port-Channel, address is 0000.0000.0000
+  Ethernet MTU 9214 bytes
+  Full-duplex, Unconfigured
+  Active members in this channel: 0
+
+% Invalid input
+
+% BGP inactive
+% BGP inactive
+% Interface does not exist
+
+Port-Channel2038 is down, line protocol is lowerlayerdown (notconnect)
+
+Summary: 
+There are two Port-Channel interfaces down, one due to notconnect and the other due to not having an active member. There are also multiple instances of BGP inactive, which may indicate a problem with the BGP protocol. An interface does not exist, which may be related to the non-existent BGP interface.
