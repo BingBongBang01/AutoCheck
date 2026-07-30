@@ -83,12 +83,14 @@ class AppPaths:
                 except OSError:
                     pass
 
-        # 복사 대상 config 디렉터리
+        # 복사 대상 config 디렉터리 (개발용 잔재 파일 active_project.yaml, customers.yaml 제외)
         target_config = user_root / "config"
         src_config = bundle / "config"
         if not target_config.exists() and src_config.exists():
             try:
-                shutil.copytree(src_config, target_config, dirs_exist_ok=True)
+                def _ignore_legacy(dir, files):
+                    return [f for f in files if f in ("active_project.yaml", "customers.yaml")]
+                shutil.copytree(src_config, target_config, ignore=_ignore_legacy, dirs_exist_ok=True)
             except OSError:
                 pass
 

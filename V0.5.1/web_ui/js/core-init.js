@@ -2,5 +2,16 @@
 (async function init() {
   await waitForApiReady();
   await refreshStatusBar();
-  navigate('settings');
+
+  // 고객사 및 정기점검 프로파일 존재 여부 검사
+  const tree = await call('get_customer_profiles') || [];
+  const hasNoCustomer = tree.length === 0;
+  const hasNoProfile = tree.every(c => !c.profiles || c.profiles.length === 0);
+
+  if (hasNoCustomer || hasNoProfile) {
+    await navigate('workspace');
+    openCustomerProfileModal();
+  } else {
+    await navigate('workspace');
+  }
 })();
