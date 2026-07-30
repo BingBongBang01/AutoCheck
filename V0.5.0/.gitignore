@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+logs/*.log
+logs/
+raw_logs/
+ai_config.yaml
+
+# 실행 중 생성되는 산출물
+migration_report.json
