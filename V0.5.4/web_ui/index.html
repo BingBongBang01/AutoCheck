@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>AutoCheck</title>
+<!-- 아이콘 폰트는 style.css의 @font-face가 vendor/material-symbols/에서 로컬로 읽는다.
+     CDN 링크를 두면 폰트 도착 전까지 아이콘이 리거처 원문("business" 등)으로 보였다. -->
+<link rel="icon" type="image/jpeg" href="icons/app_icon.jpg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <div id="topbar">
+    <div class="tb-brand" style="display:flex; align-items:center; gap:6px; margin-right:4px;">
+      <img src="icons/app_icon.jpg" alt="AutoCheck Logo" style="width:20px; height:20px; border-radius:4px; object-fit:cover;">
+      <span style="font-weight:700; font-size:13px; letter-spacing:-0.3px; color:var(--text);">AutoCheck</span>
+    </div>
+    <div class="tb-item" id="tb-context-selector" title="고객사와 정기점검 변경"><span class="material-symbols-rounded" style="font-size:16px">business</span><span id="tb-customer-name">고객사 없음</span><span style="color:var(--sub);">/</span><span id="tb-profile-name">정기점검 없음</span><span class="material-symbols-rounded" style="font-size:14px">expand_more</span></div>
+    <div class="tb-spacer"></div>
+    <div class="tb-icon-btn" id="tb-theme-toggle" title="테마 전환"><span class="material-symbols-rounded" id="tb-theme-icon">dark_mode</span></div>
+  </div>
+
+  <div id="sidebar">
+    <!-- 실제 사용 순서대로 4단계로 묶는다: 준비(무엇을 점검할지 정한다) ->
+         실행(장비에 접속해 모은다) -> 결과(모은 걸 본다) -> 기타(가끔 쓰는 것).
+         워크스페이스가 맨 위인 이유: 고객사/회차를 먼저 골라야 나머지가 전부 그 기준으로 동작함.
+         환경 설정은 전역 설정이라 자주 안 건드리므로 위가 아니라 아래에 둔다. -->
+    <div class="nav-group-label">준비</div>
+    <div class="nav-item" data-page="workspace"><span class="material-symbols-rounded">folder_managed</span><span class="nav-label">워크스페이스</span></div>
+    <div class="nav-item" data-page="inventory"><span class="material-symbols-rounded">dns</span><span class="nav-label">장비 목록</span></div>
+    <div class="nav-item" data-page="catalog"><span class="material-symbols-rounded">checklist</span><span class="nav-label">명령어 카탈로그</span></div>
+
+    <div class="nav-group-label">실행</div>
+    <div class="nav-item" data-page="connection"><span class="material-symbols-rounded">router</span><span class="nav-label">세션 터미널</span></div>
+    <div class="nav-item" data-page="realtimewatch"><span class="material-symbols-rounded">radar</span><span class="nav-label">실시간 감시</span></div>
+    <div class="nav-item" data-page="inspectionlog"><span class="material-symbols-rounded">description</span><span class="nav-label">점검 로그</span></div>
+
+    <div class="nav-group-label">결과</div>
+    <div class="nav-item" data-page="loganalysis"><span class="material-symbols-rounded">troubleshoot</span><span class="nav-label">원본로그분석</span></div>
+    <div class="nav-item" data-page="logmasking"><span class="material-symbols-rounded">visibility_off</span><span class="nav-label">마스킹</span></div>
+    <div class="nav-item" data-page="dashboard"><span class="material-symbols-rounded">dashboard</span><span class="nav-label">대시보드</span></div>
+    <div class="nav-item" data-page="report"><span class="material-symbols-rounded">summarize</span><span class="nav-label">보고서</span></div>
+
+    <div class="nav-group-label">기타</div>
+    <div class="nav-item" data-page="knowledge"><span class="material-symbols-rounded">menu_book</span><span class="nav-label">지식베이스</span></div>
+    <div class="nav-item" data-page="settings"><span class="material-symbols-rounded">settings</span><span class="nav-label">환경 설정</span></div>
+    <div class="nav-item" data-page="logs"><span class="material-symbols-rounded">receipt_long</span><span class="nav-label">전체 로그</span></div>
+    <div class="nav-item" id="nav-collapse" style="margin-top:8px;"><span class="material-symbols-rounded">chevron_left</span><span class="nav-label">접기</span></div>
+  </div>
+
+  <div id="content"></div>
+
+  <div id="statusbar">
+    <span id="sb-project">프로젝트: -</span>
+    <span id="sb-connection">연결: -</span>
+    <span id="sb-version">v-</span>
+    <div id="sb-inspection-progress" style="display:none;align-items:center;min-width:0;margin-right:12px;"></div>
+    <div id="sb-analysis-progress" style="display:none;flex:1;align-items:center;min-width:0;justify-content:flex-end;"></div>
+    <span style="flex:1"></span>
+    <span id="sb-clock"></span>
+  </div>
+
+</div>
+
+<!-- xterm(약 490KB)은 시작할 때 받지 않는다 — '세션 터미널' 페이지를 처음 열 때
+     connection-terminal.js의 ensureXterm()이 동적으로 주입한다. 터미널을 안 쓰는
+     실행에서는 파싱 비용이 아예 들지 않는다. -->
+<script src="js/core.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/inspection-report.js"></script>
+<script src="js/collection.js"></script>
+<script src="js/inspection-log.js"></script>
+<script src="js/collection-log-viewer.js"></script>
+<script src="js/collection-log-analysis.js"></script>
+<script src="js/collection-log-masking.js"></script>
+<script src="js/inventory.js"></script>
+<script src="js/inventory-probe.js"></script>
+<script src="js/inventory-table.js"></script>
+<script src="js/inventory-key-modal.js"></script>
+<script src="js/connection.js"></script>
+<script src="js/connection-terminal.js"></script>
+<script src="js/connection-context-menu.js"></script>
+<script src="js/connection-inspection.js"></script>
+<script src="js/catalog.js"></script>
+<script src="js/logs.js"></script>
+<script src="js/knowledge.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/settings-local-ai.js"></script>
+<script src="js/settings-cloud-api.js"></script>
+<script src="js/settings-ai-order.js"></script>
+<script src="js/workspace.js"></script>
+<script src="js/core-navigation.js"></script>
+<script src="js/core-profile-modal.js"></script>
+<script src="js/analysis-progress.js"></script>
+<script src="js/realtime-baseline-alerts.js"></script>
+<script src="js/realtime-monitor-panel.js"></script>
+<script src="js/core-init.js"></script>
+</body>
+</html>
