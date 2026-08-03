@@ -17,7 +17,6 @@ function renderLogAnalysisPane() {
       <button class="btn btn-primary" id="btn-run-log-analysis"><span class="material-symbols-rounded">play_arrow</span>분석 실행</button>
       <button class="btn btn-outlined" id="btn-analyze-local-ai"><span class="material-symbols-rounded">memory</span>Run Local AI Analysis</button>
       <button class="btn btn-outlined" id="btn-analyze-cloud-ai"><span class="material-symbols-rounded">cloud</span>Run Cloud AI Analysis</button>
-      <button class="btn btn-outlined" id="btn-realtime-baseline"><span class="material-symbols-rounded">sensors_off</span>실시간 감시 시작</button>
       <button class="btn btn-outlined" id="btn-goto-report"><span class="material-symbols-rounded">summarize</span>보고서 만들기</button>
       <button class="btn btn-outlined" id="btn-open-problem-folder" title="분석 결과 폴더 열기"><span class="material-symbols-rounded">folder_open</span>폴더보기</button>
       <span style="font-size:11px;color:var(--sub);">00_orignal_log의 원본을 훑어 에러 구간을 찾고, 커맨드/카테고리 문맥을 포함해 01_problem_log에 저장합니다.</span>
@@ -63,18 +62,6 @@ function renderLogAnalysisPane() {
     if (result && result.error) { btn.classList.remove('loading'); alert(result.error); }
     if (typeof pollAnalysisJobs === 'function') pollAnalysisJobs();
   };
-
-  // SecureCRT 세션 로그 실시간 Baseline Diff 감시 토글 (js/realtime-baseline-alerts.js)
-  const realtimeBtn = document.getElementById('btn-realtime-baseline');
-  if (realtimeBtn) {
-    syncRealtimeWatchButton(realtimeBtn);
-    realtimeBtn.addEventListener('click', async () => {
-      realtimeBtn.disabled = true;
-      await toggleRealtimeBaselineWatch();
-      realtimeBtn.disabled = false;
-      syncRealtimeWatchButton(realtimeBtn);
-    });
-  }
 
   document.getElementById('btn-analyze-local-ai').addEventListener('click', (e) => startAiAnalysis('local', e.currentTarget));
   document.getElementById('btn-analyze-cloud-ai').addEventListener('click', (e) => startAiAnalysis('cloud', e.currentTarget));

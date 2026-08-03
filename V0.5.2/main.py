@@ -72,28 +72,10 @@ def main():
     bundle_ui = AppPaths.bundle_root() / "web_ui" / "index.html"
     app_ui = AppPaths.app_root() / "web_ui" / "index.html"
     web_ui_path = str(bundle_ui if bundle_ui.exists() else app_ui)
-    api = Api()
-    window = webview.create_window("AutoCheck", web_ui_path, js_api=api,
+    window = webview.create_window("AutoCheck", web_ui_path, js_api=Api(),
                                     width=1280, height=800, min_size=(1000, 640))
     set_window(window)
-    webview.start(_on_window_ready, api, debug=False)
-
-
-def _on_window_ready(api):
-    """창이 뜬 뒤 pywebview가 별도 스레드에서 호출 — 시작 시 자동 실행할 백그라운드 작업들.
-
-    '자동 실시간 감시' 체크박스(연결 탭)가 켜져 있으면 사용자가 아무것도 누르지 않아도
-    CRTlog 감시가 돌아야 한다. 여기서 바로 시작하지 않고 잠깐 기다리는 이유는, 감시가
-    첫 경고를 evaluate_js로 push할 때 web_ui의 핸들러(window.onRealtimeDiffAlert)가
-    이미 등록돼 있어야 알림이 버려지지 않기 때문이다."""
-    import time
-    time.sleep(2.0)
-    try:
-        result = api.autostart_realtime_baseline_watch()
-        if result.get("started"):
-            log_event("자동 실시간 감시 시작", source="startup")
-    except Exception as exc:
-        log_event(f"자동 실시간 감시 시작 실패(무시하고 계속): {exc}", source="startup")
+    webview.start(debug=False)
 
 
 if __name__ == "__main__":

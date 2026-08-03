@@ -94,9 +94,6 @@ class AppPaths:
             except OSError:
                 pass
 
-        # 최초 실행 시 CRTlog 폴더 자동 생성 보장
-        cls._ensure(user_root / "CRTlog")
-
     @staticmethod
     def _ensure(path: Path) -> Path:
         path.mkdir(parents=True, exist_ok=True)
@@ -139,12 +136,6 @@ class AppPaths:
         앱을 다른 폴더에서 실행하면 로그가 멀쩡히 있는데도 "장비 없음"으로 보였다.
         """
         return cls.labs_root() / str(project_id) / "terminal_sessions"
-
-    @classmethod
-    def crt_log_root(cls) -> Path:
-        """SecureCRT 세션 로그 자동 연동용 글로벌 저장소 위치.
-        Documents/AutoCheck/CRTlog/ 에 쌓인 로그들을 활성 프로파일로 자동 매핑/복사한다."""
-        return cls._ensure(cls.user_data_root() / "CRTlog")
 
 
 def sanitize_component(name: str) -> str:

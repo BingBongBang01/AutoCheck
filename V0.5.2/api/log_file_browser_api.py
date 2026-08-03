@@ -6,8 +6,6 @@ Reports·Findings·AI분석이 읽는 경로), data/<고객사>/<프로파일>/0
 import os
 import glob
 import datetime
-import shutil
-import re
 
 from api.report_api import _latest_terminal_logs_by_device
 from core.paths import AppPaths
@@ -21,7 +19,6 @@ def _allowed_log_roots(project_id, extra_dirs=()):
         if d:
             roots.append(os.path.abspath(d))
     roots.append(os.path.abspath(AppPaths.raw_logs_root()))
-    roots.append(os.path.abspath(AppPaths.crt_log_root()))
     return roots
 
 
@@ -163,82 +160,6 @@ class LogFileBrowserApiMixin:
         for f in files:
             f["mtime_str"] = datetime.datetime.fromtimestamp(f["mtime"]).strftime("%Y-%m-%d %H:%M:%S")
         return files
-
-    def scan_crt_log_directory(self):
-        """CRTlog 폴더를 스캔하여 활성 프로파일의 인벤토리 장비명과 일치하는 로그를 복사한다.
-        {device}_{timestamp}.txt 형태에서 호스트명을 파싱하거나, 실패 시 파일 앞 10줄에서
-        프롬프트(예: Core1#)를 찾아 매핑한다."""
-        try:
-            project_id = self._project()
-        except RuntimeError:
-            return {"error": "활성 프로파일이 없습니다."}
-
-        original_dir = self._active_original_log_dir()
-        if not original_dir:
-            return {"error": "로그 원본 폴더(00_orignal_log) 경로를 찾을 수 없습니다."}
-
-        from engine import project_manager as pm
-        from engine import device_inventory as di
-
-        paths = pm.project_paths(project_id)
-        if not paths:
-            return {"error": "프로젝트 경로를 찾을 수 없습니다."}
-        inv = self._load_inventory(paths)
-        enabled_devices = di.get_enabled_devices(inv)
-        valid_hostnames = {d["name"] for d in enabled_devices}
-
-        crt_dir = AppPaths.crt_log_root()
-        if not os.path.isdir(crt_dir):
-            return {"ok": True, "copied": 0, "message": "CRTlog 폴더가 존재하지 않습니다."}
-
-        copied_files = []
-        prompt_regex = re.compile(r'^([A-Za-z0-9_-]+)[#>]$')
-
-        for fname in os.listdir(crt_dir):
-            if not fname.lower().endswith(".txt"):
-                continue
-
-            abs_path = os.path.join(crt_dir, fname)
-            # 1. 파일명 기반 매핑 ({device}_{timestamp}.txt 또는 _로 구분된 첫 번째 단어)
-            matched_device = None
-            candidate = fname.split("_")[0] if "_" in fname else fname[:-4]
-            if candidate in valid_hostnames:
-                matched_device = candidate
-
-            # 2. 내용 기반 매핑 (파일명 매핑 실패 시)
-            if not matched_device:
-                try:
-                    content = _read_text_auto(abs_path)
-                    lines = content.splitlines()[:10]
-                    for line in lines:
-                        match = prompt_regex.search(line.strip())
-                        if match and match.group(1) in valid_hostnames:
-                            matched_device = match.group(1)
-                            break
-                except (OSError, UnicodeDecodeError):
-                    continue
-
-            # 매핑 성공 시 복사
-            if matched_device:
-                # 00_orignal_log 안에 저장될 때 어떤 이름으로 복사할지 결정
-                # 파일명 충돌을 피하기 위해 원본 파일명을 유지하거나 매핑된 장비명을 넣는다
-                target_path = os.path.join(original_dir, fname)
-                
-                try:
-                    # mtime과 크기가 같으면 이미 동기화된 파일로 취급
-                    if os.path.exists(target_path):
-                        src_stat = os.stat(abs_path)
-                        tgt_stat = os.stat(target_path)
-                        if src_stat.st_mtime == tgt_stat.st_mtime and src_stat.st_size == tgt_stat.st_size:
-                            continue
-                    
-                    shutil.copy2(abs_path, target_path)
-                    copied_files.append(fname)
-                except OSError:
-                    # 파일 쓰기 중 잠금(lock) 등의 이유로 복사가 실패하면 무시 (다음 debounced 때 재시도)
-                    pass
-
-        return {"ok": True, "copied": len(copied_files), "files": copied_files}
 
     def _validate_log_path(self, path):
         """path가 raw_logs/, labs/{project}/terminal_sessions/, 00_orignal_log/, 01_problem_log/,
