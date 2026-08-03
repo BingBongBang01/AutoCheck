@@ -18,7 +18,7 @@ EXCEL_HEADERS = ["순서", "카테고리", "사용여부", "커맨드", "설명"
 import pandas as pd
 from core.paths import AppPaths
 
-EXCEL_DEFAULT_PATH = str(AppPaths.app_root() / "data" / "eve" / "test" / "commands" / "commands_catalog.xlsx")
+EXCEL_DEFAULT_PATH = str(AppPaths.bundle_root() / "config" / "commands_catalog_default.xlsx")
 
 def _make_default_catalog():
     catalog = []
