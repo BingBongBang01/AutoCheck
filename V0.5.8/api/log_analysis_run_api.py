@@ -376,13 +376,19 @@ class LogAnalysisRunApiMixin:
             "baseline_source_kind": self._baseline_store().source_kind,
         }
 
-    def get_realtime_monitor_state(self, tail=120):
-        """연결 탭 하단 3분할 패널 폴링용 — 장비별 실시간 로그 + 체크리스트 + 오류 분석."""
+    def get_realtime_monitor_state(self, tail=120, since=None):
+        """연결 탭 하단 3분할 패널 폴링용 — 장비별 실시간 로그 + 체크리스트 + 오류 분석.
+
+        since: 프론트엔드가 마지막으로 받은 위치({epoch, devices:{장비:seq}, versions:{...}}).
+               넘기면 **바뀐 것만** 돌려준다(OPTIMIZATION_PLAN 3-1). 실측(장비 30대, tail=160):
+               전체 701.7 KB -> 델타 6.8 KB, 0.8초 폴링 기준 877 KB/s -> 8.5 KB/s.
+               생략하면 예전과 똑같이 전체를 돌려준다 — 프론트엔드가 강제 재동기화할 때 쓴다.
+        """
         watcher = getattr(self, "_baseline_stream_watcher", None)
         monitor = self._realtime_monitor()
         # 프로파일을 바꾼 뒤 이 탭을 열면 그 프로파일의 지난 감시 결과가 보여야 한다.
         self._sync_realtime_profile()
-        state = monitor.state(tail=int(tail or 120))
+        state = monitor.state(tail=int(tail or 120), since=since)
         state["running"] = bool(watcher and watcher.is_running())
         # 감시가 도는데도 화면이 비어 있을 때 원인을 바로 보여준다 — 대개 파일-장비 매칭 실패다.
         status = watcher.status() if watcher else {}

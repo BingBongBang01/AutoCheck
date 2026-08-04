@@ -91,6 +91,13 @@ class RealtimeMonitor:
         self._started_at = None
         self._last_activity = {}        # {device: epoch}
         self._alert_max = 300
+        # --- 델타 전송용 상태 (OPTIMIZATION_PLAN 3-1) ---
+        # 로그 줄마다 단조증가 seq 를 붙인다. 프론트엔드가 마지막으로 받은 seq 를 보내면
+        # 그 이후 줄만 돌려주므로, 폴링 payload 가 '장비 수 x tail' 에서 '새로 들어온 줄'로 줄어든다.
+        self._line_seq = 0
+        # 버퍼를 통째로 비우는 일(reset/clear_alerts)이 생기면 seq 가 되감기므로, 프론트엔드의
+        # 낡은 seq 를 그대로 믿으면 안 된다. epoch 가 다르면 무조건 전체를 다시 보낸다.
+        self._epoch = 1
         # Module 4 — 화면 필터/고정. API가 config/realtime_watch.yaml에서 읽어 set_filter()로 넣는다.
         # 필터를 판정 단계가 아니라 '표시 단계'에 두는 이유: 숨긴 규칙도 이력에는 남아야 하고
         # (숨김 해제하면 다시 보여야 한다), 무엇보다 숨김이 판정을 바꾸면 안 된다.
@@ -107,6 +114,9 @@ class RealtimeMonitor:
             self._alerts = []
             self._last_activity = {}
             self._started_at = time.time()
+            # 버퍼를 새로 만들었으므로 프론트엔드가 들고 있는 seq 는 의미가 없다.
+            self._line_seq = 0
+            self._epoch += 1
 
     def adopt_devices(self, devices, baseline_devices=()):
         """감시를 시작하지 않은 채로 장비 목록만 등록한다(저장본 복원 직전에 쓴다).
@@ -184,7 +194,9 @@ class RealtimeMonitor:
                 line = line.rstrip()
                 if not line.strip():
                     continue
-                buf.append({"ts": stamp, "text": line[:_LOG_LINE_MAX], "history": is_history})
+                self._line_seq += 1
+                buf.append({"ts": stamp, "text": line[:_LOG_LINE_MAX],
+                            "history": is_history, "seq": self._line_seq})
             if not is_history:
                 self._last_activity[device] = time.time()
 
@@ -370,9 +382,30 @@ class RealtimeMonitor:
         return self._buffers[device]
 
     # ---------- 읽기 ----------
-    def state(self, tail=120):
-        """프론트엔드 폴링용 스냅샷. tail: 장비별로 넘겨줄 최근 로그 줄 수."""
+    def state(self, tail=120, since=None):
+        """프론트엔드 폴링용 스냅샷. tail: 장비별로 넘겨줄 최근 로그 줄 수.
+
+        since: 프론트엔드가 마지막으로 받은 위치. {"epoch": int, "devices": {장비: seq}} 형태.
+               넘기면 **로그 줄은 그 이후 것만** 담아 payload 를 줄인다(OPTIMIZATION_PLAN 3-1).
+               생략하면 예전과 똑같이 전체 tail 을 담는다 — 다른 호출부와 '강제 전체 재동기화'가
+               그 경로를 쓴다.
+
+        원자성: 델타 절단선과 체크리스트/분석/고정을 **같은 락 블록 안에서** 계산한다.
+        이 모듈의 존재 이유가 "세 패널이 같은 이벤트에서 파생되므로 갱신 시점이 어긋나면
+        '왼쪽 로그에는 보이는데 체크리스트는 정상'인 화면이 나온다"는 것이므로(상단 주석),
+        델타화가 그 불변식을 깨서는 안 된다. 섹션 버전도 이 스냅샷에서만 파생시킨다.
+
+        장비별로 다음을 함께 돌려준다:
+          line_seq : 이 응답에 담긴 마지막 줄의 seq(없으면 이전 값 유지용으로 0)
+          resync   : True 면 프론트엔드는 그 장비의 로그를 통째로 갈아야 한다
+                     (버퍼가 maxlen 을 넘겨 클라이언트가 놓친 구간이 생긴 경우)
+        """
         with self._lock:
+            client_epoch = (since or {}).get("epoch")
+            client_seqs = (since or {}).get("devices") or {}
+            # epoch 가 다르면(감시 재시작·초기화) 클라이언트 seq 는 의미가 없다 — 전부 다시 보낸다.
+            use_delta = since is not None and client_epoch == self._epoch
+
             hidden_devices = self._filter["hidden_devices"]
             devices = []
             pinned = []
@@ -380,7 +413,28 @@ class RealtimeMonitor:
                 if device in hidden_devices:
                     continue
                 buf = self._buffers.get(device) or deque()
-                lines = list(buf)[-tail:]
+                all_lines = list(buf)
+                newest_seq = all_lines[-1].get("seq", 0) if all_lines else 0
+                resync = not use_delta
+
+                if use_delta:
+                    since_seq = client_seqs.get(device)
+                    if since_seq is None:
+                        # 이 장비를 클라이언트가 아직 모른다(감시 중 새로 등장) — 전체를 보낸다.
+                        resync = True
+                    else:
+                        oldest_seq = all_lines[0].get("seq", 0) if all_lines else 0
+                        if all_lines and since_seq < oldest_seq - 1:
+                            # 클라이언트가 마지막으로 본 뒤로 버퍼가 밀려 나갔다(maxlen 초과).
+                            # 그 사이 줄을 되살릴 수 없으므로 통째로 갈아야 한다.
+                            resync = True
+
+                if resync:
+                    lines = all_lines[-tail:]
+                else:
+                    since_seq = client_seqs.get(device, 0)
+                    lines = [line for line in all_lines if line.get("seq", 0) > since_seq]
+
                 checklist = []
                 for item in (self._checklists.get(device) or {}).values():
                     rank = self._pin_rank_locked(device, item["key"])
@@ -395,6 +449,8 @@ class RealtimeMonitor:
                     "has_baseline": device in self._baseline_devices,
                     "lines": lines,
                     "line_count": len(buf),
+                    "line_seq": newest_seq,
+                    "resync": resync,
                     "checklist": checklist,
                     "fail_count": len(fails),
                     "warn_count": len(warns),
@@ -413,13 +469,18 @@ class RealtimeMonitor:
                 pinned.append(self._pin_from_alerts_locked(key[0], key[1], rank))
             pinned.sort(key=lambda p: p["pin_rank"])
             visible = [a for a in self._alerts if not self._is_hidden_locked(a)]
-            return {
+            analysis = self._analyze_locked()
+            alerts = list(reversed(visible))[:80]
+            filter_copy = _copy_filter(self._filter)
+
+            payload = {
+                "epoch": self._epoch,
                 "devices": devices,
                 "pinned": pinned,
-                "alerts": list(reversed(visible))[:80],
-                "analysis": self._analyze_locked(),
+                "alerts": alerts,
+                "analysis": analysis,
                 "started_at": self._started_at,
-                "filter": _copy_filter(self._filter),
+                "filter": filter_copy,
                 # 우클릭으로 뭘 숨겼는지 화면에 알려주지 않으면 '경고가 안 뜬다'는 오해가 생긴다.
                 "hidden_counts": {
                     "devices": len([d for d in self._devices if d in hidden_devices]),
@@ -429,6 +490,50 @@ class RealtimeMonitor:
                 "seen_rules": sorted({a.get("rule_id") or a.get("type")
                                       for a in self._alerts if (a.get("rule_id") or a.get("type"))}),
             }
+
+            # 섹션 버전 — 프론트엔드가 바뀐 패널만 다시 그리게 한다. 0.8초마다 DOM 을 통째로
+            # 갈아치우던 것이 이 항목의 두 번째 비용이었다(그래서 클릭 고정 강조를 매 렌더마다
+            # 복원해야 했다). 값은 **이 스냅샷에서만** 파생시킨다 — 다른 시점의 것을 섞으면
+            # 세 패널이 어긋난다.
+            versions = {
+                "analysis": _fingerprint(analysis),
+                "checklist": _fingerprint([(d["device"], d["status"], d["fail_count"],
+                                            d["warn_count"], d["has_baseline"],
+                                            tuple((c["key"], c["status"], c["severity"], c["count"])
+                                                  for c in d["checklist"]))
+                                           for d in devices]),
+                "pinned": _fingerprint(pinned),
+                "filter": _fingerprint(filter_copy),
+                # alert_id 만으로는 부족하다. resolve_alerts()/ignore_alerts() 는 경고를 지우지
+                # 않고 **제자리에서** resolved/ignored 표시만 남기므로(이력이 점검 자료다) id
+                # 목록이 그대로다 — id 로만 지문을 내면 '해결됨'이 프론트엔드에 영원히 전달되지
+                # 않는다. 지금은 이 패널이 state["alerts"] 를 읽지 않아 증상이 없지만, 읽는 쪽이
+                # 생기는 순간 조용히 틀린 화면이 된다.
+                "alerts": _fingerprint([(a.get("alert_id"), a.get("severity"), a.get("device"),
+                                         bool(a.get("resolved")), bool(a.get("ignored")))
+                                        for a in alerts]),
+                "devices": _fingerprint([d["device"] for d in devices]),
+            }
+            payload["versions"] = versions
+
+            if use_delta:
+                # 지문이 같은 섹션은 보내지 않는다(None). 프론트엔드는 자기 DOM 을 그대로 둔다.
+                # payload 구성 실측(장비 30대): lines 88% / checklist 6.2% / analysis 2.6% /
+                # alerts 2.2% — lines 델타가 주효하고, 나머지 섹션 생략이 남은 몫을 줄인다.
+                known = (since or {}).get("versions") or {}
+                if known.get("analysis") == versions["analysis"]:
+                    payload["analysis"] = None
+                if known.get("alerts") == versions["alerts"]:
+                    payload["alerts"] = None
+                if known.get("pinned") == versions["pinned"]:
+                    payload["pinned"] = None
+                if known.get("filter") == versions["filter"]:
+                    payload["filter"] = None
+                if known.get("checklist") == versions["checklist"]:
+                    # 장비 목록 자체는 남겨야 한다(로그 델타가 거기 실려 있다) — checklist 만 뺀다.
+                    for entry in payload["devices"]:
+                        entry["checklist"] = None
+            return payload
 
     def alerts(self, device=None, limit=200, include_hidden=True):
         with self._lock:
@@ -444,6 +549,9 @@ class RealtimeMonitor:
             self._alerts = []
             for device in list(self._checklists):
                 self._checklists[device] = self._fresh_checklist(device)
+            # 체크리스트/경고가 통째로 바뀌었다 — 프론트엔드가 부분 갱신으로 따라올 수 없으므로
+            # epoch 를 올려 다음 폴링에서 전체를 다시 받게 한다.
+            self._epoch += 1
 
     # ---------- 프로파일별 보존(snapshot / restore) ----------
     # 실시간 감시 상태는 프로그램을 껐다 켜도 남아야 한다. 정기점검은 며칠에 걸쳐 이어지고,
@@ -488,8 +596,10 @@ class RealtimeMonitor:
                 buf = self._ensure_device(device)
                 for line in (snapshot.get("lines") or {}).get(device) or []:
                     if isinstance(line, dict) and line.get("text"):
+                        self._line_seq += 1
                         buf.append({"ts": line.get("ts", "--:--:--"),
-                                    "text": line["text"], "history": True})
+                                    "text": line["text"], "history": True,
+                                    "seq": self._line_seq})
                 activity = (snapshot.get("last_activity") or {}).get(device)
                 if activity:
                     self._last_activity[device] = activity
@@ -745,6 +855,21 @@ class RealtimeMonitor:
                 "alert_ids": _ids(group),
             })
         return out
+
+
+def _fingerprint(value):
+    """JSON 직렬화 가능한 값의 짧은 지문 — 섹션이 바뀌었는지 판정하는 데만 쓴다.
+
+    해시를 쓰는 이유: 프론트엔드가 이전 값을 그대로 들고 비교하려면 그 값을 다시 받아야 하고,
+    그러면 payload 를 줄이려는 목적이 사라진다. 짧은 문자열 하나만 주고받으면 된다.
+    md5 를 쓰지만 보안 용도가 아니다(변경 감지) — 충돌하면 화면이 한 번 덜 갱신될 뿐이고
+    다음 tick 에 값이 또 바뀌면 지문도 바뀐다.
+    """
+    import hashlib
+    import json
+
+    encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+    return hashlib.md5(encoded.encode("utf-8")).hexdigest()[:16]
 
 
 def _ids(alerts):
