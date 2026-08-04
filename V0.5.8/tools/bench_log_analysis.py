@@ -85,14 +85,20 @@ def _percentile(values, fraction):
     return ordered[index]
 
 
-def _timed(fn, repeat):
+def _timed(fn, repeat, setup=None):
     """fn 을 repeat 회 돌려 (최소, 중앙값, 상대편차) 를 ms 로 반환.
 
     평균이 아니라 최소를 대표값으로 쓴다 — 다른 프로세스의 방해는 시간을 늘리기만 하므로,
     최소값이 '이 코드가 낼 수 있는 시간'에 가장 가깝고 반복 재현성이 높다.
+
+    setup: 각 측정 **전에** 실행되며 시간에 포함되지 않는다. 판정 엔진이 줄 단위 메모를
+    갖게 된 뒤로 이게 필요해졌다 — 메모를 비우지 않으면 2회차부터 전부 캐시 히트라서
+    최소값이 '완전히 워밍된 상태'가 되고, 이득이 실제보다 크게 나온다.
     """
     samples = []
     for _ in range(repeat):
+        if setup is not None:
+            setup()
         started = time.perf_counter()
         fn()
         samples.append((time.perf_counter() - started) * 1000.0)
@@ -106,8 +112,16 @@ def _timed(fn, repeat):
 
 
 def measure_analyze_text(corpus, repeat):
+    """코퍼스 하나를 분석하는 시간 — 메모를 매번 비우고 잰다.
+
+    비우지 않으면 2회차부터 전부 캐시 히트가 되어 min 이 '완전 워밍' 수치가 된다. 그건 앱의
+    실제 상황(회차 첫 장비는 콜드)이 아니고, 2-1 적용 전 기준선과도 비교할 수 없다.
+    메모의 진짜 이득(장비 사이 중복)은 *_memo_speedup_run 지표가 따로 보고한다.
+    """
     stats = corpus_stats(corpus)
-    low, median, spread = _timed(lambda: analyze_text(corpus), repeat)
+    engine = get_engine()
+    low, median, spread = _timed(lambda: analyze_text(corpus), repeat,
+                                 setup=engine.clear_memo)
     per_line = low * 1000.0 / stats["evaluated_lines"] if stats["evaluated_lines"] else 0.0
     return {
         "analyze_text_ms": round(low, 2),
@@ -140,7 +154,9 @@ def measure_stages(corpus, repeat):
     }
     result = {"stage_lines": len(lines)}
     for name, fn in stages.items():
-        low, _median, _spread = _timed(fn, repeat)
+        # 단계별 측정도 메모를 비우고 잰다 — 그러지 않으면 match_signature/find_keyword 가
+        # 2회차부터 캐시 히트만 하게 되어 '어디가 비싼가'를 알 수 없다.
+        low, _median, _spread = _timed(fn, repeat, setup=engine.clear_memo)
         result[name] = round(low, 2)
     return result
 
@@ -169,20 +185,12 @@ def measure_memo_potential(corpus, repeat, devices, seed):
         tracker = ContextTracker()
         per_device_lines.append([l for l in text.splitlines() if not tracker.feed(l)])
 
-    _MISS = object()
-
-    def memoized_call(fn, memo):
-        """실제 구현과 같은 모양 — 언제나 함수 호출을 거치고 그 안에서 dict 를 본다."""
-        def call(line):
-            hit = memo.get(line, _MISS)
-            if hit is _MISS:
-                hit = fn(line)
-                memo[line] = hit
-            return hit
-        return call
-
+    # 엔진의 **실제** 메모를 토글해서 잰다. 2-1 적용 전에는 하네스가 자기 래퍼로 메모를
+    # 흉내냈는데, 이제 엔진이 직접 메모하므로 그 방식으로는 '메모 없는 기준선'이 이미 메모된
+    # 경로를 부르게 되어 측정이 무의미해진다.
     def plain(fn):
         def run():
+            engine.set_memo_enabled(False)
             for lines in per_device_lines:
                 for line in lines:
                     fn(line)
@@ -190,18 +198,20 @@ def measure_memo_potential(corpus, repeat, devices, seed):
 
     def per_file(fn):
         def run():
+            engine.set_memo_enabled(True)
             for lines in per_device_lines:
-                call = memoized_call(fn, {})      # 파일마다 메모를 새로 만든다
+                engine.clear_memo()               # 파일마다 메모를 버린다
                 for line in lines:
-                    call(line)
+                    fn(line)
         return run
 
     def whole_run(fn):
         def run():
-            call = memoized_call(fn, {})          # 회차 전체가 하나의 메모를 공유
+            engine.set_memo_enabled(True)
+            engine.clear_memo()                   # 회차 시작에 한 번만 비운다
             for lines in per_device_lines:
                 for line in lines:
-                    call(line)
+                    fn(line)
         return run
 
     def sig_fn(line):
@@ -218,8 +228,14 @@ def measure_memo_potential(corpus, repeat, devices, seed):
             round(base / run_scoped, 2) if run_scoped else 0.0,
         )
 
-    sig_file, sig_run = speedup(sig_fn)
-    kw_file, kw_run = speedup(kw_fn)
+    try:
+        sig_file, sig_run = speedup(sig_fn)
+        kw_file, kw_run = speedup(kw_fn)
+    finally:
+        # 반드시 원래대로 돌려놓는다 — 껐다 둔 채로 두면 뒤따르는 측정이 메모 없는 상태로
+        # 재어져 이득이 사라진 것처럼 보인다.
+        engine.set_memo_enabled(True)
+        engine.clear_memo()
 
     total_lines = sum(len(lines) for lines in per_device_lines)
     unique_lines = len({line for lines in per_device_lines for line in lines})

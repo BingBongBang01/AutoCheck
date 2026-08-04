@@ -39,6 +39,19 @@ import json
 
 SEVERITY_ORDER = ["info", "minor", "major", "critical"]
 
+# --------------------------------------------------------------------------- 줄 단위 메모
+# 판정 핫패스(match_signature / find_keyword)는 같은 줄을 반복해서 본다 — 장비마다 같은
+# 인터페이스 표가 나오기 때문이다. 메모는 RuleEngine 인스턴스에 붙고, get_engine() 이 프로세스
+# 싱글턴이므로 **점검 회차 전체(장비 N대 파일)가 하나의 메모를 공유**한다. 이게 핵심이다:
+# 파일마다 메모를 새로 만들면 이득이 1.05배로 사라지고(한 파일 안에서는 포트 번호가 달라
+# 줄이 대부분 고유하다), 회차를 공유하면 장비 8대에서 3.2배, 20대에서 3.9배가 된다.
+_MEMO_MISS = object()
+
+# 메모 엔트리 상한. 줄 하나가 평균 100~200바이트라고 보면 5만 줄은 수~십 MB 규모로,
+# 로그 전문을 이미 메모리에 들고 있는 이 앱에서는 부담이 되지 않는다. 상한이 없으면
+# 고유 줄이 수백만인 로그(타임스탬프가 전부 다른 syslog 덤프)에서 메모리가 계속 늘어난다.
+_MEMO_MAX_ENTRIES = 50_000
+
 
 def severity_rank(sev):
     try:
@@ -288,7 +301,41 @@ class SignatureMatcher:
         self.keyword_severity = {k.upper(): v for k, v in (rules.get("keyword_severity") or {}).items()}
         self.default_severity = rules.get("default_severity", "major")
 
+        # --- 줄 단위 메모 (핫패스) ---
+        # match_signature 는 줄마다 서명 31개를 순차로 훑는다. 실측으로 evaluate() 시간의
+        # 약 56% 를 여기서 쓴다. 실제 수집 로그는 장비마다 같은 표(포트 48개)를 반복하므로
+        # 중복률이 높고(합성 현실 코퍼스 73%), 같은 줄을 다시 판정하는 것이 대부분이다.
+        #
+        # 안전성: 이 함수가 ctx 를 읽는 곳은 `if scope and not scope.search(ctx.command)` 뿐이다.
+        # 모든 서명의 scope 가 None 이면 그 분기는 절대 실행되지 않으므로 '줄 문자열만의 순수
+        # 함수'가 되어 메모가 안전하다. scope 를 가진 서명이 하나라도 생기면 메모를 끈다.
+        self._memo = {}
+        # scope 를 가진 서명이 하나라도 있으면 메모가 정확하지 않다 — 그때는 아예 못 켜게 한다.
+        self._memo_safe = all(scope is None for _rx, scope, _entry in self.signatures)
+        # 실제로 메모를 쓸지. 정확성 게이트(_memo_safe)와 사용자 스위치를 곱한 값이다.
+        self._memo_requested = True
+
+    @property
+    def memo_enabled(self):
+        return self._memo_safe and self._memo_requested
+
+    def set_memo_enabled(self, enabled):
+        """벤치마크/테스트용 스위치. _memo_safe 가 False 면 켜도 켜지지 않는다."""
+        self._memo_requested = bool(enabled)
+
     def match_signature(self, line, ctx):
+        if not self.memo_enabled:
+            return self._match_signature_uncached(line, ctx)
+        hit = self._memo.get(line, _MEMO_MISS)
+        if hit is _MEMO_MISS:
+            hit = self._match_signature_uncached(line, ctx)
+            # 상한에 닿으면 더 담지 않는다. 캐시를 비우지 않는 이유: 고유 줄이 아주 많은
+            # 로그에서 비우고 다시 채우기를 반복하면(진동) 캐시 없는 것보다 느려진다.
+            if len(self._memo) < _MEMO_MAX_ENTRIES:
+                self._memo[line] = hit
+        return hit
+
+    def _match_signature_uncached(self, line, ctx):
         for rx, scope, entry in self.signatures:
             if scope and not scope.search(ctx.command or ""):
                 continue
@@ -490,8 +537,49 @@ class RuleEngine:
         self.signatures = SignatureMatcher(self.rules)
         self.correlator = Correlator(self.rules)
 
+        # find_keyword 는 ctx 를 아예 받지 않으므로 언제나 줄만의 순수 함수다 — 조건 없이
+        # 메모할 수 있다(서명 쪽 _memo_safe 게이트가 필요 없는 이유).
+        self._keyword_memo = {}
+        self._keyword_memo_enabled = True
+
     def find_keyword(self, line):
-        return next((kw for kw, rx in self.keyword_res.items() if rx.search(line)), None)
+        if not self._keyword_memo_enabled:
+            return next((kw for kw, rx in self.keyword_res.items() if rx.search(line)), None)
+        hit = self._keyword_memo.get(line, _MEMO_MISS)
+        if hit is _MEMO_MISS:
+            hit = next((kw for kw, rx in self.keyword_res.items() if rx.search(line)), None)
+            if len(self._keyword_memo) < _MEMO_MAX_ENTRIES:
+                self._keyword_memo[line] = hit
+        return hit
+
+    def memo_stats(self):
+        """메모 상태 — 진단/테스트용. 상한에 닿았는지 확인할 수 있어야 한다."""
+        return {
+            "signature_entries": len(self.signatures._memo),
+            "signature_memo_enabled": self.signatures.memo_enabled,
+            "keyword_entries": len(self._keyword_memo),
+            "keyword_memo_enabled": self._keyword_memo_enabled,
+            "max_entries": _MEMO_MAX_ENTRIES,
+        }
+
+    def clear_memo(self):
+        """메모를 비운다 — 벤치마크가 '파일 단위'와 '회차 공유'를 구분해 재려면 필요하다."""
+        self.signatures._memo.clear()
+        self._keyword_memo.clear()
+
+    def set_memo_enabled(self, enabled):
+        """메모를 켜고 끈다 — 벤치마크의 before/after 비교와 결과 동일성 테스트용.
+
+        운영 코드가 부를 일은 없다. 이 스위치가 있어야 "메모가 판정을 바꾸지 않는다"를
+        같은 엔진으로 직접 대조할 수 있고, 벤치마크도 '메모 없는 기준선'을 정직하게 잴 수 있다.
+        끄면 메모도 비운다 — 껐다 켰을 때 낡은 항목이 남아 있으면 안 된다.
+
+        주의: 서명 메모는 scope 를 가진 서명이 하나라도 있으면 enabled=True 로도 켜지지 않는다
+        (정확성 게이트가 우선한다).
+        """
+        self._keyword_memo_enabled = bool(enabled)
+        self.signatures.set_memo_enabled(enabled)
+        self.clear_memo()
 
     def evaluate(self, line, ctx):
         """한 줄을 판정. 이상이면 dict, 아니면 None.
