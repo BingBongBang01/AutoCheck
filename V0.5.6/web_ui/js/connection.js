@@ -55,7 +55,9 @@ async function renderConnection() {
           <div class="connection-device-list" id="connection-device-list">${targets.map((t, i) => `
             <label class="connection-device" data-idx="${i}" data-name="${t.name}">
               <input type="checkbox" data-name="${t.name}" ${selectedDeviceNames.has(t.name) ? 'checked' : ''}>
-              <span class="device-name">${t.name}</span><span class="ip">${t.ip}:${t.port}</span>
+              <span class="device-name">${t.name}</span>
+              <span class="device-session-slot"></span>
+              <span class="ip">${t.ip}:${t.port}</span>
             </label>`).join('')}</div>
         </div>
         <div class="term-main">
@@ -236,11 +238,27 @@ function wireDeviceList(targets) {
   updateDeviceRowClasses();
 }
 
+// 좌측 장비 목록 ↔ 우측 터미널의 1:1 시각 연동.
+//  - session-active : SSH 세션이 살아 있는 장비 (● ONLINE 배지도 같이 붙는다)
+//  - term-focus-device : 지금 키 입력이 실제로 들어가는 장비 = 활성 탭/활성 분할판
+// 활성 탭만 파란 네온으로 강조해, 다른 장비에 명령을 잘못 넣는 사고를 눈으로 막는다.
 function updateDeviceRowClasses() {
   const activeDevices = new Set(termSessions.filter(s => s.ok).map(s => s.device));
+  const focusSession = termSessions.find(s => s.ok && s.session_id === termActiveId);
+  const focusDevice = focusSession ? focusSession.device : null;
   document.querySelectorAll('#connection-device-list .connection-device').forEach(label => {
     const name = label.dataset.name;
+    const online = activeDevices.has(name);
+    const focused = !!focusDevice && name === focusDevice;
     label.classList.toggle('selected', selectedDeviceNames.has(name));
-    label.classList.toggle('session-active', activeDevices.has(name));
+    label.classList.toggle('session-active', online);
+    label.classList.toggle('term-focus-device', focused);
+    const slot = label.querySelector('.device-session-slot');
+    if (slot) {
+      slot.innerHTML = [
+        online ? '<span class="device-online-badge" title="SSH 세션이 연결되어 있습니다">ONLINE</span>' : '',
+        focused ? '<span class="device-focus-mark" title="지금 입력이 이 장비로 들어갑니다">◀ 입력 중</span>' : '',
+      ].filter(Boolean).join('');
+    }
   });
 }

@@ -1274,3 +1274,232 @@ details.fold[open] > summary .fold-caret { transform: rotate(180deg); }
 .rtm-probe-body tr.rtm-probe-bad td { color: var(--critical); }
 .rtm-probe-note { font-size: 11px; color: var(--sub); line-height: 1.6; margin: 10px 0 0; }
 .rtm-probe-note code { font-family: var(--font-mono); background: var(--input-bg); border-radius: 4px; padding: 1px 4px; }
+
+/* =====================================================================
+   시인성·직관성 강화 (v0.5.6 UI 리팩토링)
+   "지금 어디를 보고 있는지"를 색·굵기·배지 세 겹으로 알려주는 규칙 모음.
+   기능 로직은 건드리지 않고, JS가 붙이는 클래스에 대한 표현만 여기서 정의한다.
+   ===================================================================== */
+
+/* 여러 패널이 공유하는 상호 하이라이트 펄스 — 같은 원인을 가리키는 서로 다른
+   패널(로그/체크리스트)이 동시에 같은 리듬으로 깜빡여야 '같은 것'으로 읽힌다. */
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55); }
+  50%      { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.05); }
+}
+@keyframes pulse-border-critical {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55); }
+  50%      { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.05); }
+}
+@keyframes live-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+/* ===== 1단계: 펼쳐진 점검 회차(대분류) 구역 ===== */
+/* 회차가 여러 개 쌓이면 어느 그룹이 펼쳐져 있는지가 caret 하나로는 잘 안 보인다 —
+   펼친 헤더에 좌측 액센트 바를, 그 본문에는 옅은 틴트 + 계층 트리선을 준다. */
+.log-run-group-head.open {
+  border-left: 3px solid var(--primary);
+  background: rgba(59, 130, 246, 0.10);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.log-run-group-head.open .log-run-group-title { color: var(--primary); }
+.log-run-group-head.open .log-run-group-caret { color: var(--primary); }
+.log-run-group-head.open .log-run-group-count {
+  background: rgba(59, 130, 246, 0.20); color: var(--primary); font-weight: 700;
+}
+.log-run-group-body {
+  background: rgba(59, 130, 246, 0.05);
+  border-left: 2px solid var(--primary-dim);
+  padding-left: 12px; margin-left: 6px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+/* ===== 2단계: 그 안에서 지금 열람 중인 파일 ===== */
+/* .log-file-item.active = 우측 뷰어/분석창에 실제로 읽혀 보이는 파일.
+   .selected(삭제 대상 다중선택)와는 다른 정보라 배경 진하기로 구분한다. */
+.log-file-item.active {
+  background: rgba(59, 130, 246, 0.20);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+.log-file-item.active .device-name { font-weight: 700; color: var(--primary); }
+.log-file-open-badge {
+  margin-left: auto; flex-shrink: 0; display: inline-flex; align-items: center; gap: 3px;
+  background: var(--primary); color: #fff; font-size: 9px; font-weight: 700;
+  border-radius: 999px; padding: 1px 6px; letter-spacing: 0.3px; white-space: nowrap;
+}
+
+/* ===== 장비 목록: 선택 행 핀 바 ===== */
+/* 선택(파랑)과 연결 확인 결과(초록/빨강)는 서로 다른 정보다 — 선택은 왼쪽 핀 바 +
+   마커로, 결과는 배경으로 표현해 한 행에 겹쳐도 둘 다 읽힌다. */
+table.dtable tbody tr.inv-selected > td:first-child {
+  box-shadow: inset 5px 0 0 var(--primary);
+  position: relative; padding-left: 16px;
+}
+table.dtable tbody tr.inv-selected > td:first-child::before {
+  content: "\25BA"; position: absolute; left: 7px; top: 50%; transform: translateY(-50%);
+  font-size: 9px; color: var(--primary); line-height: 1; pointer-events: none;
+}
+/* 연결 결과 배경 위에 선택 상태를 얹는 오버레이 — 결과 색을 지우지 않고 한 겹 밝게
+   깔아, '초록인데 선택됨' / '빨강인데 선택됨'이 모두 구별된다. */
+table.dtable tbody tr.inv-selected.probe-ok,
+table.dtable tbody tr.inv-selected.probe-ok:hover,
+table.dtable tbody tr.inv-selected.probe-fail,
+table.dtable tbody tr.inv-selected.probe-fail:hover,
+table.dtable tbody tr.inv-selected.probe-checking,
+table.dtable tbody tr.inv-selected.probe-checking:hover {
+  background-image: linear-gradient(rgba(59, 130, 246, 0.16), rgba(59, 130, 246, 0.16));
+}
+
+/* ===== 세션 터미널: 활성 탭 ↔ 좌측 장비 목록 1:1 연동 ===== */
+/* 지금 키 입력이 들어가는 장비를 좌우 양쪽에서 같은 색으로 표시한다 —
+   다른 장비에 명령을 잘못 넣는 사고를 막는 것이 목적이다. */
+.connection-device { position: relative; }
+.connection-device.term-focus-device {
+  background: rgba(59, 130, 246, 0.20);
+  box-shadow: inset 4px 0 0 var(--primary), 0 0 0 1px var(--primary),
+              0 0 10px rgba(59, 130, 246, 0.35);
+  border-radius: var(--radius-sm);
+}
+.connection-device.term-focus-device .device-name { font-weight: 700; color: var(--primary); }
+.device-session-slot { display: inline-flex; align-items: center; gap: 4px; }
+.device-focus-mark {
+  flex-shrink: 0; font-size: 9px; font-weight: 700; color: var(--primary);
+  letter-spacing: 0.3px; white-space: nowrap;
+}
+.device-online-badge {
+  display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0;
+  background: rgba(34, 197, 94, 0.16); color: var(--success);
+  font-size: 9px; font-weight: 700; border-radius: 999px; padding: 1px 6px;
+  letter-spacing: 0.3px; white-space: nowrap;
+}
+.device-online-badge::before {
+  content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--success);
+  animation: live-blink 1.4s var(--ease) infinite;
+}
+
+/* 활성 터미널 탭 — 아랫줄 2px만으로는 탭이 많을 때 눈에 잘 안 띈다. */
+.term-tab.active {
+  background: rgba(59, 130, 246, 0.14);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+/* 분할 뷰에서 지금 입력을 받는 판 — 헤더와 본문 테두리를 같이 굵게 밝힌다. */
+.term-pane-header.active {
+  border-width: 2px; border-color: var(--primary); color: var(--primary); font-weight: 700;
+  background: rgba(59, 130, 246, 0.14);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.30);
+}
+.term-pane-focus-mark { font-size: 9px; font-weight: 700; letter-spacing: 0.3px; }
+.term-pane-wrap.term-pane-focused .term-pane-body {
+  border: 2px solid var(--primary); border-top: none;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
+}
+
+/* ===== 실시간 감시: 장애 원인 ↔ 로그 ↔ 체크리스트 3-Way 교차 강조 ===== */
+/* 오류 카드를 짚으면 그 오류를 낸 장비의 CLI 로그 박스와 체크리스트가 같이 깜빡인다.
+   .rtm-xhl(경고 계열) / .rtm-xhl-critical(심각 계열) 두 색만 쓴다 — 색이 더 늘면
+   기존 심각도 색 체계와 섞여 오히려 안 읽힌다. */
+.rtm-log-box.rtm-xhl, .rtm-check-group.rtm-xhl, .rtm-check-row.rtm-xhl,
+.rtm-checklist-devtile.rtm-xhl {
+  outline: 2px solid var(--warning); outline-offset: -1px;
+  animation: pulse-border 1.5s var(--ease) infinite;
+  border-radius: var(--radius-sm);
+}
+.rtm-log-box.rtm-xhl-critical, .rtm-check-group.rtm-xhl-critical, .rtm-check-row.rtm-xhl-critical,
+.rtm-checklist-devtile.rtm-xhl-critical {
+  outline: 2px solid var(--critical); outline-offset: -1px;
+  animation: pulse-border-critical 1.5s var(--ease) infinite;
+  border-radius: var(--radius-sm);
+}
+.rtm-err-row, .rtm-finding { cursor: pointer; }
+.rtm-err-row.rtm-xhl-source, .rtm-finding.rtm-xhl-source {
+  outline: 2px solid var(--warning); outline-offset: -1px;
+}
+.rtm-err-row.rtm-xhl-source-critical, .rtm-finding.rtm-xhl-source-critical {
+  outline: 2px solid var(--critical); outline-offset: -1px;
+}
+
+/* ===== 고객사/프로파일 모달: 현재 사용 중인 회차 ===== */
+.inspection-profile-card.profile-current {
+  border: 2px solid var(--success);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
+  border-radius: var(--radius-sm);
+}
+/* 배너는 <summary> 안에 들어간다 — details가 접혀 있어도 보여야 하기 때문이다.
+   summary를 wrap으로 바꿔 배너가 첫 줄을 통째로 차지하게 한다. */
+.inspection-profile-card.profile-current > summary { flex-wrap: wrap; padding-top: 0; }
+.profile-current-banner {
+  width: calc(100% + 20px); margin: 0 -10px 6px; display: flex; align-items: center; gap: 5px;
+  background: var(--success); color: #fff;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.4px;
+  padding: 4px 10px; border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+.inspection-profile-card.profile-current > summary { font-weight: 700; }
+/* 사용 중이 아닌 회차는 시각적 무게를 낮춰 대비를 만든다. */
+.inspection-profile-card.profile-idle > summary { opacity: 0.72; font-weight: 500; }
+.inspection-profile-card.profile-idle:hover > summary { opacity: 1; }
+
+/* ===== 명령어 카탈로그: ON/OFF 배지 + 드롭 가이드 ===== */
+.cmd-state-badge {
+  flex-shrink: 0; width: 34px; text-align: center;
+  font-size: 9px; font-weight: 800; letter-spacing: 0.4px;
+  border-radius: 999px; padding: 2px 0;
+}
+.cmd-state-badge.cmd-state-on { background: rgba(34, 197, 94, 0.18); color: var(--success); }
+.cmd-state-badge.cmd-state-off { background: var(--hover); color: var(--sub); }
+/* 비활성 행은 무채색으로 눌러 둔다 — 취소선(기존 규칙)에 채도까지 빼서
+   목록을 훑을 때 '실행되는 것'만 눈에 들어오게 한다. */
+.catalog-row.cmd-disabled { filter: grayscale(1); opacity: 0.55; }
+.catalog-row.cmd-disabled:hover { filter: grayscale(0.4); opacity: 0.85; }
+
+/* 삽입 위치 가이드 — 어느 행 '사이'로 들어가는지가 테두리만으로는 애매했다. */
+.catalog-row.drop-target, .ai-order-item.drop-target { position: relative; }
+.catalog-row.drop-target::before, .ai-order-item.drop-target::before {
+  content: ""; position: absolute; left: 0; right: 0; top: -2px; height: 3px;
+  background: var(--primary); border-radius: 2px;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.7);
+}
+.catalog-row.drop-target::after, .ai-order-item.drop-target::after {
+  content: "\25B6"; position: absolute; left: -10px; top: -9px;
+  font-size: 10px; color: var(--primary); line-height: 1;
+}
+.catalog-drop-zone.drop-target { box-shadow: inset 0 -3px 0 var(--primary); }
+
+/* ===== 대시보드: 추이 배지 + 클릭 이동 가이드 ===== */
+.dash-trend {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 8px;
+  white-space: nowrap;
+}
+.dash-trend-up { background: rgba(34, 197, 94, 0.16); color: var(--success); }
+.dash-trend-down { background: rgba(239, 68, 68, 0.16); color: var(--critical); }
+.dash-trend-flat { background: var(--hover); color: var(--sub); }
+.dash-trend-none { background: var(--hover); color: var(--sub); font-weight: 500; }
+
+table.dtable tbody tr.dash-clickable { cursor: pointer; }
+table.dtable tbody tr.dash-clickable:hover { background: rgba(59, 130, 246, 0.10); }
+table.dtable tbody tr.dash-clickable .dash-goto {
+  visibility: hidden; margin-left: 6px; font-size: 10px; font-weight: 700; color: var(--primary);
+  white-space: nowrap;
+}
+table.dtable tbody tr.dash-clickable:hover .dash-goto { visibility: visible; }
+
+/* ===== 환경 설정: 1순위 AI 크라운 + API 키 미설정 경고 ===== */
+.ai-order-item { position: relative; flex-wrap: wrap; }
+.ai-order-item.ai-main-provider {
+  border: 2px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.10);
+}
+.ai-main-crown {
+  display: flex; align-items: center; gap: 5px; width: 100%;
+  background: var(--primary); color: #fff;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.4px;
+  padding: 3px 10px; border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  margin: -6px -10px 6px;
+}
+.ai-order-item.ai-main-provider .order-label { font-weight: 800; }
+.api-key-warn {
+  display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
+  background: rgba(249, 115, 22, 0.16); color: var(--warning);
+  font-size: 10px; font-weight: 700; border-radius: 999px; padding: 2px 8px;
+  white-space: nowrap;
+}

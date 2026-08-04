@@ -62,8 +62,10 @@ function renderInventoryTable() {
            <input class="field" style="height:30px;width:90px" type="password" value="${d.password||''}" placeholder="기본값" data-idx="${idx}" data-field="password">
            <button class="btn btn-outlined" style="height:26px;padding:2px 6px;font-size:11px;" data-open-key="${idx}" title="퍼블릭키(개인키 파일)로 접속 전환"><span class="material-symbols-rounded" style="font-size:14px">key</span></button>
          </div>`;
-    // 선택 표시는 outline(파랑), 연결 확인 결과는 배경색(초록/빨강) — 둘은 서로 다른
-    // 정보라 한 행에 겹쳐도 각각 보여야 한다. 자세한 규칙은 style.css의 .probe-* 참고.
+    // 선택 표시는 outline + 첫 셀 좌측 핀 바(파랑 5px, ► 마커), 연결 확인 결과는 배경색
+    // (초록/빨강) — 둘은 서로 다른 정보라 한 행에 겹쳐도 각각 보여야 한다. 선택된 행이
+    // 연결 결과 색을 갖고 있으면 그 위에 파란 오버레이를 한 겹 얹어 둘을 동시에 읽게 한다.
+    // 자세한 규칙은 style.css의 .probe-* / tr.inv-selected 참고.
     const rowClass = [isSelected ? 'inv-selected' : '', probeRowClass(d)].filter(Boolean).join(' ');
     return `
     <tr class="${rowClass}" data-row-idx="${idx}">

@@ -110,6 +110,7 @@ function renderTermArea() {
     tabbar.innerHTML = okSessions.map(s => `
       <div class="term-tab ${s.session_id === termActiveId ? 'active' : ''}" data-tab="${s.session_id}">
         <span class="material-symbols-rounded" style="font-size:14px;">dns</span>${s.device}
+        ${s.session_id === termActiveId ? '<span class="device-online-badge" title="이 탭이 입력을 받고 있습니다">ONLINE</span>' : ''}
         <span class="material-symbols-rounded term-tab-close" data-close-tab="${s.session_id}">close</span>
       </div>
     `).join('');
@@ -137,9 +138,12 @@ function renderTermArea() {
     const cols = Math.min(3, Math.ceil(Math.sqrt(okSessions.length)));
     area.innerHTML = `<div class="term-grid" style="grid-template-columns:repeat(${cols},1fr);">` +
       okSessions.map(s => `
-        <div class="term-pane-wrap" data-pane="${s.session_id}">
+        <div class="term-pane-wrap ${s.session_id === termActiveId ? 'term-pane-focused' : ''}" data-pane="${s.session_id}">
           <div class="term-pane-header ${s.session_id === termActiveId ? 'active' : ''}" data-focus="${s.session_id}">
             <span class="material-symbols-rounded" style="font-size:14px;">dns</span>${s.device}
+            ${s.session_id === termActiveId
+              ? '<span class="term-pane-focus-mark" title="지금 키 입력이 이 장비로 들어갑니다">◀ 입력 중</span>'
+              : ''}
             <span style="flex:1"></span>
             <span class="material-symbols-rounded term-tab-close" data-close-tab="${s.session_id}">close</span>
           </div>
@@ -201,6 +205,7 @@ function refitActiveTerminal() {
 function updateActiveTabHighlight() {
   document.querySelectorAll('#term-tabbar .term-tab').forEach(el => el.classList.toggle('active', el.dataset.tab === termActiveId));
   document.querySelectorAll('#term-area [data-focus]').forEach(el => el.classList.toggle('active', el.dataset.focus === termActiveId));
+  document.querySelectorAll('#term-area [data-pane]').forEach(el => el.classList.toggle('term-pane-focused', el.dataset.pane === termActiveId));
 }
 
 async function closeSingleTerminal(sessionId) {

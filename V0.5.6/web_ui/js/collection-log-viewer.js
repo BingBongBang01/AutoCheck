@@ -62,11 +62,12 @@ function renderLogViewer() {
     <div style="display:flex;gap:12px;flex:1;min-height:0;">
       <div style="width:260px;flex:0 0 260px;overflow:auto;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px;user-select:none;" id="log-file-list" tabindex="0">
         ${renderLogRunGroupsHtml(collectionLogFiles, collectionExpandedRuns, f => `
-          <div class="connection-device log-file-row ${collectionOpenTabs.includes(f.path) ? 'session-active' : ''} ${collectionSelectedPaths.has(f.path) ? 'selected' : ''}" data-path="${f.path}" style="cursor:pointer;">
-            <div style="display:flex;flex-direction:column;">
+          <div class="${logFileRowClass(f.path === collectionActiveTab, collectionSelectedPaths.has(f.path))} ${collectionOpenTabs.includes(f.path) ? 'session-active' : ''}" data-path="${f.path}" style="cursor:pointer;">
+            <div style="display:flex;flex-direction:column;min-width:0;">
               <span class="device-name">${f.device}</span>
               <span style="font-size:10px;color:var(--sub);">${f.source} · ${f.mtime_str}</span>
             </div>
+            ${logFileActiveBadge(f.path === collectionActiveTab)}
           </div>`)}
       </div>
       <div style="flex:1;min-width:0;display:flex;flex-direction:column;">

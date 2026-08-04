@@ -302,6 +302,62 @@ function renderRtmState(state) {
   renderRtmLogs(state);
   renderRtmAnalysis(state);
   renderRtmChecklist(state);
+  // 세 패널이 모두 새로 그려진 뒤에 교차 강조를 다시 입힌다 — 0.8초 폴링으로 DOM이
+  // 통째로 갈리므로, 클릭으로 고정해 둔 강조는 매 렌더마다 복원해야 유지된다.
+  applyRtmCrossHighlight();
+}
+
+// ===== 3-Way 교차 강조 (장애 원인 분석 ↔ 좌측 CLI 로그 ↔ 우측 체크리스트) =====
+// 오류 카드 하나가 가리키는 장비들을, 세 패널에서 같은 색·같은 리듬으로 동시에 깜빡인다.
+// "이 오류는 어느 장비의 로그에서 났고, 체크리스트의 어느 항목에 걸렸나"를 눈으로 잇는 것이
+// 목적이다. hover는 미리보기(손을 떼면 원래대로), click은 고정(폴링 재렌더에도 유지).
+let rtmXhlPinned = null;   // {devices: [name], sev: 'CRITICAL'|...} — 클릭으로 고정된 강조
+let rtmXhlHover = null;    // 마우스를 올린 동안만 유효한 미리보기
+
+const RTM_XHL_CLASSES = ['rtm-xhl', 'rtm-xhl-critical', 'rtm-xhl-source', 'rtm-xhl-source-critical'];
+
+// 지금 유효한 강조(hover 우선, 없으면 고정)를 세 패널에 입힌다. 인자 없이 부르면 상태만 반영.
+function applyRtmCrossHighlight() {
+  document.querySelectorAll('.rtm-xhl, .rtm-xhl-critical, .rtm-xhl-source, .rtm-xhl-source-critical')
+    .forEach(el => el.classList.remove(...RTM_XHL_CLASSES));
+  const target = rtmXhlHover || rtmXhlPinned;
+  if (!target || !target.devices.length) return;
+  const critical = target.sev === 'CRITICAL';
+  const cls = critical ? 'rtm-xhl-critical' : 'rtm-xhl';
+  const srcCls = critical ? 'rtm-xhl-source-critical' : 'rtm-xhl-source';
+  const devices = new Set(target.devices);
+
+  // 1) 원인 카드 자신(어느 줄에서 시작된 강조인지)
+  document.querySelectorAll('#rtm-analysis [data-rtm-devices]').forEach(el => {
+    if (el.dataset.rtmXhlKey === target.key) el.classList.add(srcCls);
+  });
+  // 2) 좌측 CLI 로그 박스
+  document.querySelectorAll('.rtm-log-box[data-rtm-xhl-device]')
+    .forEach(el => { if (devices.has(el.dataset.rtmXhlDevice)) el.classList.add(cls); });
+  // 3) 우측 하단 체크리스트 — 장비 그룹과 그 안에서 지금 이상인 항목 행까지.
+  document.querySelectorAll('#rtm-checklist [data-rtm-detail]').forEach(el => {
+    if (!devices.has(el.dataset.rtmDetail)) return;
+    el.classList.add(cls);
+    el.querySelectorAll('.rtm-check-fail, .rtm-check-warn').forEach(row => row.classList.add(cls));
+  });
+  document.querySelectorAll('#rtm-checklist [data-rtm-devtile]').forEach(el => {
+    if (devices.has(el.dataset.rtmDevtile)) el.classList.add(cls);
+  });
+}
+
+// 오류 카드(.rtm-err-row / .rtm-finding) 한 줄에 hover/click 강조를 붙인다.
+function wireRtmCrossHighlight(row) {
+  const devices = (row.dataset.rtmDevices || '').split('\n').filter(Boolean);
+  const sev = row.dataset.rtmSev || 'WARNING';
+  const key = row.dataset.rtmXhlKey || '';
+  row.addEventListener('mouseenter', () => { rtmXhlHover = { devices, sev, key }; applyRtmCrossHighlight(); });
+  row.addEventListener('mouseleave', () => { rtmXhlHover = null; applyRtmCrossHighlight(); });
+  row.addEventListener('click', () => {
+    // 같은 줄을 다시 누르면 고정 해제 — 계속 깜빡이는 화면을 사용자가 끌 수 있어야 한다.
+    const same = rtmXhlPinned && rtmXhlPinned.key === key;
+    rtmXhlPinned = same ? null : { devices, sev, key };
+    applyRtmCrossHighlight();
+  });
 }
 
 // ===== 숨김 안내 줄 =====
@@ -472,6 +528,7 @@ function rtmLogBox(device, maxLines, fill) {
   const chipSuffix = sev ? RTM_SEV_CHIP[sev] : 'ok';
   return `
     <div class="rtm-log-box ${sevClass} ${fill ? 'rtm-log-box-fill' : ''}"
+         data-rtm-xhl-device="${rtEscape(device.device)}"
          style="${fill ? '' : `height:${RTM_BOX_HEIGHT}px`}">
       <div class="rtm-log-head" data-rtm-box-device="${rtEscape(device.device)}" title="우클릭 → 이 장비 숨기기">
         <strong>${rtEscape(device.device)}</strong>
@@ -538,7 +595,11 @@ function renderRtmAnalysis(state) {
             (RTM_SEV_RANK[b.severity] || 0) - (RTM_SEV_RANK[a.severity] || 0))[0];
           return `
           <div class="rtm-err-row rtm-sev-${sev.toLowerCase()} ${g.key === rtmAnalysisSelectedKey ? 'active' : ''}"
-               data-rtm-err="${rtEscape(g.key)}" title="클릭 → 오른쪽에 장비별 상세 표시 / 우클릭 → 숨기기">
+               data-rtm-err="${rtEscape(g.key)}"
+               data-rtm-xhl-key="${rtEscape(g.key)}"
+               data-rtm-devices="${rtEscape(g.devices.join('\n'))}"
+               data-rtm-sev="${rtEscape(sev)}"
+               title="클릭/마우스오버 → 이 오류를 낸 장비의 좌측 로그와 우측 체크리스트를 같이 강조 (클릭은 고정, 다시 클릭하면 해제) / 우클릭 → 숨기기">
             <div class="rtm-err-row-head">
               <span class="rtm-chip rtm-chip-${RTM_SEV_CHIP[sev] || 'warn'}">${RTM_SEV_LABEL[sev] || sev}</span>
               ${g.fromHistory ? '<span class="rtm-chip rtm-chip-unknown" title="이전 세션·이전 실행의 로그에서 찾은 오류입니다">이전 기록</span>' : ''}
@@ -572,6 +633,8 @@ function renderRtmAnalysis(state) {
   if (detailEl) detailEl.scrollTop = selectionChanged ? 0 : prevDetailTop;
 
   listEl?.querySelectorAll('[data-rtm-err]').forEach(row => {
+    // 3-Way 교차 강조 — 이 오류를 낸 장비의 로그/체크리스트를 같이 깜빡인다.
+    wireRtmCrossHighlight(row);
     row.addEventListener('click', () => {
       rtmAnalysisSelectedKey = row.dataset.rtmErr;
       renderRtmAnalysis(state);
@@ -585,7 +648,15 @@ function renderRtmAnalysis(state) {
   detailEl?.querySelectorAll('[data-rtm-detail-device]').forEach(node => {
     node.addEventListener('contextmenu', (e) =>
       openRtmContextMenu(e, { device: node.dataset.rtmDetailDevice }));
+    // 상세는 장비 한 대 단위다 — 여기서 짚으면 그 한 대만 좌우에서 강조된다.
+    node.dataset.rtmDevices = node.dataset.rtmDetailDevice || '';
+    node.dataset.rtmXhlKey = `detail:${node.dataset.rtmDetailDevice || ''}`;
+    node.dataset.rtmSev = selected ? selected.severity : 'WARNING';
+    wireRtmCrossHighlight(node);
   });
+
+  // 클릭으로 고정해 둔 교차 강조를 방금 새로 그린 DOM에 다시 입힌다.
+  applyRtmCrossHighlight();
 }
 
 // 같은 기술 분류(category — VLAN/인터페이스/링크/BGP·OSPF 인접/STP·MLAG/운영 명령/기타)의

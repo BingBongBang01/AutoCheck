@@ -84,6 +84,23 @@ function renderLogRunGroupsHtml(files, expandedSet, rowHtml, emptyHtml) {
   }).join('');
 }
 
+// 2단계 하이라이트의 '2단계' — 펼친 회차 안에서 지금 우측 뷰어/분석창에 읽혀 보이는 파일.
+// 세 탭(점검 로그/로그 분석/마스킹)이 각자 다른 상태 변수로 활성 파일을 들고 있어서,
+// 클래스 이름만 여기서 한 곳으로 모아 세 탭의 하이라이트 모양이 갈라지지 않게 한다.
+// isActive = 지금 열려서 보이는 파일, isSelected = 삭제 등 다중선택 대상(서로 다른 정보다).
+function logFileRowClass(isActive, isSelected) {
+  return ['connection-device', 'log-file-row', 'log-file-item',
+    isActive ? 'active session-active' : '', isSelected ? 'selected' : '']
+    .filter(Boolean).join(' ');
+}
+
+// 활성 파일 우측 배지 — 배경색만으로는 다중선택(.selected)과 헷갈리므로 글자로도 못 박는다.
+function logFileActiveBadge(isActive) {
+  return isActive
+    ? '<span class="log-file-open-badge" title="지금 오른쪽에 열려 있는 로그입니다">\u{1F441} 열림</span>'
+    : '';
+}
+
 function wireLogRunGroupToggles(containerEl, expandedSet, rerender) {
   if (!containerEl) return;
   containerEl.querySelectorAll('[data-run-group]').forEach((head) => {

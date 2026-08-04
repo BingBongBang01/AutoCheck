@@ -17,6 +17,8 @@ function renderCloudApiList() {
       <input class="field" data-role="model-custom" value="${e.model_is_custom ? e.model : ''}" placeholder="모델 ID 직접 입력" style="max-width:230px;display:none;">
       ${providerNeedsEndpoint(e.provider) ? `<input class="field" data-role="endpoint" value="${e.endpoint || ''}" placeholder="API 주소 (예: https://.../v1/chat/completions)" style="min-width:260px;flex:1;">` : ''}
       <input class="field" type="password" data-role="key" placeholder="${e.has_key ? 'API 키 (변경 시에만 입력)' : 'API 키 입력'}" style="flex:1;min-width:160px;">
+      ${e.has_key ? '' : `<span class="api-key-warn" title="이 항목은 키가 저장되지 않아 호출 시 건너뜁니다">
+        <span class="material-symbols-rounded" style="font-size:13px">warning</span>API 키 미설정</span>`}
       <button class="btn btn-outlined" data-action="test" title="연결 테스트"><span class="material-symbols-rounded">wifi_tethering</span></button>
       <button class="btn btn-primary" data-action="save" title="저장"><span class="material-symbols-rounded">save</span></button>
       <button class="btn btn-outlined" data-action="remove" title="삭제"><span class="material-symbols-rounded">delete</span></button>

@@ -1,8 +1,22 @@
 // ===== 설정 — AI 제공자 우선순위(드래그로 재정렬, FLIP 애니메이션) =====
+// 이 제공자를 지금 실제로 쓸 수 있는가 — 클라우드 API는 '사용 체크 + 키 저장'이 둘 다 돼 있어야
+// 호출이 성립한다. 1순위가 키 없는 제공자면 매번 폴백으로 흘러가므로, 순위 목록에서 바로
+// 경고를 보여 준다(키 목록 카드까지 내려가서야 알게 되는 걸 막는 것이 목적).
+function aiProviderKeyMissing(providerId) {
+  if (providerId !== 'cloud_apis') return false;
+  return !(cloudApis || []).some(e => e.enabled && e.has_key);
+}
+
 function renderAiOrderList() {
   const list = document.getElementById('ai-order-list');
-  list.innerHTML = aiProviders.map((p, i) => `
-    <div class="ai-order-item" draggable="true" data-id="${p.id}">
+  list.innerHTML = aiProviders.map((p, i) => {
+    const main = i === 0;
+    const keyMissing = aiProviderKeyMissing(p.id);
+    return `
+    <div class="ai-order-item ${main ? 'ai-main-provider' : ''}" draggable="true" data-id="${p.id}">
+      ${main ? `<span class="ai-main-crown">
+        <span class="material-symbols-rounded" style="font-size:13px">workspace_premium</span>
+        MAIN PROVIDER / 1순위 주 분석기</span>` : ''}
       <span class="material-symbols-rounded drag-handle">drag_indicator</span>
       <span class="order-rank">${i + 1}</span>
       <div class="order-icon"><span class="material-symbols-rounded">${p.icon || 'smart_toy'}</span></div>
@@ -10,8 +24,10 @@ function renderAiOrderList() {
         <div class="order-label">${p.label}</div>
         <div class="order-desc">${p.desc || ''}</div>
       </div>
-    </div>
-  `).join('');
+      ${keyMissing ? `<span class="api-key-warn" title="사용 체크된 API 키가 없습니다 — 아래 '클라우드 API 키'에서 키를 등록하세요">
+        <span class="material-symbols-rounded" style="font-size:13px">warning</span>API 키 미설정</span>` : ''}
+    </div>`;
+  }).join('');
 
   let draggedId = null;
   const autoScroller = createDragAutoScroller();

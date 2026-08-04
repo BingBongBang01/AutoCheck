@@ -61,11 +61,12 @@ function renderLogAnalysisPane() {
     <div style="display:flex;gap:12px;flex:1;min-height:0;">
       <div style="width:260px;flex:0 0 260px;overflow:auto;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px;user-select:none;" id="problem-file-list" tabindex="0">
         ${problemLogFiles.length ? renderLogRunGroupsHtml(problemLogFiles, problemExpandedRuns, f => `
-          <div class="connection-device log-file-row ${f.path === problemActiveTab ? 'session-active' : ''} ${problemSelectedPaths.has(f.path) ? 'selected' : ''}" data-select-path="${f.path}" style="cursor:pointer;">
-            <div style="display:flex;flex-direction:column;">
+          <div class="${logFileRowClass(f.path === problemActiveTab, problemSelectedPaths.has(f.path))}" data-select-path="${f.path}" style="cursor:pointer;">
+            <div style="display:flex;flex-direction:column;min-width:0;">
               <span class="device-name">${f.name}</span>
               <span style="font-size:10px;color:var(--sub);">${f.mtime_str}</span>
             </div>
+            ${logFileActiveBadge(f.path === problemActiveTab)}
           </div>`) : `<p style="font-size:12px;color:var(--sub);padding:8px;">아직 분석 결과가 없습니다 — '분석 실행'을 눌러 점검 원본 로그를 분석하세요.</p>`}
       </div>
       <pre class="mono terminal" id="problem-log-content" style="flex:1;height:auto;white-space:pre-wrap;">${problemActiveTab ? '불러오는 중...' : '왼쪽 목록에서 결과 파일을 선택하세요.'}</pre>

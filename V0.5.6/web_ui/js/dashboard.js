@@ -25,6 +25,43 @@ function dashSkeleton() {
 }
 
 // value(0~100)를 도넛 게이지로. 색은 임계값에 따라 바뀌지만 중앙에 수치가 항상 함께 표시된다.
+// ===== 종합 Health 추이 배지 (직전 회차 대비) =====
+// 백엔드는 '지금'의 Health만 준다(api/dashboard_api.py) — 회차 간 비교값을 새로 만들지 않고,
+// 고객사·프로파일별로 '마지막으로 본 두 개의 서로 다른 점수'를 브라우저에 남겨 비교한다.
+// 점수가 바뀔 때만 밀어 넣으므로(같은 값으로 새로고침해도 prev가 덮이지 않는다) 배지가
+// 새로고침 한 번에 ▲0으로 무너지지 않는다.
+function dashHealthTrendKey(ctx) {
+  return `autocheck.dash.health.${(ctx || {}).customer || '-'}/${(ctx || {}).profile || '-'}`;
+}
+
+function dashHealthTrendBadge(ctx, health) {
+  if (typeof health !== 'number') return '';
+  const key = dashHealthTrendKey(ctx);
+  let prev = null;
+  try {
+    const saved = JSON.parse(localStorage.getItem(key) || 'null');
+    if (saved && typeof saved.current === 'number') {
+      if (saved.current === health) {
+        prev = typeof saved.prev === 'number' ? saved.prev : null;
+      } else {
+        prev = saved.current;
+        localStorage.setItem(key, JSON.stringify({ prev, current: health }));
+      }
+    } else {
+      localStorage.setItem(key, JSON.stringify({ prev: null, current: health }));
+    }
+  } catch (e) { return ''; } // 사생활 보호 모드 등 localStorage 불가 — 배지만 생략한다.
+  if (prev === null) {
+    return `<span class="dash-trend dash-trend-none" title="비교할 직전 점수가 아직 없습니다">추이 기준 없음</span>`;
+  }
+  const diff = health - prev;
+  if (diff === 0) return `<span class="dash-trend dash-trend-flat" title="직전 회차와 동일">— 0점</span>`;
+  const cls = diff > 0 ? 'dash-trend-up' : 'dash-trend-down';
+  const mark = diff > 0 ? '▲' : '▼';
+  return `<span class="dash-trend ${cls}" title="직전 회차 ${prev}점 → 지금 ${health}점">
+    ${mark} ${diff > 0 ? '+' : ''}${diff}점 (직전 회차 대비)</span>`;
+}
+
 function dashGauge(value, color, sub) {
   const r = 34, c = 2 * Math.PI * r;
   const filled = c * Math.max(0, Math.min(100, value)) / 100;
@@ -127,7 +164,9 @@ async function renderDashboard() {
 
     <div class="grid-cols-4" style="margin-top:16px;">
       <div class="card hoverable">
-        <div class="kpi-label">전체 Health</div>
+        <div class="kpi-label" style="display:flex;align-items:center;gap:8px;">전체 Health
+          ${dashHealthTrendBadge(ctx, kpi.health)}
+        </div>
         <div class="dash-donut-wrap" style="margin-top:8px;gap:12px;">
           ${dashGauge(kpi.health || 0, healthColor, 'Health')}
           <div style="font-size:11px;color:var(--sub);line-height:1.5;">
@@ -301,8 +340,9 @@ async function renderDashboard() {
         <thead><tr><th>장비</th><th>인시던트 (반복 횟수)</th>
           <th style="text-align:right;">비정상/전체 줄</th><th>수집 시각</th></tr></thead>
         <tbody>${hosts.map(h => `
-          <tr>
-            <td><b>${dashEsc(h.device)}</b></td>
+          <tr class="dash-clickable" data-dash-host="${dashEsc(h.device)}"
+              title="클릭 → 점검 로그 탭에서 이 장비의 원본 로그를 확인합니다">
+            <td><b>${dashEsc(h.device)}</b><span class="dash-goto">상세 보기 ↗</span></td>
             <td>${(h.incidents || []).map(i => `
               <span class="badge ${i.severity === 'critical' ? 'badge-fail' : 'badge-warn'}"
                     title="${dashEsc(i.keyword)} ${i.count}줄">${dashEsc(i.keyword)} ×${i.count}</span>`).join(' ')}</td>
@@ -310,7 +350,13 @@ async function renderDashboard() {
             <td class="mono">${dashEsc(h.collected_at)}</td>
           </tr>`).join('')}</tbody>
       </table>
-      <p class="dash-note">같은 원인이 반복된 줄은 하나의 인시던트로 묶고 반복 횟수(×N)만 표시합니다.</p>`;
+      <p class="dash-note">같은 원인이 반복된 줄은 하나의 인시던트로 묶고 반복 횟수(×N)만 표시합니다.
+        행을 클릭하면 점검 로그 탭으로 이동합니다.</p>`;
+    // 상위 장비 행은 '여기서 끝'이 아니라 원본 로그로 가는 입구다 — hover에 [상세 보기 ↗]가
+    // 뜨는 이유를 클릭이 실제로 뒷받침해야 한다.
+    hostsEl.querySelectorAll('[data-dash-host]').forEach(tr => {
+      tr.addEventListener('click', () => navigate('inspectionlog'));
+    });
   }
 
   const barsEl = document.getElementById('stage-bars');

@@ -33,6 +33,8 @@ async function renderCatalog() {
       <span class="material-symbols-rounded catalog-drag-handle" draggable="true" data-select-handle="${c.id}" title="클릭: 선택 / Shift+클릭: 범위선택 / 드래그: 이동" style="cursor:grab;color:var(--sub)">drag_indicator</span>
       <input type="number" min="1" class="field mono catalog-rank-input" value="${rank}" data-rank-id="${c.id}" title="순서 번호 직접 입력" style="width:44px;padding:4px 4px;text-align:center;">
       <select class="field catalog-category-select" data-category-id="${c.id}" title="카테고리 변경" style="width:96px;font-size:12px;padding:4px 4px;">${categoryOptions(c.category)}</select>
+      <span class="cmd-state-badge ${c.enabled ? 'cmd-state-on' : 'cmd-state-off'}" data-state-badge="${c.id}"
+            title="${c.enabled ? 'Collection 시 실행됩니다' : '실행에서 제외됩니다'}">${c.enabled ? 'ON' : 'OFF'}</span>
       <input type="checkbox" ${c.enabled ? 'checked' : ''} data-cmd-id="${c.id}">
       <input class="field mono" style="width:280px" value="${c.command}" data-edit-command="${c.id}">
       <input class="field" style="font-size:12px;flex:1" value="${c.description}" data-edit-description="${c.id}">
@@ -120,7 +122,19 @@ async function renderCatalog() {
         for (let i = start; i <= end; i++) inputs[i].checked = inp.checked;
       }
       lastSelectedIndex = inputs.indexOf(inp);
-      inputs.forEach(cb => cb.closest('.catalog-row')?.classList.toggle('cmd-disabled', !cb.checked));
+      // 딤드 처리와 ON/OFF 배지를 같이 갱신한다 — 배지 글자가 체크 상태와 어긋나면
+      // 오히려 배지 쪽을 믿고 잘못 판단하게 된다.
+      inputs.forEach(cb => {
+        const row = cb.closest('.catalog-row');
+        row?.classList.toggle('cmd-disabled', !cb.checked);
+        const badge = row?.querySelector('[data-state-badge]');
+        if (badge) {
+          badge.textContent = cb.checked ? 'ON' : 'OFF';
+          badge.classList.toggle('cmd-state-on', cb.checked);
+          badge.classList.toggle('cmd-state-off', !cb.checked);
+          badge.title = cb.checked ? 'Collection 시 실행됩니다' : '실행에서 제외됩니다';
+        }
+      });
       if (document.getElementById('catalog-autosave').checked) await saveCatalogState();
     });
   });

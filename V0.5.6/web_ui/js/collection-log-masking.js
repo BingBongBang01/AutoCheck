@@ -81,11 +81,12 @@ function renderLogMaskingPane() {
     <div style="display:flex;gap:12px;flex:1;min-height:0;">
       <div style="width:260px;flex:0 0 260px;overflow:auto;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px;user-select:none;" id="masking-file-list" tabindex="0">
         ${maskingLogFiles.length ? renderLogRunGroupsHtml(maskingLogFiles, maskingExpandedRuns, f => `
-          <div class="connection-device log-file-row ${f.path === maskingActiveTab ? 'session-active' : ''} ${maskingSelectedPaths.has(f.path) ? 'selected' : ''}" data-select-path="${f.path}" style="cursor:pointer;">
-            <div style="display:flex;flex-direction:column;">
+          <div class="${logFileRowClass(f.path === maskingActiveTab, maskingSelectedPaths.has(f.path))}" data-select-path="${f.path}" style="cursor:pointer;">
+            <div style="display:flex;flex-direction:column;min-width:0;">
               <span class="device-name">${f.name}</span>
               <span style="font-size:10px;color:var(--sub);">${f.mtime_str}</span>
             </div>
+            ${logFileActiveBadge(f.path === maskingActiveTab)}
           </div>`) : `<p style="font-size:12px;color:var(--sub);padding:8px;">아직 마스킹 결과가 없습니다.</p>`}
       </div>
       <pre class="mono terminal" id="masking-log-content" style="flex:1;height:auto;white-space:pre-wrap;">${maskingActiveTab ? '불러오는 중...' : '왼쪽 목록에서 결과 파일을 선택하세요.'}</pre>
