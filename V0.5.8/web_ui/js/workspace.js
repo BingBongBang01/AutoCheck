@@ -138,7 +138,8 @@ async function wsGenerateReport() {
   const btn = document.getElementById('ws-btn-gen-report');
   btn.disabled = true;
   const result = await call('start_workspace_report', format);
-  if (result && result.error) { showToast(result.error, 'error'); btn.disabled = false; }
+  if (result && result.error) { showToast(result.error, 'error'); btn.disabled = false; return; }
+  workspacePoller.wake();   // 유휴 주기(5초)에 걸려 진행 표시가 늦게 뜨는 것을 막는다
 }
 
 async function wsExport() {
@@ -146,7 +147,8 @@ async function wsExport() {
   const btn = document.getElementById('ws-btn-export');
   btn.disabled = true;
   const result = await call('start_workspace_export', kind, 'zip');
-  if (result && result.error) { showToast(result.error, 'error'); btn.disabled = false; }
+  if (result && result.error) { showToast(result.error, 'error'); btn.disabled = false; return; }
+  workspacePoller.wake();
 }
 
 async function refreshWorkspace() {
@@ -214,6 +216,12 @@ let workspaceJobsPrev = {};
 
 let workspaceOverviewPrevStr = '';
 
+// 한 번의 폴링: (워크스페이스 탭이 열려 있으면) 개요 갱신 -> 작업 상태 반영 -> 완료 감지.
+// 주기 결정을 위해 jobs 를 반환한다.
+//
+// 개요 조회(get_workspace_overview)는 run 마다 session.json/metadata.json/health_score.json 을
+// 읽고 리포트 목록까지 세는 무거운 호출이다(OPTIMIZATION_PLAN 3-3). 유휴 시 주기를 5초로
+// 늘리면 이 호출 빈도가 그대로 1/5 이 된다 — 이 항목의 실질 이득 대부분이 여기서 나온다.
 async function pollWorkspaceJobs() {
   if (typeof currentPage !== 'undefined' && currentPage === 'workspace') {
     const overview = await call('get_workspace_overview');
@@ -225,7 +233,7 @@ async function pollWorkspaceJobs() {
   }
 
   const jobs = await call('get_workspace_job_status');
-  if (!jobs) return;
+  if (!jobs) return null;
 
   const wrap = document.getElementById('ws-progress');
   if (wrap) {
@@ -258,6 +266,14 @@ async function pollWorkspaceJobs() {
     }
   }
   workspaceJobsPrev = jobs;
+  return jobs;
 }
 
-setInterval(pollWorkspaceJobs, 1000);
+// 리포트 생성/내보내기가 돌지 않으면 5초 주기로 늘린다. 두 작업 모두 사용자가 버튼을
+// 눌러야 시작되므로, 워크스페이스 탭을 열어 둔 채 아무것도 안 하는 시간이 대부분이다.
+const workspacePoller = createAdaptivePoller({
+  tick: pollWorkspaceJobs,
+  isBusy: (jobs) => Object.values(jobs).some(j => j.status === 'running'),
+  activeMs: 1000,
+  idleMs: 5000,
+}).start();

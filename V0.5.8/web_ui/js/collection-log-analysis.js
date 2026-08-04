@@ -81,7 +81,10 @@ function renderLogAnalysisPane() {
     if (typeof analysisJobsPrev !== 'undefined') analysisJobsPrev['program'] = {status: 'running'};
     const result = await call('start_log_analysis');
     if (result && result.error) { btn.classList.remove('loading'); alert(result.error); }
-    if (typeof pollAnalysisJobs === 'function') pollAnalysisJobs();
+    // 폴러를 즉시 깨운다 — 유휴 상태였다면 대기 타이머가 5초에 걸려 있어서, 이걸 하지 않으면
+    // 진행바가 한 번 늦게 뜬다. wake() 는 대기를 취소하고 지금 한 번 돌린 뒤 빠른 주기로 잇는다.
+    if (typeof analysisPoller !== 'undefined') analysisPoller.wake();
+    else if (typeof pollAnalysisJobs === 'function') pollAnalysisJobs();
   });
 
   const startAiAnalysis = async (mode, btn) => {
@@ -89,7 +92,10 @@ function renderLogAnalysisPane() {
     if (typeof analysisJobsPrev !== 'undefined') analysisJobsPrev[mode] = {status: 'running'};
     const result = await call('start_ai_log_analysis', mode);
     if (result && result.error) { btn.classList.remove('loading'); alert(result.error); }
-    if (typeof pollAnalysisJobs === 'function') pollAnalysisJobs();
+    // 폴러를 즉시 깨운다 — 유휴 상태였다면 대기 타이머가 5초에 걸려 있어서, 이걸 하지 않으면
+    // 진행바가 한 번 늦게 뜬다. wake() 는 대기를 취소하고 지금 한 번 돌린 뒤 빠른 주기로 잇는다.
+    if (typeof analysisPoller !== 'undefined') analysisPoller.wake();
+    else if (typeof pollAnalysisJobs === 'function') pollAnalysisJobs();
   };
 
   // 실시간 감시는 전용 탭(js/realtime-monitor-panel.js)에서 조작한다 — 여기서는 바로가기만 둔다.
