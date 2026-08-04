@@ -196,6 +196,9 @@ async function initRealtimeMonitorPanel() {
   const card = document.getElementById('rtm-card');
   if (!card) return;
 
+  // 탭을 다시 열면 카드 DOM이 새로 만들어진다 — 직전 커서를 그대로 쓰면 서버가 '안 바뀌었다'며
+  // 섹션을 생략하고 화면은 빈 채로 남는다.
+  rtmResetDeltaCursor();
   applyRtmRatios();
   wireRtmSplitters();
   renderRtmTargetChips();
@@ -267,6 +270,30 @@ function renderRtmTargetChips() {
 }
 
 // ===== 폴링 =====
+// OPTIMIZATION_PLAN 3-1. 예전에는 0.8초마다 **전체 스냅샷**을 받아 세 패널의 innerHTML을
+// 통째로 갈아치웠다. 장비 30대·tail 160줄이면 응답이 701.7 KB(= 877 KB/s)였고, 그 중 88%가
+// 이미 화면에 있는 로그 줄이었다. 이제 '어디까지 받았다'는 커서를 함께 보내고 서버는
+// 새 줄과 바뀐 섹션만 돌려준다 — 실측 8.5 KB/s(104배 감소).
+//
+// 설계상 중요한 두 가지:
+//   1) 렌더 함수들은 **여전히 완전한 상태만** 본다. 델타는 rtmMergeState()가 직전 상태에
+//      합쳐 다시 완전한 상태로 만든 다음 넘긴다. 그래서 세 패널이 같은 스냅샷에서 파생된다는
+//      이 모듈의 불변식이 유지되고(서버도 한 락 블록에서 만든다), 렌더 쪽 분기가 늘지 않는다.
+//   2) 안 바뀐 패널은 다시 그리지 않는다. 이게 두 번째 이득이다 — DOM이 살아남으므로
+//      클릭으로 고정한 교차 강조를 매 렌더마다 복원할 필요가 없고, 로그 박스는 교체가 아니라
+//      append로 바뀌어 사용자의 스크롤/선택이 흔들리지 않는다.
+const RTM_TAIL = 160;               // 서버에 요청하는 장비별 최근 줄 수 = 클라이언트 사본의 상한
+const RTM_DELTA_SECTIONS = ['analysis', 'alerts', 'pinned', 'filter'];
+
+let rtmCursor = null;   // {epoch, versions, devices:{장비: seq}} — 서버에 알리는 마지막 수신 위치
+
+// 커서와 누적 사본을 버려 다음 폴링이 전체를 받게 한다. 탭을 다시 열면 DOM이 새 것이므로
+// (렌더를 건너뛸 근거가 사라졌다) 반드시 여기를 지나야 한다.
+function rtmResetDeltaCursor() {
+  rtmCursor = null;
+  rtmLastState = null;
+}
+
 function startRtmPolling() {
   if (rtmPollTimer) clearInterval(rtmPollTimer);
   rtmPollTimer = setInterval(async () => {
@@ -281,29 +308,126 @@ function startRtmPolling() {
 }
 
 async function refreshRealtimeMonitor() {
-  const state = await call('get_realtime_monitor_state', 160);
-  if (!state) return;
-  rtmLastState = state;
-  renderRtmState(state);
+  // 커서가 없으면(첫 폴링·탭 재진입·직전 응답이 불완전) 인자를 빼고 부른다 — 서버는 그 경로에서
+  // 예전과 똑같이 전체를 돌려준다.
+  const payload = rtmCursor
+    ? await call('get_realtime_monitor_state', RTM_TAIL, rtmCursor)
+    : await call('get_realtime_monitor_state', RTM_TAIL);
+  if (!payload) return;
+
+  const merged = rtmMergeState(rtmLastState, payload);
+  rtmLastState = merged.state;
+  // 다음 폴링의 기준점은 **합친 뒤의** 상태에서 뽑는다. 응답에 없던 섹션은 직전 지문을 그대로
+  // 유지해야 서버가 계속 생략할 수 있다.
+  rtmCursor = merged.complete ? rtmBuildCursor(merged.state) : null;
+  renderRtmState(merged.state, merged);
 }
 
-function renderRtmState(state) {
+// 델타 응답을 직전 완전 상태에 합쳐 다시 완전한 상태로 만든다.
+// 반환: {state, changed:Set, complete:boolean}
+//   changed  — 다시 그려야 하는 것들. 'logs'는 장비별 새 줄 목록(append 대상)을 함께 담는다.
+//   complete — 합친 결과가 완전한지. 아니면 커서를 버려 다음 폴링에서 전체를 받는다.
+function rtmMergeState(prev, payload) {
+  const changed = new Set();
+  const state = Object.assign({}, payload);
+  let complete = true;
+
+  // 1) 패널 단위 섹션 — null은 '안 바뀌었다'는 뜻이므로 직전 값을 그대로 쓴다.
+  RTM_DELTA_SECTIONS.forEach(key => {
+    if (payload[key] === null || payload[key] === undefined) {
+      if (!prev || prev[key] === null || prev[key] === undefined) {
+        // 직전 값이 없는데 서버가 생략했다 — 커서가 어긋났다. 화면을 비우지 않고 다음 폴링에서
+        // 전체를 받아 메운다(빈 값으로 그리면 '오류가 사라졌다'는 잘못된 화면이 된다).
+        complete = false;
+      } else {
+        state[key] = prev[key];
+      }
+    } else {
+      changed.add(key);
+    }
+  });
+
+  // 2) 장비별 로그 줄 — resync면 교체, 아니면 직전 사본 뒤에 붙인다.
+  const prevByDevice = {};
+  (prev && prev.devices || []).forEach(d => { prevByDevice[d.device] = d; });
+  const appended = {};
+  state.devices = (payload.devices || []).map(entry => {
+    const before = prevByDevice[entry.device];
+    const incoming = entry.lines || [];
+    const merged = Object.assign({}, entry);
+
+    if (entry.resync || !before) {
+      merged.lines = incoming;
+      if (!before || incoming.length !== (before.lines || []).length) changed.add('logs');
+      else if (incoming.some((l, i) => l.seq !== before.lines[i].seq)) changed.add('logs');
+    } else {
+      merged.lines = incoming.length ? (before.lines || []).concat(incoming).slice(-RTM_TAIL)
+                                     : (before.lines || []);
+      if (incoming.length) {
+        changed.add('logs');
+        appended[entry.device] = incoming;
+      }
+    }
+
+    // checklist가 null이면 직전 것을 되살린다 — 없으면 이 장비만이 아니라 체크리스트 패널
+    // 전체(정상 건수 합계)가 틀려지므로 불완전으로 표시한다.
+    if (entry.checklist === null || entry.checklist === undefined) {
+      if (before && before.checklist) merged.checklist = before.checklist;
+      else { merged.checklist = []; complete = false; }
+    } else {
+      changed.add('checklist');
+    }
+    return merged;
+  });
+  // resync로 줄이 통째로 갈린 장비는 append로는 처리할 수 없다 — 로그 박스를 재구성한다.
+  const resynced = state.devices.some(d => d.resync);
+
+  // 3) 장비 목록 자체(추가/삭제/숨김)가 바뀌면 좌측 배치와 탭이 달라진다.
+  const prevNames = (prev && prev.devices || []).map(d => d.device).join('\n');
+  if (prevNames !== state.devices.map(d => d.device).join('\n')) changed.add('devices');
+  if (!prev || prev.epoch !== payload.epoch) changed.add('devices');
+
+  return { state, changed, complete, appended, resynced };
+}
+
+function rtmBuildCursor(state) {
+  const devices = {};
+  (state.devices || []).forEach(d => { devices[d.device] = d.line_seq || 0; });
+  return { epoch: state.epoch, versions: state.versions || {}, devices };
+}
+
+// delta(rtmMergeState의 결과)를 넘기면 바뀐 패널만 다시 그린다. 인자를 빼면 전부 그린다 —
+// 보기 모드 변경처럼 서버 응답과 무관하게 화면을 재구성해야 할 때 쓴다.
+function renderRtmState(state, delta = null) {
   if (!state || !document.getElementById('rtm-card')) return;
+  const dirty = (key) => delta === null || delta.changed.has(key);
+
   // 서버가 소유한 필터가 폴링마다 같이 온다 — 다른 창/YAML에서 바뀌어도 화면이 따라온다.
   if (state.filter) rtmFilter = state.filter;
   // 세 패널이 같은 색을 쓰도록 장비별 심각도를 먼저 한 번만 계산한다(패널마다 따로 계산하면
   // 근거가 갈려서 '분석은 CRITICAL인데 장비는 초록'인 화면이 나온다).
+  const prevSeverity = rtmSeverityByDevice;
   rtmSeverityByDevice = rtmComputeSeverityByDevice(state);
-  renderRtmToolbar(state);
+  // 심각도는 alerts와 checklist 둘 다에서 나온다. 색이 바뀌면 세 패널의 칩·테두리·정렬(심각도
+  // 버킷)이 전부 달라지므로, 지문만 보고 건너뛰면 색이 한 박자 늦게 따라온다.
+  const severityChanged = delta === null
+    || JSON.stringify(prevSeverity) !== JSON.stringify(rtmSeverityByDevice);
+
+  renderRtmToolbar(state);       // 버튼 두 개 — 지문을 볼 만한 비용이 아니다.
   renderRtmWarnRow(state);
-  renderRtmHiddenRow(state);
-  renderRtmPinnedRow(state);
-  renderRtmDeviceTabs(state);
-  renderRtmLogs(state);
-  renderRtmAnalysis(state);
-  renderRtmChecklist(state);
-  // 세 패널이 모두 새로 그려진 뒤에 교차 강조를 다시 입힌다 — 0.8초 폴링으로 DOM이
-  // 통째로 갈리므로, 클릭으로 고정해 둔 강조는 매 렌더마다 복원해야 유지된다.
+  if (dirty('filter') || dirty('devices')) renderRtmHiddenRow(state);
+  if (dirty('pinned') || severityChanged) renderRtmPinnedRow(state);
+  if (dirty('devices') || dirty('checklist') || severityChanged) renderRtmDeviceTabs(state);
+  // 로그는 append 경로가 있다 — 배치를 바꾸는 요인(장비 목록·심각도 버킷·보기 모드)이 그대로면
+  // 새 줄만 DOM 뒤에 붙인다. resync(버퍼 밀림)면 그 장비의 줄이 통째로 갈렸으니 재구성한다.
+  if (dirty('logs') || dirty('devices') || severityChanged) {
+    const canAppend = delta && !severityChanged && !delta.resynced && !delta.changed.has('devices');
+    renderRtmLogs(state, canAppend ? delta.appended : null);
+  }
+  if (dirty('analysis') || dirty('devices')) renderRtmAnalysis(state);
+  if (dirty('checklist') || dirty('devices') || severityChanged) renderRtmChecklist(state);
+  // 다시 그린 패널에 클릭으로 고정해 둔 교차 강조를 입힌다. 이제는 DOM이 살아남으므로 매
+  // 폴링마다 복원할 필요는 없지만, 한 패널이라도 갈렸으면 그 패널의 강조는 사라진 상태다.
   applyRtmCrossHighlight();
 }
 
@@ -473,8 +597,13 @@ function renderRtmDeviceTabs(state) {
   });
 }
 
-function renderRtmLogs(state) {
+// appended({장비: [새 줄]})를 넘기면 DOM을 갈지 않고 그 줄만 뒤에 붙인다. 이게 3-1의 두 번째
+// 이득이다 — 로그 박스가 살아남으므로 사용자의 스크롤 위치, 텍스트 선택, 고정 강조가 흔들리지
+// 않고, 장비 30대분 innerHTML 조립·파싱이 0.8초마다 사라진다.
+// 붙일 수 없는 상황(배치가 바뀜, 박스가 아직 없음)이면 null을 넘겨 예전처럼 전부 다시 그린다.
+function renderRtmLogs(state, appended = null) {
   const body = document.getElementById('rtm-left-body');
+  if (appended && rtmAppendRtmLogLines(body, state, appended)) return;
   const scrollTop = body.scrollTop;
   // 첫 렌더에서는 clientHeight가 0이라 '맨 아래에 있다'로 오판해 목록이 끝으로 튄다 — 명시적으로 제외.
   const firstPaint = !body.firstElementChild;
@@ -511,6 +640,52 @@ function renderRtmLogs(state) {
   wireRtmLogBoxMenus(body);
 }
 
+// 새 줄만 기존 로그 박스 뒤에 붙인다. 붙일 수 없으면 false를 돌려주고 호출부가 전부 다시 그린다.
+// 붙일 수 없는 경우: 박스가 아직 없다(첫 렌더), 또는 박스 내부 구조가 예상과 다르다.
+function rtmAppendRtmLogLines(body, state, appended) {
+  if (!body) return false;
+  const boxes = {};
+  body.querySelectorAll('.rtm-log-box[data-rtm-xhl-device]')
+    .forEach(box => { boxes[box.dataset.rtmXhlDevice] = box; });
+  if (!Object.keys(boxes).length) return false;
+
+  for (const [device, lines] of Object.entries(appended)) {
+    const box = boxes[device];
+    // 탭 보기에서 지금 안 보이는 장비 — 사본(rtmLastState)에만 쌓아 두면 탭을 옮길 때 그려진다.
+    if (!box) continue;
+    const holder = box.querySelector('.rtm-log-lines');
+    if (!holder) return false;
+    // '입력 대기 중…' 자리표시자는 첫 줄이 들어오면 치운다.
+    const idle = holder.querySelector('.rtm-log-idle');
+    if (idle) idle.remove();
+    lines.forEach(line => holder.appendChild(rtmLogLineNode(line)));
+    // .rtm-log-lines는 overflow:hidden + justify-content:flex-end라 넘친 줄은 위로 잘려 보이지만,
+    // 그대로 두면 DOM이 무한히 자란다 — 박스가 보여줄 수 있는 만큼만 남긴다.
+    const max = Number(box.dataset.rtmBoxMax) || RTM_BOX_LINES;
+    while (holder.childElementCount > max) holder.removeChild(holder.firstElementChild);
+  }
+
+  // 줄 수 배지는 서버 버퍼 길이(line_count)다 — 화면에 보이는 줄 수와 다르므로 따로 갱신한다.
+  (state.devices || []).forEach(d => {
+    const count = boxes[d.device] && boxes[d.device].querySelector('.rtm-log-count');
+    if (count) count.textContent = `${d.line_count}줄`;
+  });
+  return true;
+}
+
+// 로그 한 줄을 DOM으로 만든다. textContent를 쓰므로 이스케이프가 필요 없다(rtEscape는 문자열
+// 조립 경로용이다) — 로그 내용에 '<'가 들어와도 그대로 글자로 보인다.
+function rtmLogLineNode(line) {
+  const row = document.createElement('div');
+  row.className = line.history ? 'rtm-log-line rtm-log-history' : 'rtm-log-line';
+  const ts = document.createElement('span');
+  ts.className = 'rtm-log-ts';
+  ts.textContent = line.ts || '';
+  row.appendChild(ts);
+  row.appendChild(document.createTextNode(line.text || ''));
+  return row;
+}
+
 // 로그 박스 헤더 우클릭 — 관심 없는 장비를 화면에서 빼는 가장 자연스러운 지점이다.
 function wireRtmLogBoxMenus(body) {
   body.querySelectorAll('[data-rtm-box-device]').forEach(box => {
@@ -529,6 +704,7 @@ function rtmLogBox(device, maxLines, fill) {
   return `
     <div class="rtm-log-box ${sevClass} ${fill ? 'rtm-log-box-fill' : ''}"
          data-rtm-xhl-device="${rtEscape(device.device)}"
+         data-rtm-box-max="${maxLines}"
          style="${fill ? '' : `height:${RTM_BOX_HEIGHT}px`}">
       <div class="rtm-log-head" data-rtm-box-device="${rtEscape(device.device)}" title="우클릭 → 이 장비 숨기기">
         <strong>${rtEscape(device.device)}</strong>
