@@ -37,7 +37,7 @@
 | └ openpyxl | 269 ms (`report/inspection_excel.py:25`) | 〃 | 이전 측정(Windows) |
 | `import webview` | 200 ms | 단독 계측 | 이전 측정(Windows) |
 | `ensure_requirements()` 패키지 스캔 | 34 ms | 단독 계측 | 이전 측정(Windows) |
-| 테스트 파일 수 | 0개 → **52개 통과**(0단계 완료) | `python -m pytest tests/ -q` | 이번 세션 |
+| 테스트 수 | 0개 → **140개 통과**(0·1단계 완료) | `python -m pytest tests/ -q` | 이번 세션 |
 
 > Linux 재측정이 Windows 대비 3배 느린 것은 머신 차이다. **절대값이 아니라 비율과 프로파일 형태가 일치**하는 것이 확인 포인트이며, 두 환경 모두 `re.search`가 지배적(54~55%)이고 호출 횟수(296,002)까지 동일하다.
 
@@ -75,7 +75,7 @@
 
 판정 로직을 건드리는 모든 항목의 선행 조건이다. 이 단계 없이 2단계로 가면 안 된다.
 
-실행: `pip install -r requirements-dev.txt` → `python -m pytest tests/ -q` (52 passed) → `python -m tools.bench_log_analysis --check`
+실행: `pip install -r requirements-dev.txt` → `python -m pytest tests/ -q` → `python -m tools.bench_log_analysis --check`
 
 ### 0-1. 판정 characterization 테스트 ✅
 
@@ -87,14 +87,14 @@
   - syslog facility 심각도 매핑(`-5-` → major, `-2-` → critical)
   - `analyze_text()` 전체 스냅샷: 원시 18건(`counter_nonzero` 6 + `link_state_down` 12) → 스로틀/상관분석 후 3건, `repeat` 합이 원시 건수를 보존, 복합 finding `link_flapping/critical`
   - 규칙 파일 형태(signature 33 entry / suppressions 10 / correlation 10 / keywords 17 / counter_columns 15)
-- **부수 발견(테스트로 고정)**: signature 33개 중 **2개가 `_comment` 전용**이라 `pattern` 키가 없고, `_compile_patterns()`가 `KeyError`를 삼켜 조용히 31개만 컴파일된다. 정규식 오타도 같은 방식으로 규칙을 사라지게 한다 → 1-4 항목의 기준점.
+- **부수 발견(테스트로 고정)**: signature 33개 중 **2개가 `_comment` 전용**이라 `pattern` 키가 없고, `_compile_patterns()`가 `KeyError`를 삼켜 조용히 31개만 컴파일됐다. 정규식 오타도 같은 방식으로 규칙을 사라지게 한다 → **1-4 에서 수정됨**(주석은 의도적으로 건너뛰고 오타는 경고).
 - **가장 중요한 테스트**: `test_no_signature_declares_scope` — 31개 signature 전부 `scope=None`임을 못박는다. 이것이 **2-1 메모화의 안전성 근거**이고, 누군가 `scope`를 가진 규칙을 추가하면 실패해서 메모 게이트를 확인하게 만든다.
 - **작성 중 수정한 것**: `test_counter_table_detects_only_nonzero_cells`가 처음 실패했다. `ctx.feed()`가 헤더 줄을 소비하지 않아(구분선만 소비하며 그때 직전 줄을 헤더로 기억한다) 인덱스가 밀린 것으로, 코드가 아니라 테스트의 오해였다. 0단계 원칙대로 테스트를 고쳤다.
 - **리스크**: LOW / **공수**: S(완료)
 
 ### 0-2. 재현 가능한 벤치마크 하네스 ✅
 
-- **파일**: `tools/synthetic_log.py`(코퍼스 생성), `tools/bench_log_analysis.py`(측정/비교), `tools/bench_baseline.json`(기준선), `tests/test_bench_harness.py`(21 tests)
+- **파일**: `tools/synthetic_log.py`(코퍼스 생성), `tools/bench_log_analysis.py`(측정/비교), `tests/test_bench_harness.py`(38 tests). 기준선(`tools/bench_baseline.json`)은 gitignore — 머신마다 절대값이 3배 이상 다르므로 각자 `--save-baseline` 으로 만든다.
 - **기능**: 고정 시드 합성 로그(장비 수·중복률 파라미터) + `analyze_text` 및 단계별 타이밍 + 메모 이득(파일 단위 / 회차 공유 분리) + `RealtimeMonitor.state()` payload를 장비 4/12/30대로 측정. `--save-baseline` / `--check`(임계값 10% 초과 퇴행 시 exit 1) / `--json`.
 - **대표값은 평균이 아니라 최소**를 쓴다 — 다른 프로세스의 방해는 시간을 늘리기만 하므로 최소값이 재현성이 높다. 편차는 `(중앙값 − 최소)/최소`로 재서 단일 이상치에 흔들리지 않게 했다(처음엔 `(최대 − 최소)`를 써서 재현성 양호한데도 58.8% 경고가 떴다).
 - **종료 코드**: `0` 퇴행 없음 / `1` 퇴행 / `2` 기준선 없음 / `3` **판정 불가**(머신이 시끄러워 비교 무의미).
@@ -112,9 +112,20 @@
 
 ---
 
-## 1단계 — 무위험 즉시 적용
+## 1단계 — 무위험 즉시 적용 ✅ 완료
 
-판정 결과·기능 동작을 전혀 바꾸지 않는 항목만 모았다. 0단계와 병행 가능하다.
+판정 결과·기능 동작을 전혀 바꾸지 않는 항목만 모았다.
+
+**적용 결과 요약**
+
+| 항목 | 실측 결과 | 검증 |
+|---|---|---|
+| 1-1 무거운 의존성 지연 | 16개 믹스인 전부가 pandas/paramiko/openpyxl **0개 설치 상태**에서 import (변경 전 `api.base`·`api.inspection_report_api` 실패) | `tests/test_startup_imports.py` (20) |
+| 1-2 `AppPaths` 캐시 | 9.8 → **0.22 us/call** (45배). 수용 기준 1 us 충족 | `tests/test_app_paths.py` (39) |
+| 1-3 폴러 백오프 | 유휴 브리지 호출 초당 2회 → **0.4회**. `setInterval` 겹침 결함도 함께 제거 | `tests/test_adaptive_poller.py` (8) |
+| 1-4 규칙 컴파일 진단 | 정규식 오타가 조용히 사라지지 않는다 | 골든 테스트 4건 추가 |
+
+시작 시간 절감폭 자체(약 1.27초 기대)는 **Windows에서 `-X importtime`으로 재측정해야 한다** — 이 환경에는 pywebview가 없어 창이 뜨기까지의 시간을 잴 수 없다.
 
 ### 1-1. 무거운 의존성 지연 import
 
@@ -170,16 +181,15 @@
 - **검증 방법**: 분석/리포트 작업을 실행해 진행바와 완료 토스트가 정상 동작하는지 확인.
 - **선행 조건**: 없음
 
-### 1-4. `log_rules.json`의 `_comment` 전용 엔트리 정리
+### 1-4. 규칙 컴파일 실패 진단 ✅ (계획 수정됨)
 
-- **대상 파일**: `config/log_rules.json`
-- **지금 동작**: `signatures` 배열 33개 중 2개가 `{"_comment": ...}`만 담고 있어 `pattern` 키가 없다. `_compile_patterns()`가 `e["pattern"]`에서 `KeyError`를 내고 `except Exception: continue`로 조용히 건너뛴다. 결과적으로 31개만 컴파일된다.
-- **변경**: 주석 엔트리를 배열 밖(별도 `_comment` 최상위 키)으로 옮긴다. `_compile_patterns()`가 삼키는 예외 범위를 좁혀, `pattern` 누락은 건너뛰되 정규식 컴파일 실패는 로그를 남기게 한다.
-- **예상 이득**: 성능 이득 없음. **조용한 규칙 유실을 드러내는 것**이 목적이다 — 지금은 정규식에 오타가 나도 아무 신호 없이 그 규칙만 사라진다.
-- **리스크**: LOW
-- **공수**: S
-- **검증 방법**: 컴파일된 signature 수가 31 → 31로 유지되고(주석 제거는 개수를 바꾸지 않음), 의도적으로 잘못된 정규식을 넣었을 때 경고가 뜨는지 확인.
-- **선행 조건**: 없음
+- **대상 파일**: `engine/log_rule_engine.py` (`_compile_patterns`)
+- **지금 동작**: `except Exception: continue` 가 모든 실패를 삼켜, 주석 엔트리와 정규식 오타가 구별되지 않았다.
+- **계획을 바꾼 이유**: 원래는 주석 엔트리를 배열 밖으로 옮기려 했다. 내용을 확인하니 **두 주석은 위치가 곧 의미**였다 — index 4 는 "앞의 4개 서명이 뒤쪽 일반 규칙(`interface_line_down` / `mlag_peer_problem` 등)보다 먼저 있어야 한다"는 순서 제약을 그 지점에서 설명한다. 배열 순서가 곧 우선순위이므로 밖으로 옮기면 어느 규칙에 대한 설명인지 알 수 없게 된다.
+- **실제 변경**: 주석 엔트리(`pattern` 키 없음)는 **의도적으로 조용히** 건너뛰고, 정규식 컴파일 실패는 규칙 id 와 함께 경고를 남긴다. `scope` 컴파일 실패도 경고한다 — `scope` 가 `None` 이 되면 규칙이 모든 명령에 적용되어 좁히려던 규칙이 넓어지고 오탐이 늘어난다(규칙 자체는 살린다). `print` 를 쓰는 이유는 `core/app_logger.py` 의 `install_print_capture()` 가 이를 앱 로그로 캡처하기 때문이다.
+- **이득**: 성능 이득 없음. **조용한 규칙 유실을 드러내는 것**이 목적이다 — 규칙 하나가 신호 없이 빠지면 그 규칙이 잡던 장애를 앱이 '이상 없음'으로 보고한다. 점검 도구에서 가장 나쁜 실패다.
+- **리스크**: LOW / **공수**: S(완료)
+- **검증**: 주석은 경고 없이 건너뛰는지, 오타 `pattern`/`scope` 가 id 와 함께 보고되는지, 실제 `config/log_rules.json` 이 경고 없이 전부 컴파일되는지(실패하면 지금 어떤 규칙이 빠지고 있다는 뜻).
 
 ---
 
@@ -350,8 +360,8 @@
 숫자로 판정한다. 모두 0-2 벤치마크 하네스의 고정 시드 코퍼스로 측정한다.
 
 1. **0단계** ✅ — 테스트 69개가 현재 코드에서 전부 통과한다(`python -m pytest tests/ -q`). 하네스 측정 편차 p75 3.5%(≤5%). 기준선 조작 시 퇴행 3건을 모두 포착하고 exit 1을 낸다. 8회 연속 `--check`에서 7회 정상(1회는 컨테이너 경합에 의한 오탐 — 위 한계 참고).
-2. **1-1**: `python -X importtime main.py`에서 `pandas` / `paramiko` / `openpyxl`이 시작 경로에 **나타나지 않는다**. 창이 뜨기까지의 시간이 이전 측정(Windows) 대비 **1.0초 이상** 단축된다.
-3. **1-2**: `AppPaths.crt_log_root()` 반복 호출이 **1 us/call 이하**(현재 9.8 us). 앱 실행 중 `CRTlog` 삭제 후에도 실시간 감시가 동작한다.
+2. **1-1** ✅(부분) — 16개 믹스인이 세 패키지 **미설치 상태에서 전부 import** 됨을 확인했다. 남은 확인: Windows 에서 `python -X importtime main.py` 로 창이 뜨기까지의 시간이 **1.0초 이상** 단축되는지.
+3. **1-2** ✅ — `AppPaths.crt_log_root()` 반복 호출 **0.22 us/call**(기준 1 us 이하, 변경 전 9.8 us). 남은 확인: 앱 실행 중 `CRTlog` 를 지운 뒤에도 실시간 감시가 동작하는지(수동 확인 필요 — 쓰기 경로가 각자 `makedirs` 하는 것은 코드로 확인했다).
 4. **2-1**: 기준선 코퍼스(장비 8대, 중복률 73.2%)에서 `match_signature_memo_speedup_run` **3.0배 이상**, `find_keyword_memo_speedup_run` **3.3배 이상**. `analyze_text()` findings가 메모 on/off에서 **완전히 동일**(합성 코퍼스 + 실제 수집 로그 양쪽) — 0-1 스냅샷 테스트가 이것을 판정한다. 메모 엔트리가 상한을 넘지 않는다. 파일 단위 이득(1.05배)이 아니라 회차 공유 이득이 나오는지 반드시 확인한다.
 5. **2-2**: 실제 수집 로그에서 findings before/after 완전 일치. `suppressor.check` 호출 횟수가 키워드 매치 줄에서 2회 → 1회.
 6. **3-1**: 장비 30대 정상 상태에서 폴링 payload가 **50 KB/s 이하**(현재 723 KB/s). 경고 발생→복구→숨김→고정 시나리오에서 세 패널이 어긋나지 않는다. `seq` 재동기화가 버퍼 초과 시 정상 동작한다.
