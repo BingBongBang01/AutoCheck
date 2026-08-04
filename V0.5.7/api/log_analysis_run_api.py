@@ -406,6 +406,30 @@ class LogAnalysisRunApiMixin:
         self._save_realtime_state(force=True)
         return {"ok": True}
 
+    def resolve_realtime_finding(self, alert_ids, note=""):
+        """실시간 오류분석 목록의 finding에 '해결' 버튼을 눌렀을 때 — 조치를 완료했다는 뜻이므로
+        StateTracker의 자동 복구와 같은 경로(resolve_alerts)를 태운다. 체크리스트 항목도
+        '복구'로 바뀐다(RealtimeMonitor._unmark)."""
+        ids = [i for i in (alert_ids or []) if i]
+        if not ids:
+            return {"error": "대상 경고가 없습니다."}
+        now = time.strftime("%Y-%m-%d %H:%M:%S")
+        resolutions = [{"alert_id": i, "resolved_by": note or "수동 해결", "ts": now, "duration_sec": None}
+                       for i in ids]
+        applied = self._realtime_monitor().resolve_alerts(resolutions)
+        self._save_realtime_state(force=True)
+        return {"ok": True, "resolved": len(applied)}
+
+    def ignore_realtime_finding(self, alert_ids, note=""):
+        """'무시' 버튼 — 장애가 복구됐다는 보장은 없지만 지금 조치 목록에서 뺀다. 체크리스트
+        상태(fail/warn 배지)는 그대로 두고, 실시간 오류분석 목록/카운트에서만 사라진다."""
+        ids = [i for i in (alert_ids or []) if i]
+        if not ids:
+            return {"error": "대상 경고가 없습니다."}
+        applied = self._realtime_monitor().ignore_alerts(ids, ignored_by="user", note=note or "")
+        self._save_realtime_state(force=True)
+        return {"ok": True, "ignored": len(applied)}
+
     def probe_realtime_log_files(self):
         """'왜 감시가 안 되나'를 화면에서 확인하기 위한 진단 — CRTlog의 각 파일이 어떤 근거로
         어느 장비에 매칭되는지 보여준다. 감시를 시작하지 않은 상태에서도 호출할 수 있다.

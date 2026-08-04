@@ -643,6 +643,10 @@ function renderRtmAnalysis(state) {
     const g = groups.find(x => x.key === row.dataset.rtmErr);
     row.addEventListener('contextmenu', (e) => openRtmContextMenu(e, {
       device: g && g.devices.length === 1 ? g.devices[0] : undefined,
+      // 대분류(그룹) 전체 일괄 처리용 — 그룹에 속한 모든 finding의 alert_id를 모아 넘긴다.
+      groupLabel: g ? g.label : '',
+      groupDeviceCount: g ? g.devices.length : 0,
+      groupAlertIds: g ? g.items.flatMap(f => f.alert_ids || []) : [],
     }));
   });
   detailEl?.querySelectorAll('[data-rtm-detail-device]').forEach(node => {
@@ -657,6 +661,43 @@ function renderRtmAnalysis(state) {
 
   // 클릭으로 고정해 둔 교차 강조를 방금 새로 그린 DOM에 다시 입힌다.
   applyRtmCrossHighlight();
+
+  detailEl?.querySelectorAll('[data-rtm-resolve]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      rtmResolveOrIgnore(btn, 'resolve_realtime_finding', '해결 처리했습니다.');
+    });
+  });
+  detailEl?.querySelectorAll('[data-rtm-ignore]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      rtmResolveOrIgnore(btn, 'ignore_realtime_finding', '무시 처리했습니다 — 이력에는 남습니다.');
+    });
+  });
+}
+
+// '해결'/'무시' 버튼 공통 처리 — alert_ids를 백엔드로 보내고, 다음 폴링을 기다리지 않고
+// 바로 다시 그려서 방금 누른 finding이 즉시 목록에서 빠지는 것처럼 보이게 한다.
+async function rtmResolveOrIgnore(btn, apiName, toastMessage) {
+  const ids = JSON.parse(btn.dataset.rtmResolve || btn.dataset.rtmIgnore || '[]');
+  if (!ids.length) return;
+  btn.classList.add('loading');
+  btn.disabled = true;
+  await rtmBulkResolveOrIgnore(ids, apiName, toastMessage);
+  btn.classList.remove('loading');
+  btn.disabled = false;
+}
+
+// 대분류(그룹) 우클릭 '모두 해결'/'모두 무시' — 그룹에 묶인 모든 finding의 alert_id를
+// 한 번에 백엔드로 보낸다. 버튼 하나짜리 처리(rtmResolveOrIgnore)와 로직은 같고,
+// 우클릭 메뉴는 특정 DOM 버튼이 없으므로 이 함수를 직접 공유한다.
+async function rtmBulkResolveOrIgnore(ids, apiName, toastMessage) {
+  if (!ids || !ids.length) return;
+  const result = await call(apiName, ids);
+  if (!result) { showToast('응답이 없습니다.', 'error'); return; }
+  if (result.error) { showToast(result.error, 'error'); return; }
+  showToast(toastMessage);
+  await refreshRealtimeMonitor();
 }
 
 // 같은 기술 분류(category — VLAN/인터페이스/링크/BGP·OSPF 인접/STP·MLAG/운영 명령/기타)의
@@ -733,6 +774,17 @@ function rtmAnalysisDetail(f, state) {
       <span class="rtm-label">작업 연관</span>${rtEscape(f.root_cause.intent || '')}
       <code>${rtEscape(f.root_cause.raw_line || '')}</code></div>` : ''}
     <div class="rtm-finding-line"><span class="rtm-label">권고 조치</span>${rtEscape(f.action || '')}</div>
+    ${(f.alert_ids || []).length ? `
+    <div class="rtm-finding-actions">
+      <button class="btn btn-outlined" data-rtm-resolve="${rtEscape(JSON.stringify(f.alert_ids))}"
+              title="조치를 완료했습니다 — 체크리스트도 '복구'로 바뀝니다">
+        <span class="material-symbols-rounded">check_circle</span>해결
+      </button>
+      <button class="btn btn-outlined" data-rtm-ignore="${rtEscape(JSON.stringify(f.alert_ids))}"
+              title="지금 조치 목록에서만 뺍니다 — 이력에는 남고 체크리스트 상태는 그대로 유지됩니다">
+        <span class="material-symbols-rounded">visibility_off</span>무시
+      </button>
+    </div>` : ''}
     ${(f.evidence || []).filter(Boolean).length ? `
       <div class="rtm-detail-section">문제가 된 입력·출력</div>
       <div class="rtm-finding-evidence">${f.evidence.filter(Boolean)
@@ -870,6 +922,22 @@ function openRtmContextMenu(event, ctx) {
   closeRtmCtxMenu();
 
   const items = [];
+  if (ctx.groupAlertIds && ctx.groupAlertIds.length) {
+    const label = ctx.groupLabel || '이 오류';
+    items.push({
+      label: `모두 해결 (${label} · ${ctx.groupAlertIds.length}건${ctx.groupDeviceCount ? `, ${ctx.groupDeviceCount}대` : ''})`,
+      icon: 'check_circle',
+      action: () => rtmBulkResolveOrIgnore(ctx.groupAlertIds, 'resolve_realtime_finding',
+        `'${label}' 오류를 모두 해결 처리했습니다.`),
+    });
+    items.push({
+      label: `모두 무시 (${label} · ${ctx.groupAlertIds.length}건${ctx.groupDeviceCount ? `, ${ctx.groupDeviceCount}대` : ''})`,
+      icon: 'visibility_off',
+      action: () => rtmBulkResolveOrIgnore(ctx.groupAlertIds, 'ignore_realtime_finding',
+        `'${label}' 오류를 모두 무시 처리했습니다 — 이력에는 남습니다.`),
+    });
+    items.push({ sep: true });
+  }
   if (ctx.device && ctx.checkId) {
     items.push({
       label: ctx.pinned ? '상단 고정 해제' : '상단에 고정',

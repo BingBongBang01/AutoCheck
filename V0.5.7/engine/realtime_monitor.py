@@ -316,6 +316,28 @@ class RealtimeMonitor:
                 self._unmark(alert, res)
         return applied
 
+    def ignore_alerts(self, alert_ids, *, ignored_by="", note=""):
+        """사용자가 실시간 오류분석 화면에서 '무시'를 누른 finding에 속한 alert들을 표시한다.
+
+        resolve_alerts()와 다른 점: resolved는 '장애가 실제로 복구됐다'는 사실이고, ignore는
+        '장애는 그대로일 수 있지만 지금 조치 대상에서 뺀다'는 사용자 판단이다. 그래서 체크리스트
+        상태(_checklists)는 건드리지 않는다 — 체크리스트는 여전히 fail/warn을 보여줘야 한다.
+        경고 자체는 지우지 않고 ignored 표시만 남긴다(이력에는 계속 남아야 하므로).
+        """
+        applied = []
+        with self._lock:
+            by_id = {a.get("alert_id"): a for a in self._alerts if a.get("alert_id")}
+            for alert_id in alert_ids or []:
+                alert = by_id.get(alert_id)
+                if alert is None or alert.get("ignored") or alert.get("resolved"):
+                    continue
+                alert["ignored"] = True
+                alert["ignored_by"] = ignored_by
+                alert["ignored_ts"] = time.strftime("%Y-%m-%d %H:%M:%S")
+                alert["ignored_note"] = note
+                applied.append(alert.get("alert_id"))
+        return applied
+
     def _unmark(self, alert, res):
         """취소된 경고를 체크리스트 항목에서 뺀다. 남은 미해결 경고가 없으면 '복구'로 되돌린다."""
         item_key = _item_key_for(alert)
@@ -488,10 +510,11 @@ class RealtimeMonitor:
         """체크리스트/경고를 규칙 기반으로 요약. AI 호출 없이 즉시 계산된다(0.3초 주기 갱신이므로)."""
         counts = {"CRITICAL": 0, "MAJOR": 0, "WARNING": 0}
         by_device = {}
-        # 취소된(복구된) 경고와 숨긴 경고는 '지금 상태'가 아니므로 요약에서 제외한다 —
-        # 이력에는 남아 있고, 여기서 세면 no shutdown으로 고친 장애가 계속 CRITICAL로 잡힌다.
+        # 취소된(복구된)/무시한/숨긴 경고는 '지금 조치할 대상'이 아니므로 요약에서 제외한다 —
+        # 이력에는 남아 있고, 여기서 세면 no shutdown으로 고친 장애나 사용자가 이미 확인하고
+        # 넘어간(무시한) 장애가 계속 CRITICAL로 잡힌다.
         live = [a for a in self._alerts
-                if not a.get("resolved") and not self._is_hidden_locked(a)]
+                if not a.get("resolved") and not a.get("ignored") and not self._is_hidden_locked(a)]
         for alert in live:
             severity = alert.get("severity") or "WARNING"
             if severity in counts:
@@ -500,12 +523,18 @@ class RealtimeMonitor:
 
         if not live:
             watched = len(self._devices)
-            # 전부 복구된 경우와 처음부터 조용한 경우는 다른 이야기다 — 구분해서 알려준다.
+            # 전부 복구/무시된 경우와 처음부터 조용한 경우는 다른 이야기다 — 구분해서 알려준다.
             recovered = len([a for a in self._alerts if a.get("resolved")])
-            if recovered:
-                summary = (f"발생했던 경고 {recovered}건이 모두 복구 처리되었습니다. "
+            ignored = len([a for a in self._alerts if a.get("ignored")])
+            if recovered or ignored:
+                parts = []
+                if recovered:
+                    parts.append(f"복구 처리 {recovered}건")
+                if ignored:
+                    parts.append(f"무시 처리 {ignored}건")
+                summary = (f"발생했던 경고 중 {', '.join(parts)}가 반영되었습니다. "
                            "이력은 '세부 이력'에서 확인할 수 있습니다.")
-                headline = f"이상 없음 — 경고 {recovered}건 자동 해제됨"
+                headline = f"이상 없음 — 경고 {recovered + ignored}건 해제됨"
             elif watched:
                 summary = (f"장비 {watched}대의 세션 로그를 감시 중입니다. Baseline과 다른 변경이 "
                            "감지되면 즉시 여기에 표시됩니다.")
@@ -520,6 +549,7 @@ class RealtimeMonitor:
                 "counts": counts,
                 "findings": [],
                 "resolved_count": recovered,
+                "ignored_count": ignored,
             }
 
         findings = []
@@ -542,9 +572,11 @@ class RealtimeMonitor:
                     if counts["CRITICAL"] else
                     f"주의 {counts['MAJOR'] + counts['WARNING']}건 감지")
         recovered = len([a for a in self._alerts if a.get("resolved")])
+        ignored = len([a for a in self._alerts if a.get("ignored")])
         summary = (f"미해결 경고 {len(live)}건이 장비 {len(by_device)}대에서 발생했습니다."
                    + (f" 가장 많은 장비는 {worst_device}({len(by_device[worst_device])}건)입니다." if worst_device else "")
-                   + (f" 별도로 {recovered}건은 복구되어 해제되었습니다." if recovered else ""))
+                   + (f" 별도로 {recovered}건은 복구되어 해제되었습니다." if recovered else "")
+                   + (f" {ignored}건은 사용자가 무시 처리했습니다." if ignored else ""))
         return {
             "verdict": verdict,
             "headline": headline,
@@ -555,6 +587,7 @@ class RealtimeMonitor:
             # 기준이 되도록 상한을 장비 수 규모(40)로 올린다.
             "findings": findings[:40],
             "resolved_count": recovered,
+            "ignored_count": ignored,
         }
 
     def _device_findings(self, device, alerts):
@@ -595,6 +628,7 @@ class RealtimeMonitor:
                           "dual-active 상태에서 설정을 바꾸면 양쪽 설정이 갈라집니다.",
                 "count": len(mlag_peer),
                 "evidence": [a.get("raw_line", "") for a in (mlag_peer + partial)[:3]],
+                "alert_ids": _ids(mlag_peer + partial),
             })
             consume(mlag_peer + partial)
 
@@ -621,6 +655,7 @@ class RealtimeMonitor:
                 "count": len(alerts),
                 "evidence": [a.get("raw_line", "") for a in downs[:3]],
                 "root_cause": hinted,
+                "alert_ids": _ids(alerts),
             })
             consume(alerts)
         elif has_config_change:
@@ -638,6 +673,7 @@ class RealtimeMonitor:
                 "action": "의도된 작업인지 확인하고, 계획에 없던 변경이면 원복하세요.",
                 "count": len(alerts),
                 "evidence": [a.get("raw_line", "") for a in (removed + shut)[:3]],
+                "alert_ids": _ids(alerts),
             })
             consume(alerts)
         elif has_down:
@@ -652,6 +688,7 @@ class RealtimeMonitor:
                 "action": "대향 장비의 인터페이스 상태와 물리 경로를 확인하세요.",
                 "count": len(downs),
                 "evidence": [a.get("raw_line", "") for a in downs[:3]],
+                "alert_ids": _ids(downs),
             })
             consume(downs)
 
@@ -666,6 +703,7 @@ class RealtimeMonitor:
                 "action": "reload/write erase는 서비스 중단을 유발합니다 — 작업 승인 여부를 즉시 확인하세요.",
                 "count": len(destructive),
                 "evidence": [a.get("raw_line", "") for a in destructive[:3]],
+                "alert_ids": _ids(destructive),
             })
             consume(destructive)
 
@@ -680,6 +718,7 @@ class RealtimeMonitor:
                 "action": "STP 루트/포트 역할과 MLAG peer 상태를 확인하세요.",
                 "count": len(stp),
                 "evidence": [a.get("raw_line", "") for a in stp[:3]],
+                "alert_ids": _ids(stp),
             })
             consume(stp)
 
@@ -703,8 +742,14 @@ class RealtimeMonitor:
                 "action": "의도된 작업인지 확인하세요. 계획에 없던 변경이면 원인을 찾으세요.",
                 "count": len(group),
                 "evidence": [a.get("raw_line", "") for a in group[:3]],
+                "alert_ids": _ids(group),
             })
         return out
+
+
+def _ids(alerts):
+    """finding에 붙일 alert_id 목록 — '해결/무시' 버튼이 어떤 alert를 대상으로 할지 알아야 한다."""
+    return [a.get("alert_id") for a in alerts if a.get("alert_id")]
 
 
 def _item_key_for(alert):

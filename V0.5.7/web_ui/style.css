@@ -958,6 +958,9 @@ details.fold[open] > summary .fold-caret { transform: rotate(180deg); }
 .rtm-label { display: inline-block; min-width: 58px; color: var(--sub); font-weight: 600; margin-right: 6px; }
 .rtm-finding-evidence { display: flex; flex-direction: column; gap: 3px; }
 .rtm-finding-evidence code { font-family: var(--font-mono); font-size: 10px; color: var(--sub); background: var(--input-bg); border-radius: 5px; padding: 2px 5px; white-space: pre-wrap; word-break: break-all; }
+.rtm-finding-actions { display: flex; gap: 6px; margin: 4px 0 2px; }
+.rtm-finding-actions .btn { height: 24px; padding: 0 10px; font-size: 11px; gap: 4px; }
+.rtm-finding-actions .btn .material-symbols-rounded { font-size: 14px; }
 
 /* ?곗륫 ?섎떒 ???ㅼ떆媛?泥댄겕由ъ뒪??*/
 .rtm-check-group { border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; overflow: hidden; cursor: pointer; }
