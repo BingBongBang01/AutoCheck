@@ -15,6 +15,7 @@ import time
 import datetime
 import threading
 
+from core.log_naming import device_from_log_name, stamp_or_unknown
 from core.paths import AppPaths
 from api.job_runner import JobRunner
 
@@ -875,21 +876,9 @@ class LogAnalysisRunApiMixin:
                 if analysis_text.startswith("[AI 분석 오류]"):
                     print(f"[AI 분석] 실패: {os.path.basename(path)} -> {analysis_text}")
                 
-                fname = os.path.basename(path)
-                body = fname[:-len(".txt")] if fname.endswith(".txt") else fname
-                if body.startswith("AutoCheck_"):
-                    body_no_prefix = body[len("AutoCheck_"):]
-                    parts = body_no_prefix.rsplit("_", 2)
-                    if len(parts) == 3:
-                        device, stamp = parts[0], f"{parts[1]}_{parts[2]}"
-                    else:
-                        device, stamp = body_no_prefix, "unknown_time"
-                else:
-                    parts = body.split("_", 3)
-                    if len(parts) == 4:
-                        stamp, device = f"{parts[0]}_{parts[1]}", parts[3]
-                    else:
-                        stamp, device = "unknown_time", body
+                # 파일명 규칙 해석은 core/log_naming.py 단일 출처(engine/log_analysis.py 와 동일).
+                device = device_from_log_name(path)
+                stamp = stamp_or_unknown(path)
                 
                 ai_mode_str = "LocalAI" if ai_mode == "local" else "CloudAI"
                 out_name = f"{ai_mode_str}_{stamp}_{device}_problems.txt"

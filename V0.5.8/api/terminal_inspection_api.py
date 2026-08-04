@@ -8,6 +8,7 @@ import shutil
 import threading
 import datetime
 
+from core.log_naming import build_inspection_log_name
 from core.ansi_sanitizer import clean_terminal_log, strip_ansi
 from api.terminal_session_api import _sessions, _sessions_lock, _wait_for_settled_output, _PROMPT_TAIL_RE
 from core.paths import AppPaths
@@ -126,11 +127,12 @@ def _run_one_session_inspection(session_id, commands, results_dirs):
         return
 
     text = "\n".join(output_lines)
-    stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    # 파일명 규칙(만드는 쪽)도 core/log_naming.py 를 쓴다 — 읽는 쪽과 같은 출처여야 한다.
+    log_name = build_inspection_log_name(device)
     saved_paths = []
     for results_dir in results_dirs:
         os.makedirs(results_dir, exist_ok=True)
-        fname = os.path.join(results_dir, f"{stamp}_raw_{device}.txt")
+        fname = os.path.join(results_dir, log_name)
         with open(fname, "w", encoding="utf-8") as f:
             f.write(text)
         saved_paths.append(fname)

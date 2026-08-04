@@ -16,6 +16,7 @@ import re
 
 from api.report_api import _latest_terminal_logs_by_device
 from core.paths import AppPaths
+from core.log_naming import device_from_log_name, parse_inspection_log_name
 from core.text_io import read_log_text
 
 
@@ -38,16 +39,8 @@ def _read_text_auto(abs_path):
 
 
 def _parse_terminal_session_filename(fname):
-    """새 형식: {YYYYMMDD}_{HHMMSS}_{Type}_{device}.txt -> device
-    기존 형식: AutoCheck_{device}_{YYYYMMDD}_{HHMMSS}.txt -> device (하위 호환)"""
-    body = fname[:-len(".txt")] if fname.endswith(".txt") else fname
-    if body.startswith("AutoCheck_"):
-        body_no_prefix = body[len("AutoCheck_"):]
-        parts = body_no_prefix.rsplit("_", 2)
-        return parts[0] if len(parts) == 3 else body_no_prefix
-    else:
-        parts = body.split("_", 3)
-        return parts[3] if len(parts) == 4 else body
+    """파일명 -> 장비명. 규칙은 core/log_naming.py 단일 출처(호출부가 많아 이름만 유지)."""
+    return device_from_log_name(fname)
 
 
 class LogFileBrowserApiMixin:
@@ -100,13 +93,7 @@ class LogFileBrowserApiMixin:
         분석 결과가 계속 보인다 — 원본이 사라지면 그 결과도 함께 사라져야 한다.
         분석 결과 이름 규칙은 engine/log_analysis.run_analysis()·start_ai_log_analysis()의
         "{접두어}{stamp}_{device}_problems.txt", 마스킹은 "{원본이름}_masked.txt"."""
-        body = fname[:-len(".txt")] if fname.lower().endswith(".txt") else fname
-        if body.startswith("AutoCheck_"):
-            parts = body[len("AutoCheck_"):].rsplit("_", 2)
-            device, stamp = (parts[0], f"{parts[1]}_{parts[2]}") if len(parts) == 3 else (body, None)
-        else:
-            parts = body.split("_", 3)
-            stamp, device = (f"{parts[0]}_{parts[1]}", parts[3]) if len(parts) == 4 else (None, body)
+        device, stamp = parse_inspection_log_name(fname)
 
         targets = []
         problem_names = []

@@ -18,6 +18,7 @@ import os
 import re
 import glob
 
+from core import log_naming
 from engine import log_cache
 from engine.log_rule_engine import (
     ContextTracker, get_engine, load_rules, severity_rank, SEVERITY_ORDER,
@@ -232,22 +233,10 @@ def run_analysis(original_dir, problem_dir, prefix=RULE_CHECK_PREFIX, progress_c
         out_name = None
         if findings:
             os.makedirs(problem_dir, exist_ok=True)
-            fname = os.path.basename(path)
-            fname_body = fname[:-4] if fname.endswith(".txt") else fname
-            if fname_body.startswith("AutoCheck_"):
-                body_no_prefix = fname_body[len("AutoCheck_"):]
-                parts = body_no_prefix.rsplit("_", 2)
-                if len(parts) == 3:
-                    stamp, device = f"{parts[1]}_{parts[2]}", parts[0]
-                else:
-                    stamp, device = "unknown_time", body_no_prefix
-            else:
-                parts = fname_body.split("_", 3)
-                if len(parts) == 4:
-                    stamp, device = f"{parts[0]}_{parts[1]}", parts[3]
-                else:
-                    stamp, device = "unknown_time", fname_body
-
+            # 파일명 규칙 해석은 core/log_naming.py 단일 출처 — 예전에는 이 로직이 여기와
+            # api/log_analysis_run_api.py, api/log_file_browser_api.py 에 복제돼 있었다.
+            device = log_naming.device_from_log_name(path)
+            stamp = log_naming.stamp_or_unknown(path)
             out_name = f"{prefix}{stamp}_{device}_problems.txt"
             with open(os.path.join(problem_dir, out_name), "w", encoding="utf-8") as f:
                 f.write(format_report(os.path.basename(path), findings))
