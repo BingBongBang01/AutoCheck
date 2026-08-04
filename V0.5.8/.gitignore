@@ -7,3 +7,10 @@ ai_config.yaml
 
 # 실행 중 생성되는 산출물
 migration_report.json
+
+# 벤치마크 기준선 — 머신마다 절대값이 3배 이상 다르므로 공유하지 않는다.
+# 각자 `python -m tools.bench_log_analysis --save-baseline` 으로 자기 머신 기준선을 만든다.
+tools/bench_baseline.json
+
+# 테스트 캐시
+.pytest_cache/
