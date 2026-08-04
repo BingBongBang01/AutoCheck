@@ -141,7 +141,8 @@ class CustomerProfileApiMixin:
             pm.delete_project(profile["id"])
         prm.delete_customer(target["name"])
         cm.save([item for item in customers if item["id"] != customer_id])
-        workspace_cache.invalidate()
+        # 활성 프로파일이 이 고객사에 있었으면 pm.delete_project()가 활성 상태를 해제했다.
+        self._activated_profile(pm.get_active_project())
         return {"ok": True}
 
     def create_inspection_profile(self, customer_id, name, description="", inspection_date=""):
@@ -181,7 +182,9 @@ class CustomerProfileApiMixin:
             except Exception as exc:
                 print(f"[안내] 직전 프로파일 장비목록 복사 실패(무시하고 진행): {exc}")
 
-        workspace_cache.invalidate()
+        # 새 프로파일이 곧 활성 프로파일이다(위 pm.set_active_project) — 캐시 무효화만으로는
+        # 부족하고, 실시간 감시도 새(비어 있는) 프로파일 상태로 갈아끼워야 한다.
+        self._activated_profile(project_id)
         return {"ok": True, "id": project_id,
                 "copied_from": (previous or {}).get("profile_name") if copied else None,
                 "copied_count": (copied or {}).get("added", 0)}
@@ -220,7 +223,7 @@ class CustomerProfileApiMixin:
         pm.delete_project(profile_id)
         if customer_name and profile_name:
             prm.delete_profile(customer_name, profile_name)
-        workspace_cache.invalidate()
+        self._activated_profile(pm.get_active_project())
         return {"ok": True}
 
     def get_customer_context(self):
@@ -250,7 +253,7 @@ class CustomerProfileApiMixin:
         if not valid:
             return False
         pm.set_active_project(profile_id)
-        workspace_cache.invalidate()
+        self._activated_profile(profile_id)
         return True
 
     def list_customer_tree(self):
@@ -286,4 +289,6 @@ class CustomerProfileApiMixin:
             prm.create_profile(customer_name, profile_name)
         except FileExistsError:
             pass
+        # 활성 프로파일은 바꾸지 않지만 트리가 달라졌다 — 캐시를 비우지 않으면 목록에 안 보인다.
+        workspace_cache.invalidate()
         return project_id

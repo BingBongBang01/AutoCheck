@@ -179,29 +179,65 @@ class LogAnalysisRunApiMixin:
         monitor.adopt_devices(snapshot.get("devices") or [], snapshot.get("baseline_devices") or [])
         return monitor.restore(snapshot)
 
-    def _sync_realtime_profile(self):
+    def notify_active_profile_changed(self):
+        """프로파일 전환 직후 호출되는 훅(api/project_core_api.py의 _activated_profile).
+
+        폴링 경로에도 같은 동기화가 있지만 3초로 묶여 있어서, 전환 직후 프론트엔드가 화면을
+        다시 그리는 시점에는 아직 이전 프로파일의 감시 내역이 남아 있다. 그 순간이 사용자가
+        '프로파일을 바꿨는데 이전 내역이 그대로'라고 읽는 지점이므로 여기서 즉시 갈아끼운다.
+        """
+        # 아직 감시를 한 번도 쓰지 않았으면 갈아끼울 상태가 없다 — 다음 첫 접근이 새 프로파일
+        # 저장본을 읽는다(_realtime_monitor()가 생성 직후 _restore_realtime_state()를 부른다).
+        if getattr(self, "_realtime_monitor_obj", None) is None:
+            self._realtime_profile_checked_at = 0
+            return False
+        return self._sync_realtime_profile(force=True)
+
+    def _sync_realtime_profile(self, force=False):
         """활성 프로파일이 바뀌었으면 쓰던 상태를 저장하고 새 프로파일 상태로 갈아끼운다.
 
         패널 폴링(0.8초)마다 불리므로, 프로파일 경로를 알아내는 파일 읽기는 3초로 묶는다.
+        force=True는 프로파일을 실제로 바꾼 직후 즉시 갈아끼우기 위한 것이다.
         """
+        # 아래에서 start_realtime_baseline_watch()를 다시 부르는데, 그 경로가 다시 이 함수로
+        # 돌아오면 감시를 무한히 재시작한다.
+        if getattr(self, "_realtime_profile_switching", False):
+            return False
         now = time.time()
-        if now - getattr(self, "_realtime_profile_checked_at", 0) < 3:
+        if not force and now - getattr(self, "_realtime_profile_checked_at", 0) < 3:
             return False
         self._realtime_profile_checked_at = now
         path = self._realtime_state_path()
         if path == getattr(self, "_realtime_state_key_path", None):
             return False
-        watcher = getattr(self, "_baseline_stream_watcher", None)
-        if watcher is not None and watcher.is_running():
-            # 감시 중에는 프로파일을 따라 바꾸지 않는다 — 지금 tail 중인 판정 기준(Baseline)과
-            # 화면이 어긋난다. 감시를 멈췄다 다시 시작하면 새 프로파일 상태로 열린다.
-            return False
+        # 이전 프로파일의 감시 내역을 그 프로파일 폴더에 남긴다 — key_path가 아직 이전 것이다.
         self._save_realtime_state(force=True)
-        monitor = getattr(self, "_realtime_monitor_obj", None)
-        if monitor is not None:
-            monitor.reset([], ())
-        self._restore_realtime_state()
-        return True
+        watcher = getattr(self, "_baseline_stream_watcher", None)
+        running = bool(watcher is not None and watcher.is_running())
+        interval = getattr(watcher, "interval", 0.3) if running else 0.3
+        self._realtime_profile_switching = True
+        try:
+            if running:
+                # 감시 중에도 프로파일을 따라간다. 예전에는 여기서 그냥 물러났는데(tail 중인
+                # 판정 기준과 화면이 어긋나는 것을 피하려고), 자동시작을 켜 두면 감시가 항상
+                # 돌고 있어서 프로파일을 바꿔도 이전 프로파일의 감시 내역이 화면에 그대로
+                # 남았고, 새로 들어온 경고까지 이전 프로파일 파일에 쌓였다.
+                # 기준(Baseline)·감시 대상 장비·저장 위치를 함께 갈아야 하므로 감시를 멈추고
+                # 새 프로파일 기준으로 다시 시작한다.
+                self.stop_realtime_baseline_watch()
+            monitor = getattr(self, "_realtime_monitor_obj", None)
+            if monitor is not None:
+                monitor.reset([], ())
+            # 저장 위치(_realtime_state_key_path)를 새 프로파일로 먼저 옮긴다 — 아래 재시작이
+            # 실패해도 새 프로파일의 감시 내역이 이전 프로파일 파일로 새지 않게 한다.
+            self._restore_realtime_state()
+            if running:
+                # 감시 대상 장비는 넘기지 않는다 — 새 프로파일의 장비 목록에서 다시 고른다
+                # (프로파일마다 장비가 다르므로 이전 프로파일에서 체크한 이름은 의미가 없다).
+                self.start_realtime_baseline_watch(interval=interval)
+            return True
+        finally:
+            self._realtime_profile_switching = False
 
     def load_realtime_baseline(self):
         """활성 프로파일의 00_orignal_log를 읽어 Baseline 스냅샷을 메모리에 로드.

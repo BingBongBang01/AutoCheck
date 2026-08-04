@@ -5,9 +5,31 @@ delete_project 등에서 self.get_customer_profiles()를 호출하므로 항상 
 """
 import os
 from engine import project_manager as pm
+from core.context_cache import workspace_cache
 
 
 class ProjectCoreApiMixin:
+    def _activated_profile(self, project_id=None):
+        """활성 프로파일이 바뀐 직후에 반드시 지나야 하는 후처리.
+
+        두 가지를 한다:
+          1) workspace_cache 무효화 — resolve_active_customer_profile_names()가 캐시되어 있어서,
+             여기서 비우지 않으면 활성 프로젝트 파일은 바뀌었는데도 앱 전체가 **이전 프로파일의
+             (고객사, 프로파일)** 을 계속 돌려준다. 그러면 data/<고객사>/<프로파일> 로 갈라지는
+             모든 것(로그 경로·보고서·실시간 감시 상태)이 이전 프로파일에 머문다.
+          2) 프로파일 단위로 살아 있는 메모리 상태(실시간 감시)를 새 프로파일 것으로 갈아끼운다.
+
+        후처리가 실패해도 프로파일 전환 자체는 성공시켜야 하므로 예외는 삼키고 알린다.
+        """
+        workspace_cache.invalidate()
+        hook = getattr(self, "notify_active_profile_changed", None)
+        if hook is None:
+            return
+        try:
+            hook()
+        except Exception as exc:
+            print(f"[프로파일 전환] 실시간 감시 상태 전환 실패: {exc}")
+
     def list_projects(self):
         return pm.list_projects()
 
@@ -38,19 +60,23 @@ class ProjectCoreApiMixin:
             return {"ok": False, "project_id": None, "changed": False,
                     "reason": "등록된 프로파일이 없습니다."}
         pm.set_active_project(fallback)
+        self._activated_profile(fallback)
         return {"ok": True, "project_id": fallback, "changed": True, "previous": active}
 
     def create_project(self, name):
         new_id = pm.create_project(name)
         pm.set_active_project(new_id)
+        self._activated_profile(new_id)
         return new_id
 
     def set_active_project(self, project_id):
         pm.set_active_project(project_id)
+        self._activated_profile(project_id)
         return True
 
     def rename_project(self, project_id, new_name):
         pm.rename_project(project_id, new_name)
+        workspace_cache.invalidate()
         return True
 
     def delete_project(self, project_id):
@@ -67,6 +93,9 @@ class ProjectCoreApiMixin:
             profile_dir = log_storage.get_profile_dir(customer_name, profile_name)
             if os.path.isdir(profile_dir):
                 shutil.rmtree(profile_dir)
+        # 지운 것이 활성 프로파일이면 pm.delete_project()가 활성 상태를 해제한다 —
+        # 캐시를 비워야 앱이 '없어진 프로파일'을 계속 활성으로 보지 않는다.
+        self._activated_profile(pm.get_active_project())
         return True
 
     def export_project(self, project_id):

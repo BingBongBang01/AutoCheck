@@ -70,6 +70,9 @@ _CATEGORY_LABEL = {
     None: "기타",
 }
 _SEVERITY_RANK = {"WARNING": 1, "MAJOR": 2, "CRITICAL": 3}
+# 한 번에 넘길 finding 수의 상한. finding 은 '장비 x 규칙' 단위라 장비 30대 x 규칙 몇 개면
+# 금세 수십 개가 된다 — 화면이 묶은 뒤의 줄 수는 그보다 훨씬 적다(규칙 수만큼).
+_FINDING_MAX = 200
 # 이 type들은 '복구'라서 체크리스트를 fail로 만들지 않는다.
 _RECOVERY_TYPES = ("LINK_UP", "NEIGHBOR_UP", "INTERFACE_NOSHUT", "MLAG_PEER_UP", "CONFIG_RESTORED")
 
@@ -658,13 +661,17 @@ class RealtimeMonitor:
                 "summary": summary,
                 "counts": counts,
                 "findings": [],
+                "findings_dropped": 0,
                 "resolved_count": recovered,
                 "ignored_count": ignored,
             }
 
         findings = []
+        # 규칙 이름은 장비별 루프 밖에서 한 번만 정한다 — 같은 규칙인데 장비마다 라벨이 갈리면
+        # 화면에서 한 규칙이 두 그룹으로 쪼개진다.
+        rule_labels = _rule_labels(live)
         for device, alerts in by_device.items():
-            device_findings = self._device_findings(device, alerts)
+            device_findings = self._device_findings(device, alerts, rule_labels)
             # 이 장비의 근거가 전부 '지난 세션/지난 실행'에서 온 것이면 그렇게 표시한다 —
             # 방금 들어온 입력으로 난 오류와 구분되지 않으면 지금 대응할 것을 고를 수 없다.
             if alerts and all(a.get("history") or a.get("restored") for a in alerts):
@@ -675,6 +682,8 @@ class RealtimeMonitor:
             findings.extend(device_findings)
         # 심각도 -> 발생 건수 순
         findings.sort(key=lambda f: (-_SEVERITY_RANK.get(f["severity"], 0), -f["count"]))
+        # 상한을 넘겨 잘라낸 몫은 화면이 밝혀야 한다 — 조용히 자르면 "이게 전부"로 읽힌다.
+        dropped = max(0, len(findings) - _FINDING_MAX)
 
         verdict = "fail" if counts["CRITICAL"] else ("warn" if counts["MAJOR"] or counts["WARNING"] else "ok")
         worst_device = max(by_device.items(), key=lambda kv: len(kv[1]))[0] if by_device else None
@@ -692,25 +701,36 @@ class RealtimeMonitor:
             "headline": headline,
             "summary": summary,
             "counts": counts,
-            # 화면이 같은 제목끼리 묶어 한 줄로 보여주므로, 12개로 자르면 4대짜리 MLAG 그룹
-            # 하나가 목록의 3분의 1을 먹고 나머지 오류가 잘려 나간다 — 묶은 뒤의 줄 수가
-            # 기준이 되도록 상한을 장비 수 규모(40)로 올린다.
-            "findings": findings[:40],
+            # 화면이 같은 group_key 끼리 묶어 한 줄로 보여주므로, 12개로 자르면 4대짜리 MLAG
+            # 그룹 하나가 목록의 3분의 1을 먹고 나머지 오류가 잘려 나간다 — 묶은 뒤의 줄 수가
+            # 기준이어야 한다. finding 을 '장비 x 규칙' 단위로 쪼개면서(같은 분류라도 다른
+            # 규칙이면 다른 목록 줄이어야 하므로) 개수가 장비 수 x 규칙 수로 늘어 상한도 올렸다.
+            "findings": findings[:_FINDING_MAX],
+            "findings_dropped": dropped,
             "resolved_count": recovered,
             "ignored_count": ignored,
         }
 
-    def _device_findings(self, device, alerts):
+    def _device_findings(self, device, alerts, rule_labels=None):
         """한 장비의 경고 묶음에서 '원인 추정 + 권고'를 만든다.
 
         인과 규칙: 설정 삭제/shutdown 명령이 있고 그 뒤에 링크·인접 DOWN이 따라왔다면,
         DOWN을 개별 장애로 나열하는 대신 '작업 명령이 원인'으로 묶어야 화면이 읽힌다.
 
         모든 finding에 category(체크리스트 항목 키와 같은 축 — vlan/interface/route/neighbor/
-        link/stp_mlag/ops)를 붙인다. 왼쪽 목록은 이 category로 장비를 묶어 "VLAN / 3대"처럼
-        큰 기술 분류 단위로 보여준다(개별 문장 제목 그대로는 장비마다 살짝 달라서 좀처럼
-        안 뭉쳐졌다).
+        link/stp_mlag/ops)를 붙인다. 오른쪽 상세와 체크리스트가 같은 축으로 이어지는 근거다.
+
+        왼쪽 목록의 묶음 단위는 category가 아니라 **group_key**다. 예전에는 화면이 category로
+        묶었는데, 그러면 성질이 다른 오류가 한 줄에 뭉쳤다:
+          * 'MLAG peer-link 이상(split-brain)'과 'STP/MLAG 상태 변화'가 둘 다 stp_mlag이라
+            한 줄로 합쳐졌다 — 앞은 즉시 조치, 뒤는 확인 대상이라 같이 볼 것이 아니다.
+          * 체크리스트에 매핑되지 않는 규칙 경고는 전부 category=None(기타)이어서, '비정상
+            재기동'·'인증 실패'·'카운터 증가'가 "기타 / 7대 · 92건" 한 줄로 사라졌다(보고된 증상).
+        그래서 finding마다 '어떤 판정에서 나왔는지'를 group_key로 붙이고, 규칙 기반 경고는
+        규칙(rule_id/type)까지 내려가 쪼갠다. 같은 group_key면 장비가 몇 대든 한 줄로 묶이고,
+        다른 판정이면 절대 합쳐지지 않는다. group_label은 그 줄에 쓸 이름이다.
         """
+        rule_labels = rule_labels or {}
         types = [a.get("type") for a in alerts]
         has_config_change = any(t in ("CONFIG_REMOVED", "INTERFACE_SHUTDOWN") for t in types)
         has_down = any(t in ("LINK_DOWN", "NEIGHBOR_DOWN") for t in types)
@@ -731,6 +751,8 @@ class RealtimeMonitor:
                 "device": device,
                 "severity": "CRITICAL",
                 "category": "stp_mlag",
+                "group_key": "stp_mlag:mlag_peer_link",
+                "group_label": "MLAG peer-link 이상",
                 "title": "MLAG peer-link 이상 — split-brain(dual-active) 위험",
                 "cause": ("peer-link가 끊기면 두 스위치가 서로를 죽은 것으로 보고 각자 active로 동작합니다"
                           + (f" (멤버 포트 {len(partial)}건이 partial로 승격됨)." if partial else ".")),
@@ -759,6 +781,8 @@ class RealtimeMonitor:
                 "device": device,
                 "severity": "CRITICAL",
                 "category": category,
+                "group_key": f"{category}:command_outage",
+                "group_label": "작업 명령 → 통신 단절",
                 "title": "작업 명령이 통신 단절을 유발한 것으로 보입니다",
                 "cause": cause,
                 "action": "해당 명령을 되돌리거나(no 형태 복구) Baseline 설정과 대조해 즉시 확인하세요.",
@@ -778,6 +802,8 @@ class RealtimeMonitor:
                 "device": device,
                 "severity": max((a.get("severity") for a in alerts), key=lambda s: _SEVERITY_RANK.get(s, 0)),
                 "category": category,
+                "group_key": f"{category}:config_change",
+                "group_label": f"{_CATEGORY_LABEL.get(category, '기타')} 설정 변경",
                 "title": "Baseline 대비 설정 변경 감지",
                 "cause": f"설정 삭제 {len(removed)}건, shutdown {len(shut)}건이 입력됐습니다.",
                 "action": "의도된 작업인지 확인하고, 계획에 없던 변경이면 원복하세요.",
@@ -793,6 +819,8 @@ class RealtimeMonitor:
                 "device": device,
                 "severity": "CRITICAL",
                 "category": category,
+                "group_key": f"{category}:unexplained_down",
+                "group_label": "설정 변경 없는 링크/인접 단절",
                 "title": "설정 변경 없이 링크/인접이 끊겼습니다",
                 "cause": "입력된 변경 명령 없이 DOWN 로그만 발생 — 대향 장비, 광/케이블, 또는 원격 측 작업이 의심됩니다.",
                 "action": "대향 장비의 인터페이스 상태와 물리 경로를 확인하세요.",
@@ -808,6 +836,8 @@ class RealtimeMonitor:
                 "device": device,
                 "severity": "CRITICAL",
                 "category": "ops",
+                "group_key": "ops:destructive_command",
+                "group_label": "위험 운영 명령 실행",
                 "title": "위험 운영 명령 실행",
                 "cause": f"{', '.join(sorted({a.get('raw_line', '') for a in destructive}))}",
                 "action": "reload/write erase는 서비스 중단을 유발합니다 — 작업 승인 여부를 즉시 확인하세요.",
@@ -823,6 +853,8 @@ class RealtimeMonitor:
                 "device": device,
                 "severity": "MAJOR",
                 "category": "stp_mlag",
+                "group_key": "stp_mlag:topology_change",
+                "group_label": "STP / MLAG 상태 변화",
                 "title": "STP / MLAG 상태 변화",
                 "cause": f"토폴로지 변경 로그 {len(stp)}건 — 루프 또는 이중화 절체 가능성.",
                 "action": "STP 루트/포트 역할과 MLAG peer 상태를 확인하세요.",
@@ -832,23 +864,33 @@ class RealtimeMonitor:
             })
             consume(stp)
 
-        # 위 어느 분류에도 안 걸린 alert — 대부분 '복구는 됐지만 취소할 장애가 없었던'
-        # 정보성 이벤트(no shutdown/Established/active-full 등)다. 여기서 안 만들면 카운트에는
-        # 잡히는데 목록에는 하나도 안 보이는 "경고 N건인데 이상 없음" 화면이 나온다(실제로 보고된
-        # 버그). category별로 모아 하나씩 만든다.
+        # 위 어느 분류에도 안 걸린 alert — 규칙 엔진(config/log_rules.json)이 낸 경고와,
+        # '복구는 됐지만 취소할 장애가 없었던' 정보성 이벤트(no shutdown/Established 등)다.
+        # 여기서 안 만들면 카운트에는 잡히는데 목록에는 하나도 안 보이는 "경고 N건인데 이상 없음"
+        # 화면이 나온다(실제로 보고된 버그).
+        #
+        # 묶는 단위는 **규칙(rule_id/type)** 이다. category로 묶었을 때는 체크리스트에 매핑되지
+        # 않는 규칙 경고가 전부 category=None 으로 떨어져서, '비정상 재기동'·'인증 실패'·'카운터
+        # 증가'가 "기타 / 7대 · 92건" 한 줄로 합쳐졌다 — 목록을 열어 봐야 안에 여러 오류가
+        # 섞여 있다는 것을 알 수 있었다. 규칙이 다르면 다른 줄이어야 한다.
         leftover = [a for a in alerts if a.get("alert_id") not in consumed_ids]
-        by_cat = {}
+        by_rule = {}
         for a in leftover:
-            by_cat.setdefault(_item_key_for(a), []).append(a)
-        for category, group in by_cat.items():
+            by_rule.setdefault((_item_key_for(a), _rule_key(a)), []).append(a)
+        for (category, rule_key), group in by_rule.items():
             worst = max(group, key=lambda a: _SEVERITY_RANK.get(a.get("severity") or "", 0))
+            label = rule_labels.get(rule_key) or _humanize_rule(rule_key)
             out.append({
                 "device": device,
                 "severity": worst.get("severity") or "WARNING",
                 "category": category,
-                "title": worst.get("message") or "상태 변화 감지",
-                "cause": f"{_CATEGORY_LABEL.get(category, '기타')} 관련 정보성 이벤트 {len(group)}건"
-                         " — 추적 중이던 장애를 해제한 것이 아니라 그 자체로 새로 관측된 변화입니다.",
+                "group_key": f"{category or 'etc'}:rule:{rule_key}",
+                "group_label": label,
+                "rule_key": rule_key,
+                "title": worst.get("message") or label,
+                "cause": f"'{label}' 규칙에 걸린 로그 {len(group)}건"
+                         + (f" ({_CATEGORY_LABEL.get(category)} 관련)" if category else "")
+                         + " — 추적 중이던 장애를 해제한 것이 아니라 그 자체로 새로 관측된 변화입니다.",
                 "action": "의도된 작업인지 확인하세요. 계획에 없던 변경이면 원인을 찾으세요.",
                 "count": len(group),
                 "evidence": [a.get("raw_line", "") for a in group[:3]],
@@ -875,6 +917,48 @@ def _fingerprint(value):
 def _ids(alerts):
     """finding에 붙일 alert_id 목록 — '해결/무시' 버튼이 어떤 alert를 대상으로 할지 알아야 한다."""
     return [a.get("alert_id") for a in alerts if a.get("alert_id")]
+
+
+def _rule_key(alert):
+    """이 경고를 낸 판정의 식별자.
+
+    규칙 엔진 경고는 rule_id(예: unexpected_reload)를, Baseline diff 경고는 type(예: LINK_DOWN)을
+    갖는다. 화면 우클릭 메뉴('이 규칙 숨기기')와 고정 항목도 같은 두 값을 본다
+    (_is_hidden_locked / _pin_from_alerts_locked) — 목록 묶음도 같은 축을 써야 "숨긴 규칙"과
+    "목록 한 줄"이 1:1로 대응한다.
+    """
+    return alert.get("rule_id") or alert.get("type") or "unknown"
+
+
+def _humanize_rule(rule_key):
+    """규칙 식별자를 목록에 쓸 이름으로. 문구(title)를 못 쓰는 경우의 폴백이다."""
+    if rule_key.startswith("keyword_"):
+        return f"키워드 '{rule_key[len('keyword_'):]}'"
+    if rule_key == "counter_nonzero":
+        return "카운터 0 초과"
+    return rule_key.replace("_", " ")
+
+
+def _rule_labels(alerts):
+    """규칙 식별자 -> 목록에 쓸 이름. 경고 전체를 한 번 훑어 규칙마다 하나로 정한다.
+
+    규칙 엔진의 서명 경고는 message가 그 규칙의 title 그대로라(engine/log_rule_engine.py의
+    _match_signature_uncached) id보다 훨씬 읽힌다 — 'unexpected_reload'가 아니라
+    '비정상 재기동 이력'. 반면 키워드/syslog 판정은 줄마다 문구가 달라지므로 id를 다듬어 쓴다.
+
+    장비별로 정하지 않고 여기서 한 번에 정하는 이유: 같은 규칙인데 A장비에서는 문구가 하나뿐
+    (=문구를 라벨로 쓰고) B장비에서는 여러 개면(=id를 쓰고) 한 규칙이 화면에서 두 줄로 갈린다.
+    """
+    messages = {}
+    for alert in alerts:
+        key = _rule_key(alert)
+        message = (alert.get("message") or "").strip()
+        if key not in messages:
+            messages[key] = message
+        elif messages[key] != message:
+            messages[key] = ""      # 문구가 갈린다 — id 를 쓴다
+    return {key: (message[:60] if message else _humanize_rule(key))
+            for key, message in messages.items()}
 
 
 def _item_key_for(alert):

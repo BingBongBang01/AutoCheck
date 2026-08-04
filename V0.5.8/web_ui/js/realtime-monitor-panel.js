@@ -182,6 +182,14 @@ function applyRtmLayout(layout) {
   if (!rtmLayoutLoaded) {
     rtmSelectedDevices = new Set(saved.length ? saved : rtmTargets.map(t => t.name));
     rtmLayoutLoaded = true;
+    return;
+  }
+  // 프로파일을 바꾸면 장비 목록이 통째로 달라진다 — 이전 프로파일에서 고른 장비명을 그대로
+  // 들고 있으면 '감시 시작'이 지금 프로파일에 없는 장비를 대상으로 돈다(화면은 빈 채로 남는다).
+  // 지금 목록에 없는 선택은 버리고, 남는 게 없으면 새 목록 전체를 고른다.
+  const kept = Array.from(rtmSelectedDevices).filter(n => known.has(n));
+  if (kept.length !== rtmSelectedDevices.size) {
+    rtmSelectedDevices = new Set(kept.length ? kept : rtmTargets.map(t => t.name));
   }
 }
 
@@ -727,11 +735,12 @@ function rtmLogBox(device, maxLines, fill) {
 // 우측: 건수 칩 + 판정 요약 + 좌측에서 고른 오류가 "어느 장비의 어떤 설정이 잘못됐는지".
 //
 // 좌측 한 줄 = 오류 한 종류(장비 한 대가 아니다). 백엔드는 장비별로 finding을 만들기 때문에
-// MLAG peer-link가 4대에서 끊기면 같은 제목의 finding이 4개 온다 — 그대로 나열하면 목록이
-// 같은 문장 네 줄이 되고, '무슨 오류인지'가 아니라 '몇 대인지'만 보인다. 그래서 제목으로 묶어
-// "MLAG peer-link 이상 — Core1 외 3대"처럼 한 줄로 보이게 하고, 상세에서 장비별로 펼친다.
+// MLAG peer-link가 4대에서 끊기면 같은 판정의 finding이 4개 온다 — 그대로 나열하면 목록이
+// 같은 문장 네 줄이 되고, '무슨 오류인지'가 아니라 '몇 대인지'만 보인다. 그래서 백엔드가 붙인
+// group_key로 묶어 한 줄 + 장비 칩 4개로 보이게 하고, 상세에서 장비별로 펼친다.
+// 반대 방향도 지켜야 한다 — **다른 오류는 절대 한 줄로 합치지 않는다**(rtmGroupFindings 주석).
 //
-// 선택은 rtmAnalysisSelectedKey(제목 기반 그룹 키)로 기억하므로 0.8초 폴링으로 목록이 새로 와도,
+// 선택은 rtmAnalysisSelectedKey(group_key)로 기억하므로 0.8초 폴링으로 목록이 새로 와도,
 // 다른 탭에 갔다 와도 마지막에 고른 오류가 그대로 선택돼 있다. 선택한 오류가 해소되어
 // 목록에서 사라진 경우에만 맨 위 오류로 자동 이동한다.
 function renderRtmAnalysis(state) {
@@ -765,10 +774,12 @@ function renderRtmAnalysis(state) {
         </div>
         ${groups.length ? groups.map(g => {
           const sev = g.severity;
-          // 목록의 대표 문구 — 같은 분류 안에서 가장 심각한 finding의 제목을 미리보기로 보여준다.
-          // (본 라벨은 "분류 / 대수"이고, 이건 그 아래 한 줄 요약이다. 전체 내용은 우측 상세에 있다.)
+          // 굵은 주 라벨은 group_label(그 오류가 무엇인지)이다. 그 아래 한 줄은 같은 그룹에서
+          // 가장 심각한 finding의 문구 — 라벨과 같은 문장이면(규칙 title이 곧 라벨인 경우)
+          // 두 줄이 겹치므로 생략한다. 큰 기술 분류는 머리줄의 작은 태그로 남긴다.
           const preview = g.items.slice().sort((a, b) =>
             (RTM_SEV_RANK[b.severity] || 0) - (RTM_SEV_RANK[a.severity] || 0))[0];
+          const previewTitle = (preview && preview.title) || '';
           return `
           <div class="rtm-err-row rtm-sev-${sev.toLowerCase()} ${g.key === rtmAnalysisSelectedKey ? 'active' : ''}"
                data-rtm-err="${rtEscape(g.key)}"
@@ -779,13 +790,18 @@ function renderRtmAnalysis(state) {
             <div class="rtm-err-row-head">
               <span class="rtm-chip rtm-chip-${RTM_SEV_CHIP[sev] || 'warn'}">${RTM_SEV_LABEL[sev] || sev}</span>
               ${g.fromHistory ? '<span class="rtm-chip rtm-chip-unknown" title="이전 세션·이전 실행의 로그에서 찾은 오류입니다">이전 기록</span>' : ''}
-              <span class="rtm-cat-count" style="margin-left:auto">${g.count}건</span>
+              <span class="rtm-err-cat-tag" title="큰 기술 분류">${rtEscape(g.categoryLabel)}</span>
+              <span class="rtm-err-devcount">${g.devices.length}대</span>
+              <span class="rtm-cat-count">${g.count}건</span>
             </div>
-            <div class="rtm-err-category">${rtEscape(g.label)} / ${g.devices.length}대</div>
-            <div class="rtm-err-title">${rtEscape((preview && preview.title) || '')}</div>
+            <div class="rtm-err-category">${rtEscape(g.label)}</div>
+            ${previewTitle && previewTitle !== g.label
+              ? `<div class="rtm-err-title">${rtEscape(previewTitle)}</div>` : ''}
             <div class="rtm-err-devices">${g.devices.map(d => `<em>${rtEscape(d)}</em>`).join('')}</div>
           </div>`;
         }).join('') : '<p class="rtm-empty">이상 없음 — 오류가 발생하면 심각/주요/경고 순으로 여기에 표시됩니다.</p>'}
+        ${(analysis.findings_dropped || 0) > 0 ? `<p class="rtm-err-dropped">그 외 ${
+          analysis.findings_dropped}건은 표시 상한을 넘어 생략됐습니다 — '세부 이력'에서 확인하세요.</p>` : ''}
       </div>
       <div class="rtm-analysis-col rtm-analysis-col-detail" id="rtm-analysis-detail">
         <div class="rtm-pane-head rtm-pane-head-sticky rtm-analysis-detail-head">
@@ -876,24 +892,31 @@ async function rtmBulkResolveOrIgnore(ids, apiName, toastMessage) {
   await refreshRealtimeMonitor();
 }
 
-// 같은 기술 분류(category — VLAN/인터페이스/링크/BGP·OSPF 인접/STP·MLAG/운영 명령/기타)의
-// finding들을 한 그룹으로 묶는다. 제목 문장이 아니라 분류로 묶는 이유: 장비마다 메시지가
-// 조금씩 달라서("VLAN 100 삭제" vs "VLAN 200 삭제") 제목 기준으로는 좀처럼 안 뭉쳐졌다 —
-// "VLAN에서 문제가 났다"처럼 큰 분류로 몇 대가 걸렸는지 한눈에 보이는 것이 목적이다.
+// 같은 판정에서 나온 finding들을 한 그룹(목록 한 줄)으로 묶는다.
+//
+// 묶는 키는 백엔드가 붙인 group_key다(engine/realtime_monitor.py의 _device_findings).
+// 예전에는 category(VLAN/인터페이스/링크/BGP·OSPF 인접/STP·MLAG/운영 명령/기타)로 묶었는데,
+// 그러면 성질이 다른 오류가 한 줄에 뭉쳤다 — 'MLAG peer-link 이상(split-brain)'과 'STP/MLAG
+// 상태 변화'가 같은 stp_mlag이라 합쳐졌고, 체크리스트에 매핑되지 않는 규칙 경고는 전부
+// category 없음으로 떨어져 "기타 / 7대 · 92건" 한 줄에 여러 오류가 섞였다. group_key는
+// '어떤 판정에서 나왔는지'(규칙 경고면 rule_id까지)를 담으므로, 같은 오류만 묶이고 다른
+// 오류는 각자의 줄을 갖는다. 장비는 여전히 줄 안에서 합쳐진다(MLAG 4대 = 한 줄, 4개 칩).
+//
 // 그룹의 심각도는 소속 finding 중 최고치 — 4대 중 1대만 CRITICAL이어도 그룹은 CRITICAL이어야
 // '맨 위가 가장 급한 것'이라는 목록 규칙이 유지된다.
-// 그룹 키는 category다: 폴링마다 finding 객체가 새로 와도 category가 같으면 같은 그룹이므로
-// 선택이 유지된다(장비가 한 대 더 늘거나 빠져도 선택이 튀지 않는다).
+// group_key는 폴링마다 finding 객체가 새로 와도 같은 값이므로 선택이 유지된다(장비가 한 대
+// 더 늘거나 빠져도 선택이 튀지 않는다).
 function rtmGroupFindings(findings) {
-  const byCategory = new Map();
+  const byGroup = new Map();
   findings.forEach(f => {
-    const category = f.category || 'etc';
-    const label = f.category_label || '기타';
-    let g = byCategory.get(category);
+    // group_key가 없는 응답(구버전 백엔드)에서도 화면이 비지 않게 category로 물러난다.
+    const key = f.group_key || f.category || 'etc';
+    const label = f.group_label || f.category_label || '기타';
+    let g = byGroup.get(key);
     if (!g) {
-      g = { key: category, label, severity: f.severity || 'WARNING', count: 0, devices: [], items: [],
-            fromHistory: true };
-      byCategory.set(category, g);
+      g = { key, label, category: f.category || null, categoryLabel: f.category_label || '기타',
+            severity: f.severity || 'WARNING', count: 0, devices: [], items: [], fromHistory: true };
+      byGroup.set(key, g);
     }
     if ((RTM_SEV_RANK[f.severity] || 0) > (RTM_SEV_RANK[g.severity] || 0)) g.severity = f.severity;
     // 한 장비라도 '지금' 근거가 있으면 그룹은 지난 기록이 아니다.
@@ -904,7 +927,7 @@ function rtmGroupFindings(findings) {
   });
   // 심각도 내림차순 → 같은 심각도면 장비 수 → 발생 건수. (백엔드도 비슷한 순서로 주지만,
   // 묶은 뒤의 순서는 화면이 보장해야 한다.)
-  return [...byCategory.values()].sort((a, b) =>
+  return [...byGroup.values()].sort((a, b) =>
     (RTM_SEV_RANK[b.severity] || 0) - (RTM_SEV_RANK[a.severity] || 0)
     || b.devices.length - a.devices.length
     || b.count - a.count);

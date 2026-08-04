@@ -1043,10 +1043,17 @@ details.fold[open] > summary .fold-caret { transform: rotate(180deg); }
 .rtm-err-row.active { outline: 1px solid var(--primary); background: var(--hover); }
 .rtm-err-row-head { display: flex; align-items: center; gap: 5px; font-size: 11px; }
 .rtm-err-device { font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* 목록의 주 라벨 — "VLAN / 3대"처럼 큰 기술 분류와 대수. 아래 rtm-err-title(대표 문구 미리보기)
-   보다 굵고 크게 두어 "무엇이" 먼저 눈에 들어오게 한다. */
+/* 목록의 주 라벨 — "비정상 재기동 이력"처럼 그 오류가 무엇인지. 아래 rtm-err-title(대표 문구
+   미리보기)보다 굵고 크게 두어 "무엇이" 먼저 눈에 들어오게 한다. 큰 기술 분류(VLAN/링크/기타)는
+   머리줄의 rtm-err-cat-tag로 따로 뺐다 — 분류로 묶으면 성질이 다른 오류가 한 줄에 뭉친다. */
 .rtm-err-category { font-size: 13px; font-weight: 700; margin: 2px 0 1px; }
 .rtm-err-title { font-size: 11px; color: var(--sub); line-height: 1.45; }
+.rtm-err-cat-tag {
+  font-size: 10px; color: var(--sub); background: var(--hover);
+  border-radius: var(--radius-sm); padding: 0 5px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rtm-err-dropped { font-size: 10.5px; color: var(--sub); padding: 4px 8px; line-height: 1.5; }
 .rtm-cat-count { background: var(--hover); border-radius: 999px; padding: 0 6px; font-size: 10px; font-variant-numeric: tabular-nums; flex-shrink: 0; margin-left: auto; }
 /* 목록 한 줄 = 오류 한 종류. 어느 장비들이 걸렸는지는 제목 아래에 칩으로 깔아 준다 —
    폭이 좁으므로 줄바꿈시키고, 장비명이 길면 잘라서 줄 높이가 무너지지 않게 한다. */
