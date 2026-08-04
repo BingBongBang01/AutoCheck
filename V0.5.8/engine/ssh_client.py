@@ -10,18 +10,42 @@ SSH 접속 준비 로직의 단일 출처 — 개인키 로딩과 paramiko conne
 import os
 import tempfile
 
-import paramiko
-
-# 키 종류를 파일 내용만 보고 알 수 없으므로 흔한 순서대로 시도한다.
-# DSSKey는 paramiko 4.x에서 제거됐다(DSA 자체가 폐기됨) — 이름으로 찾아서 있는 것만 쓴다.
-# 하드코딩하면 최신 paramiko가 깔린 PC에서 AttributeError로 키 접속이 통째로 죽는다.
+# paramiko 는 import 만으로 약 340 ms 가 든다(이전 측정(Windows)). api/terminal_session_api.py
+# 가 이 모듈을 모듈 레벨로 import 하므로, 최상단에서 paramiko 를 끌어오면 SSH 를 한 번도
+# 쓰지 않는 실행에서도 그 비용을 낸다. 실제 접속 시점까지 미룬다.
+#
+# 주의: 여기서 얻는 것은 '앱 시작이 빨라진다'뿐이고, 첫 접속에서 그 비용을 그대로 낸다.
+# 첫 접속은 이미 네트워크 대기가 있는 동작이라 340 ms 가 묻힌다.
 _KEY_CLASS_NAMES = ("Ed25519Key", "RSAKey", "ECDSAKey", "DSSKey")
-_KEY_CLASSES = tuple(cls for cls in (getattr(paramiko, n, None) for n in _KEY_CLASS_NAMES) if cls)
+_key_classes_cache = None
+
+
+def _paramiko():
+    """paramiko 모듈을 필요할 때 가져온다. 미설치면 여기서 ImportError 가 난다 —
+    예전에는 모듈 import 시점에 났으므로 오류가 나는 위치만 바뀐다."""
+    import paramiko
+
+    return paramiko
+
+
+def _key_classes():
+    """시도할 개인키 클래스들 — 처음 호출할 때 한 번만 결정하고 캐시한다.
+
+    DSSKey 는 paramiko 4.x 에서 제거됐다(DSA 자체가 폐기됨) — 이름으로 찾아서 있는 것만 쓴다.
+    하드코딩하면 최신 paramiko 가 깔린 PC 에서 AttributeError 로 키 접속이 통째로 죽는다.
+    """
+    global _key_classes_cache
+    if _key_classes_cache is None:
+        paramiko = _paramiko()
+        _key_classes_cache = tuple(
+            cls for cls in (getattr(paramiko, name, None) for name in _KEY_CLASS_NAMES) if cls
+        )
+    return _key_classes_cache
 
 
 def load_private_key(path, passphrase=None):
     last_err = None
-    for key_cls in _KEY_CLASSES:
+    for key_cls in _key_classes():
         try:
             return key_cls.from_private_key_file(path, password=passphrase)
         except Exception as e:
@@ -67,6 +91,7 @@ def build_connect_kwargs(target, timeout=10):
 
 def connect(target, timeout=10):
     """접속된 paramiko.SSHClient를 반환. 실패 시 paramiko/OS 예외를 그대로 올린다."""
+    paramiko = _paramiko()
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     client.connect(**build_connect_kwargs(target, timeout=timeout))

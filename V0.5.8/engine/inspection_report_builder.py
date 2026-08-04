@@ -26,9 +26,8 @@ from pathlib import Path
 
 from core.paths import sanitize_component
 from engine.profile_manager import profile_manager
-from report.inspection_excel import (
+from report.inspection_status import (
     STATUS_NA, STATUS_OK, STATUS_UNREACHABLE, STATUS_WARN,
-    build_workbook, evaluate_device, load_template, split_transcript,
 )
 
 REPORTS_SUBDIR = "reports"
@@ -40,6 +39,19 @@ _LOG_NAME_RE = re.compile(r"^AutoCheck_(?P<device>.+)_(?P<date>\d{8})_(?P<time>\
 
 class InspectionReportError(Exception):
     """보고서 생성에 필요한 전제(원본로그 등)가 없을 때."""
+
+
+def _excel():
+    """report.inspection_excel 을 필요할 때 가져온다.
+
+    그 모듈은 최상단에서 openpyxl 을 import 한다(스타일 상수를 모듈 레벨에서 만들기 때문에
+    미룰 수 없다). 여기서 모듈 레벨로 import 하면 api/inspection_report_api.py 를 거쳐
+    앱 시작 경로가 openpyxl 전체를 끌어온다(이전 측정(Windows): 269 ms).
+    보고서를 실제로 만들 때만 필요하므로 그때 가져온다.
+    """
+    from report import inspection_excel
+
+    return inspection_excel
 
 
 # --------------------------------------------------------------------------- 경로
@@ -244,7 +256,7 @@ def build_context(customer_name: str, profile_name: str, *, project_id=None,
     장비목록에는 있는데 원본로그가 없는 장비는 '접속 불가'로 포함해 빈 시트를 남긴다 —
     보고서에서 아예 빠지면 점검 누락과 구분이 안 되기 때문(LGES 보고서의 '접속 불가' 표기 방식).
     """
-    template = load_template(template_path)
+    template = _excel().load_template(template_path)
     meta = template["meta"]
     logs = latest_logs_by_device(customer_name, profile_name)
     inventory = _inventory_by_name(project_id)
@@ -264,8 +276,8 @@ def build_context(customer_name: str, profile_name: str, *, project_id=None,
     for name in names:
         log = logs.get(name)
         record = inventory.get(name, {})
-        sections = split_transcript(log["text"]) if log else {}
-        items = evaluate_device(sections, template) if sections else []
+        sections = _excel().split_transcript(log["text"]) if log else {}
+        items = _excel().evaluate_device(sections, template) if sections else []
         previous_values = previous.get(name, {})
         for item in items:
             item["previous"] = previous_values.get(item["name"], "")
@@ -343,7 +355,7 @@ def export_report(customer_name: str, profile_name: str, *, filename=None, **kwa
     """보고서 엑셀을 data/<고객사>/<프로파일>/reports/ 에 저장하고 결과를 반환한다.
     폴더가 없으면 만든다. 반환: {path, filename, device_count, warn_count}."""
     context = build_context(customer_name, profile_name, **kwargs)
-    workbook = build_workbook(context)
+    workbook = _excel().build_workbook(context)
     target_dir = reports_dir(customer_name, profile_name)
     name = filename or build_filename(customer_name, profile_name,
                                        date=context["inspection_date"])

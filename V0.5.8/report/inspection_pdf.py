@@ -35,7 +35,7 @@ from reportlab.platypus import (
     BaseDocTemplate, Frame, PageBreak, PageTemplate, Paragraph, Spacer, Table, TableStyle,
 )
 
-from report.inspection_excel import STATUS_OK
+from report.inspection_status import STATUS_OK
 
 FONT_R = "ReportKR"
 FONT_B = "ReportKR-Bold"

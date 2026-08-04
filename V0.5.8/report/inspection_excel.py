@@ -27,17 +27,17 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 from core.paths import AppPaths
+# 판정 상태 문자열은 openpyxl 과 무관하므로 report/inspection_status.py 로 내렸다.
+# 여기서 재노출해 기존 import 경로(`from report.inspection_excel import STATUS_OK`)를 지킨다.
+from report.inspection_status import (
+    STATUS_NA, STATUS_OK, STATUS_UNREACHABLE, STATUS_WARN,
+)
 from report.textfsm_parser import split_raw_log
 
 __all__ = [
     "load_template", "split_transcript", "evaluate_device", "build_workbook",
     "STATUS_OK", "STATUS_WARN", "STATUS_NA", "STATUS_UNREACHABLE",
 ]
-
-STATUS_OK = "정상"
-STATUS_WARN = "확인필요"
-STATUS_NA = "미수집"
-STATUS_UNREACHABLE = "접속 불가"
 
 _TEMPLATE_PATH = "inspection_report_template.yaml"
 
