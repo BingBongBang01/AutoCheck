@@ -183,6 +183,16 @@ class RunManager:
         run = self._get_run_handle(customer, profile_name, run_id)
         return run, self._read_session(run), self._read_metadata(run)
 
+    def load_run_metadata(self, customer: str, profile_name: str, run_id: str):
+        """(RunHandle, RunMetadata) — session.json 은 읽지 않는다.
+
+        list_runs() 가 이미 run 마다 session.json 을 읽어 요약을 돌려주므로, 그 뒤에
+        load_run() 을 부르면 같은 파일을 두 번 읽는다. 목록을 훑으면서 metadata 만 더
+        필요한 호출부(api/workspace_api.py 의 워크스페이스 스냅샷)를 위한 것이다.
+        """
+        run = self._get_run_handle(customer, profile_name, run_id)
+        return run, self._read_metadata(run)
+
     def list_runs(self, customer: str, profile_name: str) -> list:
         """최신 run이 앞에 오도록 session.json 요약 목록을 반환한다."""
         run_ids = self._profile_manager.list_runs(customer, profile_name)
@@ -197,12 +207,35 @@ class RunManager:
         summaries.sort(key=lambda s: s.get("run_id", ""), reverse=True)
         return summaries
 
-    def get_active_run(self, customer: str, profile_name: str) -> Optional[RunHandle]:
+    def get_active_run(self, customer: str, profile_name: str,
+                       summaries: list = None) -> Optional[RunHandle]:
         """모듈들이 '지금 진행 중인 run'에 접근하는 표준 경로. 캐시에 없으면 session.json에서
-        RUNNING/PAUSED 상태인 가장 최근 run을 찾아 복구한다(예: 프로세스 재시작 후 재접근)."""
+        RUNNING/PAUSED 상태인 가장 최근 run을 찾아 복구한다(예: 프로세스 재시작 후 재접근).
+
+        summaries: list_runs() 결과를 이미 갖고 있으면 넘긴다(최신 먼저 정렬 가정).
+        그러면 session.json 을 다시 읽지 않고 그 요약으로 판정한다.
+
+        왜 필요한가: 진행 중인 run 이 **없으면** 캐시가 채워지지 않으므로 호출마다 모든 run 의
+        session.json 을 훑는다. 워크스페이스 탭은 대개 그 상태에서 폴링되므로(작업 중이 아님)
+        run 개수만큼의 파일 읽기가 폴링마다 반복됐다. 판정 규칙(RUNNING/PAUSED 중 최신)을
+        호출부로 복사하지 않기 위해 인자를 받는 쪽을 택했다 — 규칙이 두 곳에 있으면 어긋난다.
+        """
         key = self._key(customer, profile_name)
         if key in self._active_runs:
             return self._active_runs[key]
+
+        if summaries is not None:
+            for summary in summaries:      # list_runs()는 최신 먼저
+                if summary.get("status") not in (RunStatus.RUNNING.value, RunStatus.PAUSED.value):
+                    continue
+                try:
+                    run = self._get_run_handle(customer, profile_name, summary["run_id"])
+                except RunManagerError:
+                    continue
+                self._active_runs[key] = run
+                return run
+            return None
+
         for run_id in reversed(self._profile_manager.list_runs(customer, profile_name)):
             try:
                 run = self._get_run_handle(customer, profile_name, run_id)

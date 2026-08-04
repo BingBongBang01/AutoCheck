@@ -62,24 +62,98 @@ class WorkspaceApiMixin:
         except RunManagerError:
             return None
 
+    # ---- Workspace 스냅샷(단일 스캔) -------------------------------------------------
+    #
+    # 예전에는 get_workspace_overview() 가 get_run_history() 와 get_current_run_status() 를
+    # 각각 불렀고, 세 메서드가 저마다 활성 고객사/프로파일을 해석하고 run 목록을 다시 읽었다.
+    # 그 결과 run 하나당 session.json + metadata.json + health_score.json + 리포트 목록을
+    # 여러 번 읽는 N+1 이 됐다(실측: run 20개 18.4 ms, 50개 50.6 ms). 워크스페이스 탭은
+    # 폴링되므로(작업 중 1초 / 유휴 5초) 그 비용이 반복해서 든다.
+    #
+    # 이제 run 목록을 한 번만 훑어 필요한 것을 모두 모으고, 세 공개 메서드는 그것을 읽는다.
+    # 공개 시그니처와 반환 형태는 그대로다(web_ui/js/workspace.js 가 셋 다 호출한다).
+
+    def _workspace_snapshot(self):
+        """이 요청에서 필요한 워크스페이스 데이터를 한 번의 스캔으로 모은다.
+
+        반환: {customer, profile, rows, active_run, active_row} 또는 컨텍스트가 없으면 None.
+          rows       : Run History 표 행(최신 먼저). load 실패한 run 은 빠진다.
+          active_run : 진행 중인 run, 없으면 가장 최근 run, 그것도 없으면 None.
+                       판정 규칙은 _active_run() 과 같아야 한다.
+        """
+        customer_name, profile_name = self._active_customer_profile()
+        if not customer_name or not profile_name:
+            return None
+
+        # run 목록을 한 번만 읽는다. 진행 중 run 판정에도 이 요약을 그대로 넘긴다 —
+        # 그러지 않으면 get_active_run() 이 session.json 을 전부 다시 읽는다(진행 중 run 이
+        # 없으면 캐시가 비어 있어 매번 훑는데, 폴링 시 대개 그 상태다).
+        summaries = rmgr.list_runs(customer_name, profile_name)
+
+        # 진행 중인 run 이 목록의 '가장 최근'과 다를 수 있다(_active_run() 과 같은 우선순위).
+        active_run = rmgr.get_active_run(customer_name, profile_name, summaries=summaries)
+
+        rows = []
+        handles = {}         # run_id -> RunHandle
+        for summary in summaries:
+            run_id = summary["run_id"]
+            try:
+                # load_run() 이 아니라 load_run_metadata() 를 쓴다 — list_runs() 가 이미 이 run 의
+                # session.json 을 읽어 summary 를 만들었으므로, load_run() 을 부르면 같은 파일을
+                # 두 번 읽는다. session 값은 summary 에 다 들어 있다(RunSession.to_dict()).
+                run, metadata = rmgr.load_run_metadata(customer_name, profile_name, run_id)
+            except RunManagerError:
+                continue
+            handles[run_id] = run
+            health = storage_service.load_json(run, "analysis/health_score.json", default=None)
+            reports = repmgr.list_reports(run)
+            rows.append({
+                "customer": customer_name, "profile": profile_name, "run_id": run_id,
+                "execution_time": summary.get("start_time"), "status": summary.get("status"),
+                "health_score": (health or {}).get("project_score"),
+                "device_count": metadata.device_count, "command_count": metadata.command_count,
+                "report_count": len(reports),
+                # 아래 두 개는 내부용 — 공개 응답에서는 빼고 쓴다(get_run_history 의 계약 유지).
+                "_summary": summary, "_reports": reports,
+            })
+
+        if active_run is None and rows:
+            # 진행 중인 run 이 없으면 가장 최근 run. list_runs 는 최신순이므로 rows[0] 이다.
+            active_run = handles[rows[0]["run_id"]]
+
+        active_row = next((r for r in rows if active_run is not None
+                           and r["run_id"] == active_run.run_id), None)
+        return {
+            "customer": customer_name, "profile": profile_name,
+            "rows": rows, "active_run": active_run, "active_row": active_row,
+        }
+
+    @staticmethod
+    def _public_row(row):
+        """내부 필드(_summary/_reports)를 뺀 Run History 행."""
+        return {key: value for key, value in row.items() if not key.startswith("_")}
+
     # ---- Workspace Information / Run History ---------------------------------------
 
     def get_workspace_overview(self):
         """'Workspace' 탭 전체 데이터 — Customer/Profile 컨텍스트, Run History,
         Current Run Status, Recent Reports/Exports/Logs를 한 번에 반환."""
-        customer_name, profile_name = self._active_customer_profile()
-        if not customer_name or not profile_name:
+        snapshot = self._workspace_snapshot()
+        if snapshot is None:
             return {"error": "활성 고객사/프로파일이 없습니다."}
 
-        latest_run = self._active_run()
-        recent_reports = repmgr.list_reports(latest_run)[:10] if latest_run else []
+        latest_run = snapshot["active_run"]
+        active_row = snapshot["active_row"]
+        # 리포트 목록은 스냅샷이 이미 읽어 뒀다 — 활성 run 것이면 재사용한다.
+        recent_reports = (active_row["_reports"] if active_row is not None
+                          else (repmgr.list_reports(latest_run) if latest_run else []))[:10]
         recent_exports = repmgr.list_exports(latest_run)[:10] if latest_run else []
         recent_logs = lmgr.list_logs(latest_run, "raw")[:10] if latest_run else []
 
         return {
-            "customer": customer_name, "profile": profile_name,
-            "run_history": self.get_run_history(),
-            "current_run": self.get_current_run_status(),
+            "customer": snapshot["customer"], "profile": snapshot["profile"],
+            "run_history": [self._public_row(row) for row in snapshot["rows"]],
+            "current_run": self._current_run_from(snapshot),
             "recent_reports": recent_reports, "recent_exports": recent_exports,
             "recent_logs": recent_logs,
         }
@@ -87,44 +161,60 @@ class WorkspaceApiMixin:
     def get_run_history(self):
         """Run History 표: Customer/Profile/Run ID/Execution Time/Status/Health Score/
         Device Count/Command Count/Report Count. 최신 run이 먼저 온다."""
-        customer_name, profile_name = self._active_customer_profile()
-        if not customer_name or not profile_name:
+        snapshot = self._workspace_snapshot()
+        if snapshot is None:
             return []
-        rows = []
-        for summary in rmgr.list_runs(customer_name, profile_name):
-            run_id = summary["run_id"]
-            try:
-                run, _, metadata = rmgr.load_run(customer_name, profile_name, run_id)
-            except RunManagerError:
-                continue
-            health = storage_service.load_json(run, "analysis/health_score.json", default=None)
-            rows.append({
-                "customer": customer_name, "profile": profile_name, "run_id": run_id,
-                "execution_time": summary.get("start_time"), "status": summary.get("status"),
-                "health_score": (health or {}).get("project_score"),
-                "device_count": metadata.device_count, "command_count": metadata.command_count,
-                "report_count": len(repmgr.list_reports(run)),
-            })
+        rows = [self._public_row(row) for row in snapshot["rows"]]
         return rows
 
     def get_current_run_status(self):
         """진행 중(또는 가장 최근) Run의 상태 카드용 요약. Run이 하나도 없으면 None."""
-        customer_name, profile_name = self._active_customer_profile()
-        run = self._active_run()
+        return self._current_run_from(self._workspace_snapshot())
+
+    def _current_run_from(self, snapshot):
+        """스냅샷에서 Current Run Status 카드를 만든다 — 파일을 다시 읽지 않는다."""
+        if snapshot is None:
+            return None
+        run = snapshot["active_run"]
         if run is None:
             return None
+
+        row = snapshot["active_row"]
+        if row is None:
+            # 활성 run 이 목록에 없는 드문 경우(방금 만들어져 아직 목록에 안 잡힌 run 등)
+            # 에만 직접 읽는다 — 예전과 같은 결과를 내되, 흔한 경로에서는 일어나지 않는다.
+            row = self._row_for_run(snapshot, run)
+            if row is None:
+                return None
+
+        # session 값은 list_runs() 요약 dict 에서 그대로 온다 — session.json 재읽기 없음.
+        summary = row["_summary"]
+        return {
+            "customer": snapshot["customer"], "profile": snapshot["profile"], "run_id": run.run_id,
+            "execution_time": summary.get("start_time"), "status": summary.get("status"),
+            "progress": summary.get("progress"), "health_score": row["health_score"],
+            "device_count": row["device_count"], "command_count": row["command_count"],
+            "success_count": summary.get("success_count"), "failed_count": summary.get("failed_count"),
+            "skipped_count": summary.get("skipped_count"), "report_count": row["report_count"],
+        }
+
+    def _row_for_run(self, snapshot, run):
+        """스냅샷에 없는 run 하나를 읽어 행 형태로 만든다(폴백 경로). 실패하면 None."""
         try:
-            _, session, metadata = rmgr.load_run(customer_name, profile_name, run.run_id)
+            _, session, metadata = rmgr.load_run(snapshot["customer"], snapshot["profile"],
+                                                 run.run_id)
         except RunManagerError:
             return None
         health = storage_service.load_json(run, "analysis/health_score.json", default=None)
+        reports = repmgr.list_reports(run)
         return {
-            "customer": customer_name, "profile": profile_name, "run_id": run.run_id,
+            "customer": snapshot["customer"], "profile": snapshot["profile"], "run_id": run.run_id,
             "execution_time": session.start_time, "status": session.status,
-            "progress": session.progress, "health_score": (health or {}).get("project_score"),
+            "health_score": (health or {}).get("project_score"),
             "device_count": metadata.device_count, "command_count": metadata.command_count,
-            "success_count": session.success_count, "failed_count": session.failed_count,
-            "skipped_count": session.skipped_count, "report_count": len(repmgr.list_reports(run)),
+            "report_count": len(reports),
+            # 다른 행과 같은 모양으로 맞춘다 — 소비하는 쪽(_current_run_from)이 dict 만 본다.
+            "_summary": session.to_dict(), "_reports": reports,
         }
 
     # ---- Profile 조작(Archive만 신규 — Create/Rename/Delete/Copy는 이미 존재) -----------------
