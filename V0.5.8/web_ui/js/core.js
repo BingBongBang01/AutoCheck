@@ -213,3 +213,60 @@ function renderComingSoon(title, desc) {
       </div>
     </div>`;
 }
+
+// ===== 적응형 폴러 =====
+// 작업 진행률 폴링은 원래 setInterval(fn, 1000) 이었다. 두 가지 문제가 있었다:
+//
+//  1) 작업이 하나도 없어도 초당 1회씩 pywebview 브리지를 계속 두드린다. 분석/리포트 작업은
+//     사용자가 버튼을 눌러야 시작되므로, 앱을 켜 두고 아무것도 안 하는 시간이 대부분이다.
+//  2) setInterval 은 콜백이 끝나기를 기다리지 않는다. 브리지 호출이 1초보다 오래 걸리면
+//     (대량 로그 스캔 중에는 실제로 그렇다) 호출이 겹쳐 쌓인다.
+//
+// 그래서 체인 setTimeout 으로 바꾸고, 진행 중인 작업이 없으면 주기를 늘린다. 사용자가 작업을
+// 시작하는 순간 wake() 로 즉시 빠른 주기로 돌아온다 — 완료 토스트가 늦게 뜨면 안 되기 때문이다.
+// tick()  : 한 번의 폴링에서 할 일 전부(조회 + 화면 반영). 주기 결정에 쓸 상태를 반환한다.
+// isBusy(): tick() 이 반환한 것을 보고 "지금 바쁜가"를 판정한다. 참이면 activeMs, 아니면 idleMs.
+//
+// 조회와 렌더를 fetch/onData 로 쪼개지 않는다 — 그렇게 만들었다가 기존 폴러를 옮기는 과정에서
+// 렌더 로직이 어느 쪽에도 안 들어간 채 존재하지 않는 함수를 부르는 상태가 됐다. 호출부가
+// 이미 "한 함수가 조회하고 그린다" 모양이므로 계약도 그 모양이어야 한다.
+function createAdaptivePoller({ tick, isBusy, activeMs = 1000, idleMs = 5000 }) {
+  let timer = null;
+  let stopped = false;
+  let running = false;
+
+  async function runOnce() {
+    if (stopped) return;
+    running = true;
+    let busy = false;
+    try {
+      const state = await tick();
+      busy = !!(state && isBusy(state));
+    } catch (err) {
+      // 폴링은 실패해도 계속 살아 있어야 한다 — 한 번의 브리지 오류로 진행 표시가
+      // 영구히 멈추면 사용자는 작업이 멈춘 것으로 오해한다.
+      console.warn('폴링 실패(계속 진행):', err);
+    } finally {
+      running = false;
+    }
+    schedule(busy ? activeMs : idleMs);
+  }
+
+  function schedule(ms) {
+    if (stopped) return;
+    clearTimeout(timer);
+    timer = setTimeout(runOnce, ms);
+  }
+
+  return {
+    start() { stopped = false; runOnce(); return this; },
+    stop() { stopped = true; clearTimeout(timer); },
+    // 버튼을 누른 직후처럼 '지금 당장 상태가 바뀌었을' 때 부른다.
+    // 이미 tick 이 돌고 있으면 아무것도 하지 않는다 — 그 tick 이 끝나면서 스스로 주기를 다시 정한다.
+    wake() {
+      if (stopped || running) return;
+      clearTimeout(timer);
+      timer = setTimeout(runOnce, 0);
+    },
+  };
+}

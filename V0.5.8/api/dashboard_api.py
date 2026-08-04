@@ -67,8 +67,7 @@ class DashboardApiMixin:
         반환: {devices: {device: {...}}, total_lines, abnormal_lines, keyword_counts, latest_mtime}
         """
         from api.report_api import _latest_terminal_log_paths_by_device
-        from api.log_file_browser_api import _read_text_auto
-        from engine.log_analysis import analyze_text
+        from engine.log_cache import cached_findings, cached_log_text
 
         paths_by_device = _latest_terminal_log_paths_by_device(project_id)
 
@@ -84,9 +83,10 @@ class DashboardApiMixin:
         keyword_counts = Counter()
         keyword_severity = {}
         for device, (mtime, path) in paths_by_device.items():
-            text = _read_text_auto(path)
+            # 같은 로그를 보고서/Findings/AI 분석도 파싱한다 — 파일이 바뀌지 않았으면 공유한다.
+            text = cached_log_text(path)
             lines = text.splitlines()
-            findings = analyze_text(text)
+            findings = cached_findings(path, text=text)
             hit_count = sum(f.get("repeat", 1) for f in findings)
             crit = sum(f.get("repeat", 1) for f in findings
                        if _dashboard_severity(f.get("severity")) == "critical")

@@ -36,10 +36,12 @@ def _latest_terminal_log_paths_by_device(project_id):
 
 def _latest_terminal_logs_by_device(project_id):
     """장비별 최신 점검 로그 원문 — {device: raw_text}. 점검 로그 탭 -> 보고서 탭 흐름의 데이터 소스."""
-    from api.log_file_browser_api import _read_text_auto
+    from engine.log_cache import cached_log_text
     result = {}
     for device, (_, path) in _latest_terminal_log_paths_by_device(project_id).items():
-        result[device] = _read_text_auto(path)
+        # 이 함수는 보고서/Findings/점검로그 요약에서 여러 번 불린다(report_api 4곳 +
+        # log_file_browser_api 1곳). 파일이 바뀌지 않았으면 전문을 재사용한다.
+        result[device] = cached_log_text(path)
     return result
 
 

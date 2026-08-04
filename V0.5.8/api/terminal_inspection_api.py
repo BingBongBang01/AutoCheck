@@ -8,6 +8,7 @@ import shutil
 import threading
 import datetime
 
+from core.log_naming import build_inspection_log_name
 from core.ansi_sanitizer import clean_terminal_log, strip_ansi
 from api.terminal_session_api import _sessions, _sessions_lock, _wait_for_settled_output, _PROMPT_TAIL_RE
 from core.paths import AppPaths
@@ -126,11 +127,12 @@ def _run_one_session_inspection(session_id, commands, results_dirs):
         return
 
     text = "\n".join(output_lines)
-    stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    # 파일명 규칙(만드는 쪽)도 core/log_naming.py 를 쓴다 — 읽는 쪽과 같은 출처여야 한다.
+    log_name = build_inspection_log_name(device)
     saved_paths = []
     for results_dir in results_dirs:
         os.makedirs(results_dir, exist_ok=True)
-        fname = os.path.join(results_dir, f"{stamp}_raw_{device}.txt")
+        fname = os.path.join(results_dir, log_name)
         with open(fname, "w", encoding="utf-8") as f:
             f.write(text)
         saved_paths.append(fname)
@@ -225,7 +227,8 @@ class TerminalInspectionApiMixin:
                     started_at = getattr(monitor, "_started_at", 0) or 0
                     if time.time() - started_at <= 600:
                         from engine import log_analysis
-                        from api.log_file_browser_api import _parse_terminal_session_filename, _read_text_auto
+                        from api.log_file_browser_api import _parse_terminal_session_filename
+                        from engine import log_cache
                         import uuid
 
                         log_analysis.run_analysis(log_paths["original"], log_paths["problem"])
@@ -234,9 +237,9 @@ class TerminalInspectionApiMixin:
                         paths = sorted(glob.glob(os.path.join(log_paths["original"], "*.txt")))
                         for path in paths:
                             device = _parse_terminal_session_filename(os.path.basename(path))
-                            raw_text = _read_text_auto(path)
-
-                            findings = log_analysis.analyze_text(raw_text)
+                            # run_analysis() 가 바로 위에서 이 파일들을 이미 파싱했다.
+                            # 캐시를 거치면 두 번째 파싱이 일어나지 않는다.
+                            findings = log_cache.cached_findings(path)
                             for finding in findings:
                                 new_alerts.append({
                                     "device": device,

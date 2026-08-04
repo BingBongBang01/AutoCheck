@@ -15,7 +15,6 @@ DEFAULT_CATALOG_PATH = "config/commands_catalog.yaml"
 CATEGORY_LABELS = {"essential": "필수", "optional": "선택사항", "custom": "커스텀"}
 EXCEL_HEADERS = ["순서", "카테고리", "사용여부", "커맨드", "설명"]
 
-import pandas as pd
 from core.paths import AppPaths
 
 EXCEL_DEFAULT_PATH = str(AppPaths.bundle_root() / "config" / "commands_catalog_default.xlsx")
@@ -26,7 +25,12 @@ def _make_default_catalog():
         print(f"경고: 기본 커맨드 엑셀 파일이 없습니다. ({EXCEL_DEFAULT_PATH}) 빈 카탈로그로 초기화합니다.")
         return catalog
         
+    # pandas 는 이 함수(기본 카탈로그 엑셀 1회 읽기)에서만 쓴다. 모듈 최상단에서 import 하면
+    # api/base.py 가 command_catalog 를 모듈 레벨로 끌어오므로 앱을 켤 때마다 pandas 전체가
+    # 로드된다(이전 측정(Windows): 665 ms). 실제로 필요한 순간까지 미룬다.
     try:
+        import pandas as pd
+
         df = pd.read_excel(EXCEL_DEFAULT_PATH)
         for idx, row in df.iterrows():
             command_text = str(row.get("커맨드", "")).strip()

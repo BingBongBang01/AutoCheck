@@ -15,7 +15,7 @@ import time
 import datetime
 import threading
 
-from api.log_file_browser_api import _read_text_auto
+from core.log_naming import device_from_log_name, stamp_or_unknown
 from core.paths import AppPaths
 from api.job_runner import JobRunner
 
@@ -376,13 +376,19 @@ class LogAnalysisRunApiMixin:
             "baseline_source_kind": self._baseline_store().source_kind,
         }
 
-    def get_realtime_monitor_state(self, tail=120):
-        """연결 탭 하단 3분할 패널 폴링용 — 장비별 실시간 로그 + 체크리스트 + 오류 분석."""
+    def get_realtime_monitor_state(self, tail=120, since=None):
+        """연결 탭 하단 3분할 패널 폴링용 — 장비별 실시간 로그 + 체크리스트 + 오류 분석.
+
+        since: 프론트엔드가 마지막으로 받은 위치({epoch, devices:{장비:seq}, versions:{...}}).
+               넘기면 **바뀐 것만** 돌려준다(OPTIMIZATION_PLAN 3-1). 실측(장비 30대, tail=160):
+               전체 701.7 KB -> 델타 6.8 KB, 0.8초 폴링 기준 877 KB/s -> 8.5 KB/s.
+               생략하면 예전과 똑같이 전체를 돌려준다 — 프론트엔드가 강제 재동기화할 때 쓴다.
+        """
         watcher = getattr(self, "_baseline_stream_watcher", None)
         monitor = self._realtime_monitor()
         # 프로파일을 바꾼 뒤 이 탭을 열면 그 프로파일의 지난 감시 결과가 보여야 한다.
         self._sync_realtime_profile()
-        state = monitor.state(tail=int(tail or 120))
+        state = monitor.state(tail=int(tail or 120), since=since)
         state["running"] = bool(watcher and watcher.is_running())
         # 감시가 도는데도 화면이 비어 있을 때 원인을 바로 보여준다 — 대개 파일-장비 매칭 실패다.
         status = watcher.status() if watcher else {}
@@ -839,6 +845,7 @@ class LogAnalysisRunApiMixin:
 
             from ai_analysis.router import analyze_raw_log_text
             from engine.log_analysis import extract_suspicious_context
+            from engine.log_cache import cached_findings, cached_log_text
 
             problem_dir = profile_paths["problem"]
             results = []
@@ -847,10 +854,13 @@ class LogAnalysisRunApiMixin:
             total = len(paths)
             self._jobs().set(ai_mode, total=total, current=0, message="분석 중...")
             for i, path in enumerate(paths):
-                raw_text = _read_text_auto(path)
-                
-                # 원문 전체가 아닌, 의심되는 블록 주위 텍스트만 추출하여 AI에 전달 (비용 및 품질 최적화)
-                context_text = extract_suspicious_context(raw_text)
+                raw_text = cached_log_text(path)
+
+                # 원문 전체가 아닌, 의심되는 블록 주위 텍스트만 추출하여 AI에 전달 (비용 및 품질
+                # 최적화). 판정은 규칙기반 분석/대시보드가 이미 했을 수 있으므로 캐시된 것을 넘긴다 —
+                # 예전에는 extract_suspicious_context 가 내부에서 analyze_text 를 다시 돌렸다.
+                context_text = extract_suspicious_context(
+                    raw_text, findings=cached_findings(path, text=raw_text))
                 
                 if not context_text.strip():
                     analysis_text = "이 로그에서는 이상 징후를 발견하지 못했습니다."
@@ -872,21 +882,9 @@ class LogAnalysisRunApiMixin:
                 if analysis_text.startswith("[AI 분석 오류]"):
                     print(f"[AI 분석] 실패: {os.path.basename(path)} -> {analysis_text}")
                 
-                fname = os.path.basename(path)
-                body = fname[:-len(".txt")] if fname.endswith(".txt") else fname
-                if body.startswith("AutoCheck_"):
-                    body_no_prefix = body[len("AutoCheck_"):]
-                    parts = body_no_prefix.rsplit("_", 2)
-                    if len(parts) == 3:
-                        device, stamp = parts[0], f"{parts[1]}_{parts[2]}"
-                    else:
-                        device, stamp = body_no_prefix, "unknown_time"
-                else:
-                    parts = body.split("_", 3)
-                    if len(parts) == 4:
-                        stamp, device = f"{parts[0]}_{parts[1]}", parts[3]
-                    else:
-                        stamp, device = "unknown_time", body
+                # 파일명 규칙 해석은 core/log_naming.py 단일 출처(engine/log_analysis.py 와 동일).
+                device = device_from_log_name(path)
+                stamp = stamp_or_unknown(path)
                 
                 ai_mode_str = "LocalAI" if ai_mode == "local" else "CloudAI"
                 out_name = f"{ai_mode_str}_{stamp}_{device}_problems.txt"

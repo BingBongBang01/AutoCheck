@@ -80,9 +80,10 @@ function syncLogAnalysisPaneWithJobs(jobs) {
   }
 }
 
+// 한 번의 폴링: 상태 조회 -> 상단바/탭 반영 -> 완료 감지. 주기 결정을 위해 jobs 를 반환한다.
 async function pollAnalysisJobs() {
   const jobs = await call('get_analysis_jobs_status');
-  if (!jobs) return;
+  if (!jobs) return null;
 
   renderAnalysisStatusBar(jobs);
   syncLogAnalysisPaneWithJobs(jobs);
@@ -109,7 +110,15 @@ async function pollAnalysisJobs() {
     }
   }
   analysisJobsPrev = jobs;
+  return jobs;
 }
 
-setInterval(pollAnalysisJobs, 1000);
-pollAnalysisJobs();
+// 진행 중인 분석이 없으면 5초 주기로 늘린다 — 세 작업(program/local/cloud)은 사용자가
+// 버튼을 눌러야 시작되므로 대부분의 시간은 유휴다. 분석 시작 버튼 핸들러가
+// analysisPoller.wake() 를 부르면 즉시 다시 빠른 주기로 돌아온다(완료 토스트가 늦으면 안 된다).
+const analysisPoller = createAdaptivePoller({
+  tick: pollAnalysisJobs,
+  isBusy: (jobs) => Object.values(jobs).some(j => j.status === 'running'),
+  activeMs: 1000,
+  idleMs: 5000,
+}).start();

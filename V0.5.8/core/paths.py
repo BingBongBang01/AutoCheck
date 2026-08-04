@@ -31,6 +31,11 @@ class AppPaths:
 
     _root = None
     _user_data_root = None
+    # 이미 mkdir 을 호출한 경로들 — _ensure() 가 프로세스당 한 번만 시스콜을 내게 한다.
+    _ensured = set()
+    # 하위 폴더 접근자가 돌려줄 Path 객체 캐시. mkdir 을 건너뛰어도 매 호출 Path 를 새로
+    # 조립하면(user_data_root() / "data") 여전히 3 us 가 든다 — 객체까지 캐시해야 0.2 us 가 된다.
+    _subdir_cache = {}
 
     @classmethod
     def app_root(cls) -> Path:
@@ -99,31 +104,72 @@ class AppPaths:
 
     @staticmethod
     def _ensure(path: Path) -> Path:
-        path.mkdir(parents=True, exist_ok=True)
+        """폴더를 보장하고 돌려준다 — 같은 경로에 대해 mkdir 은 프로세스당 한 번만 호출한다.
+
+        왜 캐시하는가: data_root() / config_root() / logs_root() / crt_log_root() 같은 접근자는
+        호출될 때마다 mkdir(parents=True, exist_ok=True) 시스콜을 냈다. 실측 9.2~9.8 us/call
+        (Linux) / 64.8 us/call (이전 측정, Windows) 인데, 이미 캐시돼 있는 app_root() 는
+        0.1 us 다. 폴링 경로(0.8초 주기의 get_realtime_monitor_state 등)가 이 접근자를 여러 번
+        부르므로, 앱이 유휴 상태에서도 계속 디스크에 쓰기를 시도하고 있었다.
+
+        절감폭 자체는 작다(폴링 1회당 수십 us). 이 변경의 진짜 값은 "아무 일도 안 할 때
+        디스크를 건드리지 않는다"는 것이다 — 과대평가하지 말 것.
+
+        받아들이는 대가: 앱이 도는 중에 사용자가 탐색기에서 폴더를 지우면 이 함수는 다시
+        만들어 주지 않는다. 실제 쓰기 경로는 각자 makedirs 를 하므로(core/atomic_io.py,
+        engine/realtime_monitor.save_snapshot, engine/log_storage.open_in_file_explorer)
+        데이터가 유실되지는 않고, 읽기/감시 경로는 폴더가 없으면 조용히 건너뛴다.
+        """
+        key = str(path)
+        if key not in AppPaths._ensured:
+            path.mkdir(parents=True, exist_ok=True)
+            AppPaths._ensured.add(key)
         return path
+
+    @classmethod
+    def forget_ensured(cls):
+        """폴더 생성 캐시를 비운다 — 테스트가 임시 디렉터리로 루트를 바꿀 때 필요하다.
+
+        운영 코드에서 부를 일은 없다. 캐시를 비우면 다음 접근자 호출이 다시 mkdir 을 한다.
+        """
+        cls._ensured.clear()
+        cls._subdir_cache.clear()
+
+    @classmethod
+    def _subdir(cls, name: str) -> Path:
+        """user_data_root()/<name> 을 보장하고 돌려준다 — Path 객체까지 캐시한다.
+
+        이 접근자들은 폴링 경로에서 반복 호출되므로(0.8초 주기) mkdir 뿐 아니라 Path 조립
+        비용도 없애야 의미가 있다. 실측: mkdir 만 캐시 3.1 us -> Path 까지 캐시 0.2 us.
+        """
+        cached = cls._subdir_cache.get(name)
+        if cached is None:
+            cached = cls._ensure(cls.user_data_root() / name)
+            cls._subdir_cache[name] = cached
+        return cached
 
     @classmethod
     def data_root(cls) -> Path:
         """고객사별 데이터(프로파일/인벤토리/커맨드/베이스라인/실행기록) 최상위 루트."""
-        return cls._ensure(cls.user_data_root() / "data")
+        return cls._subdir("data")
 
     @classmethod
     def labs_root(cls) -> Path:
         """(레거시) 채점 프로젝트 정의(stages.yaml/target_state.yaml 등) 저장 위치."""
-        return cls._ensure(cls.user_data_root() / "labs")
+        return cls._subdir("labs")
 
     @classmethod
     def config_root(cls) -> Path:
-        return cls._ensure(cls.user_data_root() / "config")
+        return cls._subdir("config")
 
     @classmethod
     def history_root(cls) -> Path:
         """(레거시) 채점 모드(grading) 세션 히스토리."""
-        return cls._ensure(cls.user_data_root() / "history")
+        return cls._subdir("history")
 
     @classmethod
     def logs_root(cls) -> Path:
-        return cls._ensure(cls.user_data_root() / "logs")
+        return cls._subdir("logs")
 
     @classmethod
     def raw_logs_root(cls) -> Path:
@@ -144,7 +190,7 @@ class AppPaths:
     def crt_log_root(cls) -> Path:
         """SecureCRT 세션 로그 자동 연동용 글로벌 저장소 위치.
         Documents/AutoCheck/CRTlog/ 에 쌓인 로그들을 활성 프로파일로 자동 매핑/복사한다."""
-        return cls._ensure(cls.user_data_root() / "CRTlog")
+        return cls._subdir("CRTlog")
 
 
 def sanitize_component(name: str) -> str:

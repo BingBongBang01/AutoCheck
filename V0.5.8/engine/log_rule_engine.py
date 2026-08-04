@@ -39,6 +39,19 @@ import json
 
 SEVERITY_ORDER = ["info", "minor", "major", "critical"]
 
+# --------------------------------------------------------------------------- 줄 단위 메모
+# 판정 핫패스(match_signature / find_keyword)는 같은 줄을 반복해서 본다 — 장비마다 같은
+# 인터페이스 표가 나오기 때문이다. 메모는 RuleEngine 인스턴스에 붙고, get_engine() 이 프로세스
+# 싱글턴이므로 **점검 회차 전체(장비 N대 파일)가 하나의 메모를 공유**한다. 이게 핵심이다:
+# 파일마다 메모를 새로 만들면 이득이 1.05배로 사라지고(한 파일 안에서는 포트 번호가 달라
+# 줄이 대부분 고유하다), 회차를 공유하면 장비 8대에서 3.2배, 20대에서 3.9배가 된다.
+_MEMO_MISS = object()
+
+# 메모 엔트리 상한. 줄 하나가 평균 100~200바이트라고 보면 5만 줄은 수~십 MB 규모로,
+# 로그 전문을 이미 메모리에 들고 있는 이 앱에서는 부담이 되지 않는다. 상한이 없으면
+# 고유 줄이 수백만인 로그(타임스탬프가 전부 다른 syslog 덤프)에서 메모리가 계속 늘어난다.
+_MEMO_MAX_ENTRIES = 50_000
+
 
 def severity_rank(sev):
     try:
@@ -86,20 +99,43 @@ def load_rules(path=None):
 
 def _compile_patterns(entries):
     """[{pattern, scope, ...}] -> [(compiled_pattern, compiled_scope|None, entry)]
-    scope는 '이 규칙이 어떤 show 명령의 출력에서만 유효한지'를 나타내는 정규식이다."""
+    scope는 '이 규칙이 어떤 show 명령의 output에서만 유효한지'를 나타내는 정규식이다.
+
+    예전에는 이 함수가 `except Exception: continue` 로 모든 실패를 삼켰다. 그래서 두 가지가
+    구별되지 않았다:
+
+      * 주석 엔트리 — config/log_rules.json 의 signatures 배열에는 `{"_comment": "..."}` 만
+        담긴 항목이 2개 있다. 배열 순서가 곧 우선순위이므로(먼저 맞는 것이 이긴다) 그 순서
+        제약을 **그 위치에서** 설명하는 문서다. 배열 밖으로 옮기면 어느 규칙에 대한 설명인지
+        알 수 없게 되므로 그대로 두고, 여기서 조용히 건너뛴다.
+      * 정규식 오타 — 이쪽은 조용히 사라지면 안 된다. 규칙 하나가 아무 신호 없이 빠지고,
+        그 규칙이 잡던 장애를 앱이 '이상 없음'으로 보고한다. 점검 도구에서 가장 나쁜 실패다.
+
+    그래서 주석은 건너뛰고, 컴파일 실패는 경고를 남긴다. print 를 쓰는 이유는
+    core/app_logger.py 의 install_print_capture() 가 print 를 앱 로그로 캡처하기 때문이다.
+    """
     compiled = []
-    for e in entries or []:
-        try:
-            rx = re.compile(e["pattern"], re.IGNORECASE)
-        except Exception:
+    for entry in entries or []:
+        if "pattern" not in entry:
+            # 주석 전용 항목 — 위치로 순서 제약을 설명한다. 경고할 일이 아니다.
             continue
+        try:
+            rx = re.compile(entry["pattern"], re.IGNORECASE)
+        except re.error as exc:
+            print(f"[규칙 오류] 서명 '{entry.get('id', '(id 없음)')}' 의 pattern 을 컴파일할 수 "
+                  f"없어 이 규칙을 건너뜁니다: {exc} / pattern={entry['pattern']!r}")
+            continue
+
         scope = None
-        if e.get("scope"):
+        if entry.get("scope"):
             try:
-                scope = re.compile(e["scope"], re.IGNORECASE)
-            except Exception:
-                scope = None
-        compiled.append((rx, scope, e))
+                scope = re.compile(entry["scope"], re.IGNORECASE)
+            except re.error as exc:
+                # scope 가 None 이 되면 규칙이 '모든 명령'에 적용된다 — 좁히려던 규칙이
+                # 넓어지는 것이므로 조용히 넘기면 오탐이 늘어난다.
+                print(f"[규칙 오류] 서명 '{entry.get('id', '(id 없음)')}' 의 scope 를 컴파일할 수 "
+                      f"없어 명령 범위 제한 없이 적용됩니다: {exc} / scope={entry['scope']!r}")
+        compiled.append((rx, scope, entry))
     return compiled
 
 
@@ -203,6 +239,19 @@ class Suppressor:
         self.patterns = _compile_patterns(rules.get("suppressions"))
         self.counter_columns = {c.upper() for c in rules.get("counter_columns", [])}
 
+        # 구조 억제 판정 메모 (check() 주석 참고). scope 를 가진 suppression 이 하나라도
+        # 있으면 ctx.command 에 의존하게 되므로 메모를 켜지 않는다.
+        self._structural_memo = {}
+        self._memo_safe = all(scope is None for _rx, scope, _entry in self.patterns)
+        self._memo_requested = True
+
+    @property
+    def memo_enabled(self):
+        return self._memo_safe and self._memo_requested
+
+    def set_memo_enabled(self, enabled):
+        self._memo_requested = bool(enabled)
+
     def counter_value(self, line, keyword):
         """줄에서 keyword에 결합된 카운터 수치를 읽는다. 카운터 표현이 아니면 None.
         여러 개면 최댓값(하나라도 0이 아니면 실제 문제이므로)."""
@@ -223,7 +272,28 @@ class Suppressor:
         include_config_scope=False로 부르면 'running-config 구간이라 억제'만 건너뛴다 —
         명시 서명(3층)은 스스로 scope 조건을 갖고 있으므로 설정 구간이라는 이유만으로
         지워버리면 안 되지만, 0인 카운터·기능 목록표·범례 같은 구조적 억제는 서명에도
-        똑같이 적용되어야 하기 때문이다("Ports errdisabled : False" 같은 줄)."""
+        똑같이 적용되어야 하기 때문이다("Ports errdisabled : False" 같은 줄).
+
+        **구조 억제 호출(keyword=None, include_config_scope=False)은 메모한다.**
+        evaluate() 가 모든 줄에 대해 맨 처음 부르는 그 호출이 판정 시간의 큰 몫을 차지하는데
+        (메모 도입 후 evaluate 의 약 45%), 그 형태에서는 ctx 를 통해 읽는 것이 is_legend(line)
+        하나뿐이고 그건 줄에 대한 정규식이다 — 즉 줄만의 순수 함수다. suppression 규칙 중
+        scope 를 가진 것이 하나도 없어야 성립하므로(현재 0/10) _memo_safe 로 게이트한다.
+
+        ctx 가 None 인 호출은 메모하지 않는다 — 그때는 is_legend 검사를 건너뛰어 결과가
+        달라지므로, 같은 줄이 ctx 유무에 따라 다른 답을 낸다.
+        """
+        if (keyword is None and not include_config_scope
+                and ctx is not None and self.memo_enabled):
+            hit = self._structural_memo.get(line, _MEMO_MISS)
+            if hit is _MEMO_MISS:
+                hit = self._check_uncached(line, keyword, ctx, include_config_scope)
+                if len(self._structural_memo) < _MEMO_MAX_ENTRIES:
+                    self._structural_memo[line] = hit
+            return hit
+        return self._check_uncached(line, keyword, ctx, include_config_scope)
+
+    def _check_uncached(self, line, keyword=None, ctx=None, include_config_scope=True):
         lowered = line.lower()
         for phrase in self.benign_phrases:
             if phrase in lowered:
@@ -265,7 +335,41 @@ class SignatureMatcher:
         self.keyword_severity = {k.upper(): v for k, v in (rules.get("keyword_severity") or {}).items()}
         self.default_severity = rules.get("default_severity", "major")
 
+        # --- 줄 단위 메모 (핫패스) ---
+        # match_signature 는 줄마다 서명 31개를 순차로 훑는다. 실측으로 evaluate() 시간의
+        # 약 56% 를 여기서 쓴다. 실제 수집 로그는 장비마다 같은 표(포트 48개)를 반복하므로
+        # 중복률이 높고(합성 현실 코퍼스 73%), 같은 줄을 다시 판정하는 것이 대부분이다.
+        #
+        # 안전성: 이 함수가 ctx 를 읽는 곳은 `if scope and not scope.search(ctx.command)` 뿐이다.
+        # 모든 서명의 scope 가 None 이면 그 분기는 절대 실행되지 않으므로 '줄 문자열만의 순수
+        # 함수'가 되어 메모가 안전하다. scope 를 가진 서명이 하나라도 생기면 메모를 끈다.
+        self._memo = {}
+        # scope 를 가진 서명이 하나라도 있으면 메모가 정확하지 않다 — 그때는 아예 못 켜게 한다.
+        self._memo_safe = all(scope is None for _rx, scope, _entry in self.signatures)
+        # 실제로 메모를 쓸지. 정확성 게이트(_memo_safe)와 사용자 스위치를 곱한 값이다.
+        self._memo_requested = True
+
+    @property
+    def memo_enabled(self):
+        return self._memo_safe and self._memo_requested
+
+    def set_memo_enabled(self, enabled):
+        """벤치마크/테스트용 스위치. _memo_safe 가 False 면 켜도 켜지지 않는다."""
+        self._memo_requested = bool(enabled)
+
     def match_signature(self, line, ctx):
+        if not self.memo_enabled:
+            return self._match_signature_uncached(line, ctx)
+        hit = self._memo.get(line, _MEMO_MISS)
+        if hit is _MEMO_MISS:
+            hit = self._match_signature_uncached(line, ctx)
+            # 상한에 닿으면 더 담지 않는다. 캐시를 비우지 않는 이유: 고유 줄이 아주 많은
+            # 로그에서 비우고 다시 채우기를 반복하면(진동) 캐시 없는 것보다 느려진다.
+            if len(self._memo) < _MEMO_MAX_ENTRIES:
+                self._memo[line] = hit
+        return hit
+
+    def _match_signature_uncached(self, line, ctx):
         for rx, scope, entry in self.signatures:
             if scope and not scope.search(ctx.command or ""):
                 continue
@@ -467,8 +571,53 @@ class RuleEngine:
         self.signatures = SignatureMatcher(self.rules)
         self.correlator = Correlator(self.rules)
 
+        # find_keyword 는 ctx 를 아예 받지 않으므로 언제나 줄만의 순수 함수다 — 조건 없이
+        # 메모할 수 있다(서명 쪽 _memo_safe 게이트가 필요 없는 이유).
+        self._keyword_memo = {}
+        self._keyword_memo_enabled = True
+
     def find_keyword(self, line):
-        return next((kw for kw, rx in self.keyword_res.items() if rx.search(line)), None)
+        if not self._keyword_memo_enabled:
+            return next((kw for kw, rx in self.keyword_res.items() if rx.search(line)), None)
+        hit = self._keyword_memo.get(line, _MEMO_MISS)
+        if hit is _MEMO_MISS:
+            hit = next((kw for kw, rx in self.keyword_res.items() if rx.search(line)), None)
+            if len(self._keyword_memo) < _MEMO_MAX_ENTRIES:
+                self._keyword_memo[line] = hit
+        return hit
+
+    def memo_stats(self):
+        """메모 상태 — 진단/테스트용. 상한에 닿았는지 확인할 수 있어야 한다."""
+        return {
+            "signature_entries": len(self.signatures._memo),
+            "signature_memo_enabled": self.signatures.memo_enabled,
+            "suppressor_entries": len(self.suppressor._structural_memo),
+            "suppressor_memo_enabled": self.suppressor.memo_enabled,
+            "keyword_entries": len(self._keyword_memo),
+            "keyword_memo_enabled": self._keyword_memo_enabled,
+            "max_entries": _MEMO_MAX_ENTRIES,
+        }
+
+    def clear_memo(self):
+        """메모를 비운다 — 벤치마크가 '파일 단위'와 '회차 공유'를 구분해 재려면 필요하다."""
+        self.signatures._memo.clear()
+        self.suppressor._structural_memo.clear()
+        self._keyword_memo.clear()
+
+    def set_memo_enabled(self, enabled):
+        """메모를 켜고 끈다 — 벤치마크의 before/after 비교와 결과 동일성 테스트용.
+
+        운영 코드가 부를 일은 없다. 이 스위치가 있어야 "메모가 판정을 바꾸지 않는다"를
+        같은 엔진으로 직접 대조할 수 있고, 벤치마크도 '메모 없는 기준선'을 정직하게 잴 수 있다.
+        끄면 메모도 비운다 — 껐다 켰을 때 낡은 항목이 남아 있으면 안 된다.
+
+        주의: 서명 메모는 scope 를 가진 서명이 하나라도 있으면 enabled=True 로도 켜지지 않는다
+        (정확성 게이트가 우선한다).
+        """
+        self._keyword_memo_enabled = bool(enabled)
+        self.signatures.set_memo_enabled(enabled)
+        self.suppressor.set_memo_enabled(enabled)
+        self.clear_memo()
 
     def evaluate(self, line, ctx):
         """한 줄을 판정. 이상이면 dict, 아니면 None.

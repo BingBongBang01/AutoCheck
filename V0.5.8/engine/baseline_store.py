@@ -10,6 +10,7 @@
 import glob
 import os
 import re
+from core.text_io import read_log_text
 
 from core.ansi_sanitizer import clean_terminal_log
 
@@ -196,8 +197,7 @@ class BaselineStore:
         devices, sources = {}, {}
         for device, (_mtime, path) in latest.items():
             try:
-                from api.log_file_browser_api import _read_text_auto
-                raw = _read_text_auto(path)
+                raw = read_log_text(path)
             except (OSError, UnicodeDecodeError):
                 continue
             devices[device] = parse_baseline_text(raw)

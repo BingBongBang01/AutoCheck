@@ -16,6 +16,8 @@ import re
 
 from api.report_api import _latest_terminal_logs_by_device
 from core.paths import AppPaths
+from core.log_naming import device_from_log_name, parse_inspection_log_name
+from core.text_io import read_log_text
 
 
 def _allowed_log_roots(extra_dirs=()):
@@ -27,29 +29,18 @@ def _allowed_log_roots(extra_dirs=()):
 
 
 def _read_text_auto(abs_path):
-    """UTF-8(BOM 포함)으로 우선 시도하고, 과거에 시스템 기본 인코딩(cp949 등)으로 저장된
-    레거시 로그 파일이면 cp949로 재시도한다. 둘 다 실패하면 깨진 문자를 치환해서라도 반환."""
-    with open(abs_path, "rb") as f:
-        raw = f.read()
-    for encoding in ("utf-8-sig", "cp949"):
-        try:
-            return raw.decode(encoding)
-        except UnicodeDecodeError:
-            continue
-    return raw.decode("utf-8", errors="replace")
+    """UTF-8(BOM 포함) -> cp949 -> 치환 순으로 로그를 읽는다.
+
+    구현은 core/text_io.py 로 옮겼다(같은 규칙이 세 곳에 중복돼 있었고, 그중 하나는
+    engine 이 api 를 참조하는 역방향 import 로 이 함수를 쓰고 있었다). 기존 호출부가
+    많아 이름은 그대로 두고 위임한다.
+    """
+    return read_log_text(abs_path)
 
 
 def _parse_terminal_session_filename(fname):
-    """새 형식: {YYYYMMDD}_{HHMMSS}_{Type}_{device}.txt -> device
-    기존 형식: AutoCheck_{device}_{YYYYMMDD}_{HHMMSS}.txt -> device (하위 호환)"""
-    body = fname[:-len(".txt")] if fname.endswith(".txt") else fname
-    if body.startswith("AutoCheck_"):
-        body_no_prefix = body[len("AutoCheck_"):]
-        parts = body_no_prefix.rsplit("_", 2)
-        return parts[0] if len(parts) == 3 else body_no_prefix
-    else:
-        parts = body.split("_", 3)
-        return parts[3] if len(parts) == 4 else body
+    """파일명 -> 장비명. 규칙은 core/log_naming.py 단일 출처(호출부가 많아 이름만 유지)."""
+    return device_from_log_name(fname)
 
 
 class LogFileBrowserApiMixin:
@@ -102,13 +93,7 @@ class LogFileBrowserApiMixin:
         분석 결과가 계속 보인다 — 원본이 사라지면 그 결과도 함께 사라져야 한다.
         분석 결과 이름 규칙은 engine/log_analysis.run_analysis()·start_ai_log_analysis()의
         "{접두어}{stamp}_{device}_problems.txt", 마스킹은 "{원본이름}_masked.txt"."""
-        body = fname[:-len(".txt")] if fname.lower().endswith(".txt") else fname
-        if body.startswith("AutoCheck_"):
-            parts = body[len("AutoCheck_"):].rsplit("_", 2)
-            device, stamp = (parts[0], f"{parts[1]}_{parts[2]}") if len(parts) == 3 else (body, None)
-        else:
-            parts = body.split("_", 3)
-            stamp, device = (f"{parts[0]}_{parts[1]}", parts[3]) if len(parts) == 4 else (None, body)
+        device, stamp = parse_inspection_log_name(fname)
 
         targets = []
         problem_names = []
