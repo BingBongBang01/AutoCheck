@@ -86,20 +86,43 @@ def load_rules(path=None):
 
 def _compile_patterns(entries):
     """[{pattern, scope, ...}] -> [(compiled_pattern, compiled_scope|None, entry)]
-    scope는 '이 규칙이 어떤 show 명령의 출력에서만 유효한지'를 나타내는 정규식이다."""
+    scope는 '이 규칙이 어떤 show 명령의 output에서만 유효한지'를 나타내는 정규식이다.
+
+    예전에는 이 함수가 `except Exception: continue` 로 모든 실패를 삼켰다. 그래서 두 가지가
+    구별되지 않았다:
+
+      * 주석 엔트리 — config/log_rules.json 의 signatures 배열에는 `{"_comment": "..."}` 만
+        담긴 항목이 2개 있다. 배열 순서가 곧 우선순위이므로(먼저 맞는 것이 이긴다) 그 순서
+        제약을 **그 위치에서** 설명하는 문서다. 배열 밖으로 옮기면 어느 규칙에 대한 설명인지
+        알 수 없게 되므로 그대로 두고, 여기서 조용히 건너뛴다.
+      * 정규식 오타 — 이쪽은 조용히 사라지면 안 된다. 규칙 하나가 아무 신호 없이 빠지고,
+        그 규칙이 잡던 장애를 앱이 '이상 없음'으로 보고한다. 점검 도구에서 가장 나쁜 실패다.
+
+    그래서 주석은 건너뛰고, 컴파일 실패는 경고를 남긴다. print 를 쓰는 이유는
+    core/app_logger.py 의 install_print_capture() 가 print 를 앱 로그로 캡처하기 때문이다.
+    """
     compiled = []
-    for e in entries or []:
-        try:
-            rx = re.compile(e["pattern"], re.IGNORECASE)
-        except Exception:
+    for entry in entries or []:
+        if "pattern" not in entry:
+            # 주석 전용 항목 — 위치로 순서 제약을 설명한다. 경고할 일이 아니다.
             continue
+        try:
+            rx = re.compile(entry["pattern"], re.IGNORECASE)
+        except re.error as exc:
+            print(f"[규칙 오류] 서명 '{entry.get('id', '(id 없음)')}' 의 pattern 을 컴파일할 수 "
+                  f"없어 이 규칙을 건너뜁니다: {exc} / pattern={entry['pattern']!r}")
+            continue
+
         scope = None
-        if e.get("scope"):
+        if entry.get("scope"):
             try:
-                scope = re.compile(e["scope"], re.IGNORECASE)
-            except Exception:
-                scope = None
-        compiled.append((rx, scope, e))
+                scope = re.compile(entry["scope"], re.IGNORECASE)
+            except re.error as exc:
+                # scope 가 None 이 되면 규칙이 '모든 명령'에 적용된다 — 좁히려던 규칙이
+                # 넓어지는 것이므로 조용히 넘기면 오탐이 늘어난다.
+                print(f"[규칙 오류] 서명 '{entry.get('id', '(id 없음)')}' 의 scope 를 컴파일할 수 "
+                      f"없어 명령 범위 제한 없이 적용됩니다: {exc} / scope={entry['scope']!r}")
+        compiled.append((rx, scope, entry))
     return compiled
 
 

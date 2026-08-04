@@ -186,11 +186,13 @@ def test_rules_file_shape_is_unchanged():
 
 
 def test_two_signature_entries_are_comment_only():
-    """알려진 결함을 고정 — signature 33개 중 2개는 pattern 이 없는 주석 전용 엔트리다.
+    """signature 33개 중 2개는 pattern 이 없는 주석 전용 엔트리다 — 의도된 문서다.
 
-    _compile_patterns() 가 KeyError 를 삼켜서 조용히 31개만 컴파일된다. 정규식에 오타가 나도
-    같은 방식으로 규칙이 사라지므로, 이 테스트는 OPTIMIZATION_PLAN 1-4 를 적용할 때
-    '무엇이 바뀌는지'의 기준점 역할을 한다.
+    배열 순서가 곧 우선순위이므로(먼저 맞는 것이 이긴다) 이 주석들은 순서 제약을 **그 위치에서**
+    설명한다(예: index 4 는 "앞의 4개가 뒤쪽 일반 규칙보다 먼저 와야 한다"). 그래서 배열 밖으로
+    옮기지 않고 그대로 두며, _compile_patterns() 가 조용히 건너뛴다(OPTIMIZATION_PLAN 1-4).
+
+    개수를 고정하는 이유는 컴파일되는 서명이 31개라는 성능 전제를 지키기 위함이다.
     """
     with open(_rule_file_path(), encoding="utf-8-sig") as stream:
         raw = json.load(stream)
@@ -238,3 +240,63 @@ def test_find_keyword_ignores_context(engine):
     assert engine.find_keyword(line) == engine.find_keyword(line)
     # 같은 줄이면 맥락과 무관하게 같은 키워드가 나온다.
     assert engine.find_keyword(line) is not None
+
+
+# --------------------------------------------------------------------------- 규칙 컴파일 진단
+
+
+def test_comment_entries_are_skipped_silently(capsys):
+    """주석 전용 엔트리는 경고 없이 건너뛴다 — 정상적인 문서이므로 시끄러우면 안 된다."""
+    from engine.log_rule_engine import _compile_patterns
+
+    entries = [
+        {"_comment": "이 아래 규칙들은 순서가 중요하다"},
+        {"id": "ok", "pattern": r"down"},
+    ]
+    compiled = _compile_patterns(entries)
+    assert len(compiled) == 1
+    assert compiled[0][2]["id"] == "ok"
+    assert capsys.readouterr().out == "", "주석 엔트리에 대해 경고를 냈다"
+
+
+def test_broken_pattern_is_reported(capsys):
+    """정규식 오타는 경고를 남긴다.
+
+    예전에는 `except Exception: continue` 가 삼켜서, 규칙 하나가 아무 신호 없이 사라졌다.
+    그 규칙이 잡던 장애를 앱은 '이상 없음'으로 보고한다 — 점검 도구에서 가장 나쁜 실패다.
+    """
+    from engine.log_rule_engine import _compile_patterns
+
+    compiled = _compile_patterns([{"id": "broken_rule", "pattern": r"([unclosed"}])
+    assert compiled == []
+    output = capsys.readouterr().out
+    assert "broken_rule" in output
+    assert "규칙 오류" in output
+
+
+def test_broken_scope_is_reported_but_rule_kept(capsys):
+    """scope 컴파일 실패는 경고하고 규칙은 살린다.
+
+    scope 가 None 이 되면 규칙이 모든 명령에 적용된다 — 좁히려던 규칙이 넓어지므로
+    조용히 넘기면 오탐이 늘어난다. 그래도 규칙 자체를 버리는 것보다는 낫다.
+    """
+    from engine.log_rule_engine import _compile_patterns
+
+    compiled = _compile_patterns([{"id": "bad_scope", "pattern": r"down", "scope": r"([unclosed"}])
+    assert len(compiled) == 1
+    assert compiled[0][1] is None, "scope 가 None 으로 떨어져야 한다"
+    output = capsys.readouterr().out
+    assert "bad_scope" in output
+    assert "범위 제한 없이" in output
+
+
+def test_real_rules_file_compiles_without_warnings(capsys):
+    """실제 config/log_rules.json 에 정규식 오타가 없는지 — 배포 전 확인용.
+
+    이 테스트가 실패하면 어떤 규칙이 조용히 빠지고 있다는 뜻이다.
+    """
+    from engine.log_rule_engine import RuleEngine, load_rules
+
+    RuleEngine(load_rules())
+    output = capsys.readouterr().out
+    assert "규칙 오류" not in output, f"규칙 파일에 컴파일 실패가 있다:\n{output}"
