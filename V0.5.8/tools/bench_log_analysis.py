@@ -278,11 +278,34 @@ def measure_realtime_state(repeat):
         } for i in range(300)])
 
         low, _median, _spread = _timed(lambda: monitor.state(tail=160), repeat)
-        payload_kb = len(json.dumps(monitor.state(tail=160), ensure_ascii=False).encode()) / 1024.0
+        payload_kb = _payload_kb(monitor.state(tail=160))
         result[f"state_dev{count}_ms"] = round(low, 3)
         result[f"state_dev{count}_payload_kb"] = round(payload_kb, 1)
         result[f"state_dev{count}_kb_per_sec"] = round(payload_kb / POLL_INTERVAL_SEC, 1)
+
+        # 델타 폴링(3-1). 이것이 실제로 화면이 쓰는 경로다 — 전체 payload 는 첫 폴링과
+        # 강제 재동기화에서만 쓴다. 두 가지를 재는데, 둘 다 실사용 회차의 모양이다:
+        #   quiet  — 새 줄이 없는 회차. 대부분의 폴링이 여기다(사람이 명령을 치는 속도 <<
+        #            0.8초 폴링). 섹션 생략만으로 얼마까지 줄어드는지.
+        #   active — 장비마다 한 줄이 새로 들어온 회차. 수용 기준(50 KB/s)은 이걸로 본다.
+        full = monitor.state(tail=160)
+        cursor = {"epoch": full["epoch"], "versions": dict(full["versions"]),
+                  "devices": {d["device"]: d["line_seq"] for d in full["devices"]}}
+        quiet_kb = _payload_kb(monitor.state(tail=160, since=cursor))
+        for device in devices:
+            monitor.append_lines(device, f"{device} show running-config | include ntp")
+        active_kb = _payload_kb(monitor.state(tail=160, since=cursor))
+
+        result[f"state_dev{count}_delta_quiet_kb"] = round(quiet_kb, 2)
+        result[f"state_dev{count}_delta_kb"] = round(active_kb, 2)
+        result[f"state_dev{count}_delta_kb_per_sec"] = round(active_kb / POLL_INTERVAL_SEC, 1)
+        # 배수도 남긴다 — 절대값만 보면 tail/장비 수를 바꿨을 때 퇴행인지 조건 변경인지 갈린다.
+        result[f"state_dev{count}_delta_shrink"] = round(payload_kb / active_kb, 1) if active_kb else 0.0
     return result
+
+
+def _payload_kb(payload):
+    return len(json.dumps(payload, ensure_ascii=False).encode()) / 1024.0
 
 
 def run_benchmark(devices, seed, repeat):
@@ -319,7 +342,7 @@ def run_benchmark(devices, seed, repeat):
 # suffix 매칭(endswith)을 쓰면 match_signature_memo_speedup_run 처럼 뒤에 범위가 붙은
 # 이름이 조용히 검사에서 빠진다 — 실제로 그 버그로 메모 이득 퇴행이 감지되지 않았다.
 # 그래서 부분 문자열로 판정한다.
-_HIGHER_IS_BETTER_MARKERS = ("_speedup", "hit_ratio")
+_HIGHER_IS_BETTER_MARKERS = ("_speedup", "hit_ratio", "_shrink")
 _LOWER_IS_BETTER_MARKERS = ("_ms", "_kb", "us_per_evaluated_line")
 
 # 측정 잡음 지표와 순수 기술 정보 — 퇴행 판정에서 제외한다.
@@ -355,6 +378,14 @@ def _noise_floor(name):
     0.26 ms 흔들린 것이 +83.9% 로 잡혀 퇴행으로 보고됐다. 0.26 ms 는 어떤 사용자도
     체감하지 못하는 차이다. 상대·절대 조건을 **둘 다** 넘겨야 퇴행으로 본다.
     """
+    # 델타 payload 는 전체 payload 보다 두 자리 작다(8 KB 대 700 KB). 아래의 전체 payload 기준
+    # 바닥값(5 KB / 10 KB/s)을 그대로 쓰면 1 KB -> 4 KB 같은 4배 퇴행이 조용히 통과한다.
+    # 크기 지표는 애초에 측정 잡음이 없다(같은 입력이면 JSON 이 바이트 단위로 같다) — 바닥값은
+    # '이 정도 변화는 신경 쓸 필요 없다'는 뜻일 뿐이므로 작게 잡는 것이 맞다.
+    if "_delta" in name and "_kb_per_sec" in name:
+        return 1.0         # 1 KB/s
+    if "_delta" in name and "_kb" in name:
+        return 0.5         # 0.5 KB
     if "_kb_per_sec" in name:
         return 10.0        # 10 KB/s 미만 변화는 의미 없다
     if "_kb" in name:
@@ -363,7 +394,7 @@ def _noise_floor(name):
         return 2.0         # 2 us/line
     if "_ms" in name:
         return 2.0         # 2 ms
-    if "_speedup" in name or "hit_ratio" in name:
+    if "_speedup" in name or "hit_ratio" in name or "_shrink" in name:
         return 0.1         # 0.1배 / 10%p
     return 0.0
 

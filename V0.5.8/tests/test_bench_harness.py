@@ -67,6 +67,11 @@ def test_benchmark_records_platform_and_config(result):
     ("match_signature_memo_speedup_run", "higher"),
     ("find_keyword_memo_speedup_per_file", "higher"),
     ("memo_hit_ratio_run", "higher"),
+    # 3-1 델타 폴링 — 크기는 작아야 하고, 감소 배수는 커야 한다.
+    ("state_dev30_delta_kb", "lower"),
+    ("state_dev30_delta_quiet_kb", "lower"),
+    ("state_dev30_delta_kb_per_sec", "lower"),
+    ("state_dev30_delta_shrink", "higher"),
     # 잡음/기술 정보는 비교 대상이 아니다.
     ("analyze_text_spread", None),
     ("analyze_text_median_ms", None),   # 대표값(min)과 중복이라 잡음 오탐만 낸다
@@ -201,9 +206,36 @@ def test_small_speedup_wobble_is_ignored():
     ("us_per_evaluated_line", 2.0),
     ("match_signature_memo_speedup_run", 0.1),
     ("memo_hit_ratio_run", 0.1),
+    # 델타 payload 는 전체보다 두 자리 작다 — 전체 기준 바닥값을 쓰면 배수 단위 퇴행이 통과한다.
+    ("state_dev30_delta_kb", 0.5),
+    ("state_dev30_delta_quiet_kb", 0.5),
+    ("state_dev30_delta_kb_per_sec", 1.0),
+    ("state_dev30_delta_shrink", 0.1),
 ])
 def test_noise_floor_values(name, expected):
     assert bench._noise_floor(name) == expected
+
+
+def test_delta_payload_regression_is_caught():
+    """델타가 배수로 커지는 퇴행을 잡아야 한다.
+
+    전체 payload 기준 바닥값(5 KB)을 그대로 쓰면 6.8 KB -> 20 KB 도 절대 조건에서 걸러져
+    조용히 통과한다 — 3-1 의 이득이 전부 이 숫자에 있으므로 그러면 게이트가 없는 것과 같다.
+    """
+    baseline = _fake({"state_dev30_delta_quiet_kb": 6.8, "state_dev30_delta_shrink": 72.0})
+    current = _fake({"state_dev30_delta_quiet_kb": 20.0, "state_dev30_delta_shrink": 24.0})
+    regressions, _improvements = bench.compare_with_baseline(current, baseline)
+    names = {name for name, _prev, _cur, _change in regressions}
+    assert "state_dev30_delta_quiet_kb" in names, f"델타 크기 퇴행을 놓쳤다: {regressions}"
+    assert "state_dev30_delta_shrink" in names, f"감소 배수 퇴행을 놓쳤다: {regressions}"
+
+
+def test_delta_payload_noise_is_ignored():
+    """반대로 0.2 KB 흔들림은 퇴행이 아니다 — 오탐이 한 번이라도 나면 게이트를 아무도 안 믿는다."""
+    baseline = _fake({"state_dev30_delta_quiet_kb": 6.76})
+    current = _fake({"state_dev30_delta_quiet_kb": 6.94})
+    regressions, _improvements = bench.compare_with_baseline(current, baseline)
+    assert regressions == []
 
 
 # --------------------------------------------------------------------------- 판정 불가 처리
