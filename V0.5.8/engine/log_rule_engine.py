@@ -239,6 +239,19 @@ class Suppressor:
         self.patterns = _compile_patterns(rules.get("suppressions"))
         self.counter_columns = {c.upper() for c in rules.get("counter_columns", [])}
 
+        # 구조 억제 판정 메모 (check() 주석 참고). scope 를 가진 suppression 이 하나라도
+        # 있으면 ctx.command 에 의존하게 되므로 메모를 켜지 않는다.
+        self._structural_memo = {}
+        self._memo_safe = all(scope is None for _rx, scope, _entry in self.patterns)
+        self._memo_requested = True
+
+    @property
+    def memo_enabled(self):
+        return self._memo_safe and self._memo_requested
+
+    def set_memo_enabled(self, enabled):
+        self._memo_requested = bool(enabled)
+
     def counter_value(self, line, keyword):
         """줄에서 keyword에 결합된 카운터 수치를 읽는다. 카운터 표현이 아니면 None.
         여러 개면 최댓값(하나라도 0이 아니면 실제 문제이므로)."""
@@ -259,7 +272,28 @@ class Suppressor:
         include_config_scope=False로 부르면 'running-config 구간이라 억제'만 건너뛴다 —
         명시 서명(3층)은 스스로 scope 조건을 갖고 있으므로 설정 구간이라는 이유만으로
         지워버리면 안 되지만, 0인 카운터·기능 목록표·범례 같은 구조적 억제는 서명에도
-        똑같이 적용되어야 하기 때문이다("Ports errdisabled : False" 같은 줄)."""
+        똑같이 적용되어야 하기 때문이다("Ports errdisabled : False" 같은 줄).
+
+        **구조 억제 호출(keyword=None, include_config_scope=False)은 메모한다.**
+        evaluate() 가 모든 줄에 대해 맨 처음 부르는 그 호출이 판정 시간의 큰 몫을 차지하는데
+        (메모 도입 후 evaluate 의 약 45%), 그 형태에서는 ctx 를 통해 읽는 것이 is_legend(line)
+        하나뿐이고 그건 줄에 대한 정규식이다 — 즉 줄만의 순수 함수다. suppression 규칙 중
+        scope 를 가진 것이 하나도 없어야 성립하므로(현재 0/10) _memo_safe 로 게이트한다.
+
+        ctx 가 None 인 호출은 메모하지 않는다 — 그때는 is_legend 검사를 건너뛰어 결과가
+        달라지므로, 같은 줄이 ctx 유무에 따라 다른 답을 낸다.
+        """
+        if (keyword is None and not include_config_scope
+                and ctx is not None and self.memo_enabled):
+            hit = self._structural_memo.get(line, _MEMO_MISS)
+            if hit is _MEMO_MISS:
+                hit = self._check_uncached(line, keyword, ctx, include_config_scope)
+                if len(self._structural_memo) < _MEMO_MAX_ENTRIES:
+                    self._structural_memo[line] = hit
+            return hit
+        return self._check_uncached(line, keyword, ctx, include_config_scope)
+
+    def _check_uncached(self, line, keyword=None, ctx=None, include_config_scope=True):
         lowered = line.lower()
         for phrase in self.benign_phrases:
             if phrase in lowered:
@@ -557,6 +591,8 @@ class RuleEngine:
         return {
             "signature_entries": len(self.signatures._memo),
             "signature_memo_enabled": self.signatures.memo_enabled,
+            "suppressor_entries": len(self.suppressor._structural_memo),
+            "suppressor_memo_enabled": self.suppressor.memo_enabled,
             "keyword_entries": len(self._keyword_memo),
             "keyword_memo_enabled": self._keyword_memo_enabled,
             "max_entries": _MEMO_MAX_ENTRIES,
@@ -565,6 +601,7 @@ class RuleEngine:
     def clear_memo(self):
         """메모를 비운다 — 벤치마크가 '파일 단위'와 '회차 공유'를 구분해 재려면 필요하다."""
         self.signatures._memo.clear()
+        self.suppressor._structural_memo.clear()
         self._keyword_memo.clear()
 
     def set_memo_enabled(self, enabled):
@@ -579,6 +616,7 @@ class RuleEngine:
         """
         self._keyword_memo_enabled = bool(enabled)
         self.signatures.set_memo_enabled(enabled)
+        self.suppressor.set_memo_enabled(enabled)
         self.clear_memo()
 
     def evaluate(self, line, ctx):

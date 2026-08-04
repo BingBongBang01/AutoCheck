@@ -244,3 +244,102 @@ def test_verdicts_still_correct_past_the_cap(engine, monkeypatch):
 def test_cap_is_a_sane_value():
     """상한이 의미 있는 크기인지 — 너무 작으면 이득이 없고, 없으면 메모리가 새어 나간다."""
     assert 1_000 <= _MEMO_MAX_ENTRIES <= 1_000_000
+
+
+# --------------------------------------------------------------------------- 억제 계층 메모
+
+
+def test_suppressor_memo_is_enabled_by_default(engine):
+    stats = engine.memo_stats()
+    assert stats["suppressor_memo_enabled"] is True
+    assert stats["suppressor_entries"] == 0
+
+
+def test_suppressor_memo_matches_unmemoized(singleton):
+    """억제 메모 on/off 로 회차 전체 판정이 같은지 — 억제는 오탐 방지의 핵심이다."""
+    corpora = build_device_corpora(devices=20, seed=7)
+
+    singleton.set_memo_enabled(True)
+    with_memo = [analyze_text(text) for _device, text in corpora]
+    assert singleton.memo_stats()["suppressor_entries"] > 0, "억제 메모가 채워지지 않았다"
+
+    singleton.set_memo_enabled(False)
+    without_memo = [analyze_text(text) for _device, text in corpora]
+
+    for index, (a, b) in enumerate(zip(with_memo, without_memo)):
+        assert finding_key(a) == finding_key(b), f"장비 {index + 1} 의 판정이 달라졌다"
+
+
+def test_structural_check_memoized_only_for_that_call_shape(engine):
+    """메모하는 것은 evaluate() 의 1차 호출 형태(keyword=None, include_config_scope=False)뿐이다.
+
+    다른 형태는 ctx.is_config / counter_value 에 의존하므로 줄만으로 결정되지 않는다.
+    """
+    ctx = ContextTracker()
+    line = "  0 input errors, 0 CRC, 0 frame"
+
+    engine.suppressor.check(line, None, ctx, include_config_scope=False)
+    assert engine.memo_stats()["suppressor_entries"] == 1
+
+    # 키워드를 주는 호출은 메모에 들어가지 않는다.
+    engine.suppressor.check(line, "CRC", ctx)
+    assert engine.memo_stats()["suppressor_entries"] == 1
+
+
+def test_ctx_none_is_not_memoized(engine):
+    """ctx 가 None 이면 is_legend 검사를 건너뛰어 결과가 달라진다 — 메모에 섞이면 안 된다.
+
+    범례 줄("   U - In Use    D - Down")은 ctx 가 있을 때만 억제된다. 이 두 결과가 같은
+    키로 캐시되면 한쪽이 다른 쪽의 답을 받는다.
+    """
+    legend = "   U - In Use    D - Down"
+
+    without_ctx = engine.suppressor.check(legend, None, None, include_config_scope=False)
+    assert engine.memo_stats()["suppressor_entries"] == 0, "ctx=None 호출이 메모됐다"
+
+    ctx = ContextTracker()
+    with_ctx = engine.suppressor.check(legend, None, ctx, include_config_scope=False)
+    assert with_ctx == "플래그 범례 줄"
+    assert without_ctx != with_ctx, "이 테스트의 전제(ctx 유무로 결과가 다름)가 깨졌다"
+    assert engine.memo_stats()["suppressor_entries"] == 1
+
+
+def test_scoped_suppression_disables_suppressor_memo():
+    """scope 를 가진 suppression 이 있으면 억제 메모를 켜지 않는다 — ctx.command 에 의존하므로."""
+    rules = dict(load_rules())
+    rules["suppressions"] = list(rules["suppressions"]) + [
+        {"id": "scoped_sup", "pattern": r"ignore-me", "scope": r"show version", "reason": "범위 한정 억제"}
+    ]
+    scoped_engine = RuleEngine(rules)
+
+    assert scoped_engine.memo_stats()["suppressor_memo_enabled"] is False
+    scoped_engine.set_memo_enabled(True)
+    assert scoped_engine.memo_stats()["suppressor_memo_enabled"] is False
+    # 서명/키워드 메모는 영향 없다.
+    assert scoped_engine.memo_stats()["signature_memo_enabled"] is True
+
+
+def test_scoped_suppression_still_applies_by_command():
+    """메모가 꺼진 상태에서 scope 억제가 명령에 따라 다르게 동작하는지."""
+    rules = dict(load_rules())
+    rules["suppressions"] = [
+        {"id": "scoped_sup", "pattern": r"ignore-me", "scope": r"show version", "reason": "범위 한정 억제"}
+    ]
+    rules["signatures"] = [{"id": "always", "pattern": r"ignore-me", "severity": "major", "title": "테스트"}]
+    scoped_engine = RuleEngine(rules)
+
+    in_scope = ContextTracker()
+    in_scope.feed("Core1#show version")
+    assert scoped_engine.evaluate("ignore-me here", in_scope) is None, "범위 안에서 억제되지 않았다"
+
+    out_of_scope = ContextTracker()
+    out_of_scope.feed("Core1#show interfaces")
+    assert scoped_engine.evaluate("ignore-me here", out_of_scope) is not None, "범위 밖에서도 억제됐다"
+
+
+def test_suppressor_memo_respects_cap(engine, monkeypatch):
+    monkeypatch.setattr("engine.log_rule_engine._MEMO_MAX_ENTRIES", 20)
+    ctx = ContextTracker()
+    for index in range(200):
+        engine.suppressor.check(f"고유 줄 {index}", None, ctx, include_config_scope=False)
+    assert engine.memo_stats()["suppressor_entries"] <= 20
