@@ -32,6 +32,8 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
+from core.text_io import decode_log_bytes
+
 logger = logging.getLogger("storage_service")
 if not logger.handlers:
     # 애플리케이션이 별도 로깅 설정을 하지 않은 채로(예: 단위 테스트, 스크립트 실행) 쓰여도
@@ -138,16 +140,7 @@ class StorageService:
         if not path.exists():
             self._log_op("load_text(미존재)", path)
             return default
-        with path.open("rb") as f:
-            raw = f.read()
-        for encoding in ("utf-8-sig", "cp949"):
-            try:
-                text = raw.decode(encoding)
-                break
-            except UnicodeDecodeError:
-                continue
-        else:
-            text = raw.decode("utf-8", errors="replace")
+        text = decode_log_bytes(path.read_bytes())
         self._log_op("load_text", path)
         return text
 

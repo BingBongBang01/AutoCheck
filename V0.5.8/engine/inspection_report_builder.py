@@ -25,6 +25,7 @@ import re
 from pathlib import Path
 
 from core.paths import sanitize_component
+from core.text_io import read_log_text
 from engine.profile_manager import profile_manager
 from report.inspection_status import (
     STATUS_NA, STATUS_OK, STATUS_UNREACHABLE, STATUS_WARN,
@@ -82,14 +83,8 @@ def build_filename(customer_name: str, profile_name: str, *, date=None, suffix="
 # --------------------------------------------------------------------------- 원본로그 수집
 
 def _read_text(path: Path) -> str:
-    """레거시 로그가 cp949로 저장된 경우까지 감안해서 읽는다(api.log_file_browser_api와 동일 규칙)."""
-    raw = path.read_bytes()
-    for encoding in ("utf-8-sig", "cp949"):
-        try:
-            return raw.decode(encoding)
-        except UnicodeDecodeError:
-            continue
-    return raw.decode("utf-8", errors="replace")
+    """레거시 로그가 cp949로 저장된 경우까지 감안해서 읽는다 — 규칙은 core/text_io.py 단일 출처."""
+    return read_log_text(path)
 
 
 def latest_logs_by_device(customer_name: str, profile_name: str) -> dict:

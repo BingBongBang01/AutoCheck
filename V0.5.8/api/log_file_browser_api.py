@@ -16,6 +16,7 @@ import re
 
 from api.report_api import _latest_terminal_logs_by_device
 from core.paths import AppPaths
+from core.text_io import read_log_text
 
 
 def _allowed_log_roots(extra_dirs=()):
@@ -27,16 +28,13 @@ def _allowed_log_roots(extra_dirs=()):
 
 
 def _read_text_auto(abs_path):
-    """UTF-8(BOM 포함)으로 우선 시도하고, 과거에 시스템 기본 인코딩(cp949 등)으로 저장된
-    레거시 로그 파일이면 cp949로 재시도한다. 둘 다 실패하면 깨진 문자를 치환해서라도 반환."""
-    with open(abs_path, "rb") as f:
-        raw = f.read()
-    for encoding in ("utf-8-sig", "cp949"):
-        try:
-            return raw.decode(encoding)
-        except UnicodeDecodeError:
-            continue
-    return raw.decode("utf-8", errors="replace")
+    """UTF-8(BOM 포함) -> cp949 -> 치환 순으로 로그를 읽는다.
+
+    구현은 core/text_io.py 로 옮겼다(같은 규칙이 세 곳에 중복돼 있었고, 그중 하나는
+    engine 이 api 를 참조하는 역방향 import 로 이 함수를 쓰고 있었다). 기존 호출부가
+    많아 이름은 그대로 두고 위임한다.
+    """
+    return read_log_text(abs_path)
 
 
 def _parse_terminal_session_filename(fname):
