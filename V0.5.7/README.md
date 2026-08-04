@@ -1,4 +1,6 @@
-# AutoCheck — 네트워크 장비 자동 점검/채점 시스템 (v0.5.6)
+# AutoCheck - 네트워크 장비 자동 점검/채점 시스템 (v0.5.7)
+
+> **버전**: v0.5.7 | **환경**: Python 3.9+ (Windows 10/11) | **라이선스**: Internal / Proprietary
 
 > **AutoCheck**는 라우터, 스위치 등 네트워크 장비에 SSH로 자동 접속하여 원본 CLI 출력을 수집하고, 멀티 벤더 파싱, 목표 상태 대조, AI 기반 분석 및 다각도 리포트 생성까지 한 번에 처리하는 Material Design 3 기반 통합 점검/채점 솔루션입니다.
 
@@ -6,21 +8,38 @@
 
 ---
 
-## 📌 주요 특징 (Key Features)
+## 목차 (Table of Contents)
 
-- 🎨 **Material Design 3 웹 UI & 시인성 극대화 (v0.5.6)**: pywebview 기반의 직관적인 사용자 인터페이스, 2단계 로그 하이라이트, active 터미널 1:1 연동, 실시간 감시 3-Way 동시 포커스, 핀 바 & 레이어드 하이라이트, 카탈로그 ON/OFF 배지 & 드래그 가이드, 대시보드 트렌드 지표, AI 1순위 메인 엔진 크라운 뱃지
-- ⚡ **자동 연결 검증 & Hostname 자동 동기화**: IP/계정 설정 즉시 실시간 접속 확인 및 장비 이름 자동 갱신
-- 🔄 **회차별 장비 목록 자동 승계**: 동일 고객사의 이전 정기점검 회차 장비/IP/계정 정보 자동 물려받기
-- 📡 **SecureCRT 세션 로그 실시간 감시 (v0.5.5)**: `CRTlog/`에 기록되는 CLI 입·출력을 0.3초 간격 tail로 따라가며 사전 점검 결과(Baseline) 대비 설정 삭제·링크/인접 DOWN을 즉시 토스트로 경고하고, 장비별 체크리스트와 원인 분석을 실시간 갱신
-- 🔍 **이상 탐지 & 데이터 마스킹**: 원본 로그 분석, 크리티컬 알람 및 외부 공유용 개인정보/보안 데이터 마스킹
-- 🤖 **vEOS-lab & Local AI 최적화**: Arista vEOS 가상 플랫폼 특성 감안 프롬프트, 사전 구조화 경량화 패킷 전송 및 Cloud Gemini / Local LLM 지원
-- ⚡ **고성능 비동기 로깅 & UI 스트리밍**: Queue 기반 디스크 비동기 로거, 200ms DOM Throttling, Delta streaming(`since_index`), 영속적 레벨 필터링(`INFO`/`WARN`/`ERROR`/`DEBUG`)
-- 📊 **다양한 리포트 포맷**: Markdown, HTML, Excel, PDF, PPTX 형식 리포트 내보내기 지원
-- ⏰ **무인 정기점검 스케줄러**: UI 없이 백그라운드 크론(Cron) 루프로 정기 점검 자동 실행
+- [주요 특징 (Key Features)](#-주요-특징-key-features)
+- [사전 요구 사항 (Prerequisites)](#-사전-요구-사항-prerequisites)
+- [빠른 시작 (Quick Start)](#-빠른-시작-quick-start)
+- [사용자 작업 흐름 가이드 (User Workflow Guide)](#-사용자-작업-흐름-가이드-user-workflow-guide)
+- [실시간 감시 (SecureCRT 세션 로그 Baseline Diff)](#-실시간-감시-securecrt-세션-로그-baseline-diff)
+- [주요 설정 파일 (Configuration Files)](#-주요-설정-파일-configuration-files)
+- [아키텍처 및 파이프라인 개요 (Architecture & Pipeline Summary)](#-아키텍처-및-파이프라인-개요-architecture--pipeline-summary)
+- [프로젝트 디렉터리 구조 (Directory Structure)](#-프로젝트-디렉터리-구조-directory-structure)
+- [알려진 제약 사항 (Known Constraints)](#-알려진-제약-사항-known-constraints)
+- [개발자 참고 문서 & 라이선스 (Developer Resources & License)](#-개발자-참고-문서--라이선스-developer-resources--license)
 
 ---
 
-## 🛠 사전 요구 사항 (Prerequisites)
+## 주요 특징 (Key Features)
+
+- **Material Design 3 웹 UI & 시인성 극대화 (v0.5.6)**: pywebview 기반의 직관적인 사용자 인터페이스, 2단계 로그 하이라이트, active 터미널 1:1 연동, 실시간 감시 3-Way 동시 포커스, 핀 바 & 레이어드 하이라이트, 카탈로그 ON/OFF 배지 & 드래그 가이드, 대시보드 트렌드 지표, AI 1순위 메인 엔진 크라운 뱃지
+- **고도화된 전문 PDF 점검 보고서 엔진 (v0.5.7)**: ReportLab 기반의 독립 렌더러 모듈(`report/inspection_pdf.py`) 및 내보내기 API(`export_inspection_pdf_report`)를 탑재하여 요약 표, 점검 항목별 상태, AI 분석 권고안을 포함한 양질의 PDF 점검 보고서 내보내기 지원
+- **자동 연결 검증 & Hostname 자동 동기화**: IP/계정 설정 즉시 실시간 접속 확인 및 장비 이름 자동 갱신
+- **회차별 장비 목록 자동 승계**: 동일 고객사의 이전 정기점검 회차 장비/IP/계정 정보 자동 물려받기
+- **SecureCRT 세션 로그 실시간 감시 (v0.5.5)**: `CRTlog/`에 기록되는 CLI 입·출력을 0.3초 간격 tail로 따라가며 사전 점검 결과(Baseline) 대비 설정 삭제·링크/인접 DOWN을 즉시 토스트로 경고하고, `StateTracker` 기반의 경고 해제/취소 추적(MLAG/VLAN/OSPF)과 11개 L2/L3/Overlay 신규 서명(VXLAN, EVPN, SVI, VARP 등) 및 5개 연쇄 상관규칙으로 장비별 체크리스트와 원인 분석을 실시간 갱신
+- **이상 탐지 & 데이터 마스킹**: 원본 로그 분석, 크리티컬 알람 및 외부 공유용 개인정보/보안 데이터 마스킹
+- **vEOS-lab & 멀티 프로바이더 AI 최적화 (v0.0.034/v0.5.0)**: Arista vEOS 가상 플랫폼 특성 감안 프롬프트, 사전 구조화 경량화 패킷 전송, Cloud Gemini / Local LLM을 비롯하여 10종 클라우드 AI 프로바이더(NVIDIA NIM, xAI Grok, Mistral, DeepSeek, Groq, Perplexity, Upstage Solar 등) 및 OpenAI 호환 커스텀 엔드포인트/모델 직접 입력 지원
+- **원자적 스토리지 I/O & 데이터 보호 (v0.0.025)**: 설정 파일 및 장비 인벤토리 YAML 저장 시 임시 파일 기반 교체 쓰기(Atomic I/O, `core/atomic_io.py`)를 적용하여 프로세스 강제 종료 시에도 파일 손상 및 장비 목록 유실을 방지
+- **고성능 비동기 로깅 & UI 스트리밍**: Queue 기반 디스크 비동기 로거, 200ms DOM Throttling, Delta streaming(`since_index`), 영속적 레벨 필터링(`INFO`/`WARN`/`ERROR`/`DEBUG`)
+- **다양한 리포트 포맷**: Markdown, HTML, Excel, PDF, PPTX 형식 리포트 내보내기 지원
+- **무인 정기점검 스케줄러**: UI 없이 백그라운드 크론(Cron) 루프로 정기 점검 자동 실행
+
+---
+
+## 사전 요구 사항 (Prerequisites)
 
 - **OS**: Windows 10 / 11 (Microsoft Edge WebView2 Runtime 필수 포함)
 - **Python**: Python 3.9 이상
@@ -29,7 +48,7 @@
 
 ---
 
-## 🚀 빠른 시작 (Quick Start)
+## 빠른 시작 (Quick Start)
 
 ### 1. 패키지 설치 및 실행
 
@@ -55,11 +74,11 @@ python -m engine.scheduler --loop
 
 ---
 
-## 📖 사용자 작업 흐름 가이드 (User Workflow Guide)
+## 사용자 작업 흐름 가이드 (User Workflow Guide)
 
 사이드바 메뉴는 실제 업무 진행 순서에 따라 **준비 → 실행 → 결과 → 기타** 4개 그룹으로 구성되어 있습니다.
 
-### 1️⃣ 준비 (Preparation)
+### [1] 준비 (Preparation)
 * **1. 워크스페이스**: 고객사를 추가하고 정기점검 회차(프로파일)를 생성 또는 선택합니다.
   * *팁*: 동일 고객사의 두 번째 회차부터는 직전 회차의 장비 목록을 자동으로 물려받습니다.
 * **2. 장비 목록**: 관리 IP, 포트, 계정을 입력하고 점검할 장비를 활성화합니다.
@@ -68,20 +87,20 @@ python -m engine.scheduler --loop
 * **4. 명령어 카탈로그**: 점검 시 장비에서 실행하여 수집할 CLI 커맨드를 활성화합니다.
 * **5. 점검 항목**: 단계(Stage) 구성과 검사 항목 간 의존관계를 확인합니다. (읽기 전용)
 
-### 2️⃣ 실행 (Execution)
+### [2] 실행 (Execution)
 * **6. 세션 터미널 (선택)**: 장비에 직접 SSH로 접속하여 수동 명령어를 확인합니다.
 * **7. 실시간 감시 (선택)**: SecureCRT로 작업하는 동안 Baseline 대비 변경을 실시간으로 감시합니다. (아래 '실시간 감시' 절 참고)
 * **8. 수집/채점**: 점검 실행 버튼 클릭 시 `접속 → 수집 → 파싱 → 판정 → 채점 → 이력저장 → 리포트 생성` 과정이 일괄 처리됩니다.
 * **9. 점검 로그**: 수집된 원본 CLI 로그 확인, 이상 탐지 및 외부 제출용 데이터 마스킹을 수행합니다.
 
-### 3️⃣ 결과 (Results) & 4️⃣ 기타 (Settings & Logs)
+### [3] 결과 (Results) & [4] 기타 (Settings & Logs)
 * **9. 대시보드 / 발견사항 / 분석 / 보고서 / 이력**: 종합 건전성 점수, PASS/FAIL 판정 결과, AI 조치 권고안 및 내보내기 리포트를 확인합니다.
 * **10. 환경 설정**: AI 제공자(API 키), SSH 공통 접속 인자 및 터미널 동작 설정을 맞춥니다. (모든 고객사/회차 공통 적용)
 * **11. 전체 로그**: 실시간 실행 로그를 200ms 속도제어(Throttling) 및 레벨 필터(`INFO`/`WARN`/`ERROR`/`DEBUG`)로 스트리밍 확인하고 전체 세션 로그(.txt)를 내보냅니다.
 
 ---
 
-## 📡 실시간 감시 (SecureCRT 세션 로그 Baseline Diff)
+## 실시간 감시 (SecureCRT 세션 로그 Baseline Diff)
 
 사이드바 **실시간 감시** 탭은 SecureCRT로 장비를 만지는 동안 사전 점검 결과와 달라지는 것을 즉시 알려줍니다.
 점검 로그를 나중에 분석하는 기존 흐름(`원본로그분석`)과 달리, 작업 중에 사고를 잡는 것이 목적입니다.
@@ -137,19 +156,20 @@ SecureCRT는 세션 로그 파일명을 장비명이 아니라 **접속 IP**로 
 
 ---
 
-## ⚙️ 주요 설정 파일 (Configuration Files)
+## 주요 설정 파일 (Configuration Files)
 
 애플리케이션 전역 설정 및 스케줄러 일정은 파일 단위로 관리됩니다:
 
-- `ai_config.yaml`: AI 분석 제공자 (Cloud Gemini, Local LLM) 및 API 키/모델/`local_batching` 설정
+- `ai_config.yaml`: AI 분석 제공자 (Cloud Gemini, Local LLM, NVIDIA NIM, DeepSeek, OpenAI 호환 등 10종) 및 API 키/모델/엔드포인트/`local_batching` 설정
 - `connection.yaml`: SSH 접속 타임아웃, 재시도 횟수 및 공통 기본 계정 설정
 - `config/scheduler.yaml`: 무인 정기점검 백그라운드 크론(Cron) 주기 및 대상 설정
 - `ai_settings.yaml`: 프롬프트 서식 및 분석 출력 옵션 설정
-- `config/realtime_watch.yaml`: 실시간 감시 자동 시작 여부, 화면 구분선 비율·보기 모드·선택 장비
+- `config/realtime_watch.yaml`: 실시간 감시 자동 시작 여부, 화면 구분선 비율·보기 모드·선택 장비·필터 및 고정 카드 영속화 설정
+- `config/log_rules.json`: 실시간 감시 서명 패턴, L2/L3/Overlay 규칙, 연쇄 상관규칙 및 상태 취소 추적 패턴 정의
 
 ---
 
-## 🏗️ 아키텍처 및 파이프라인 개요 (Architecture & Pipeline Summary)
+## 아키텍처 및 파이프라인 개요 (Architecture & Pipeline Summary)
 
 `engine/grading.py` 실행 시 `pipeline/`에 정의된 개별 파이프라인 단계(Step)들이 순차적으로 구동됩니다:
 
@@ -168,14 +188,14 @@ SecureCRT는 세션 로그 파일명을 장비명이 아니라 **접속 IP**로 
         │
 [7. AIAnalysisStep]  AI 요약 및 조치 권고안 생성 (core/ai/)
         │
-[8. ReportStep]      Markdown/HTML/Excel/PPTX 리포트 내보내기 (report/)
+[8. ReportStep]      Markdown/HTML/Excel/PDF/PPTX 리포트 내보내기 (report/ 및 report/inspection_pdf.py)
 ```
 
 > **상세 개발자 안내**: 파이프라인 확장 방법, 5대 워크스페이스 매니저 구조, API 계층 믹스인 설계 등은 [ARCHITECTURE.md](ARCHITECTURE.md) 문서를 참고하세요.
 
 ---
 
-## 📂 프로젝트 디렉터리 구조 (Directory Structure)
+## 프로젝트 디렉터리 구조 (Directory Structure)
 
 ```
 main.py                 # 앱 유일 진입점 (pywebview 생성 및 Api 믹스인 합성)
@@ -186,16 +206,16 @@ pipeline/               # 점검/채점 파이프라인 실행기 및 단계(Ste
 rule_engine/            # 판정 규칙 평가 엔진
 parsers/                # 벤더별(Cisco, Arista) CLI 파싱 구현체
 plugins/                # 벤더 드라이버 및 파서 레지스트리
-core/                   # 공통 I/O, 경로 해석, AI 서비스, 로깅 infrastructure, 타임스탬프 유틸리티
+core/                   # 공통 I/O, 원자적 쓰기(atomic_io), 경로 해석, AI 서비스, 로깅 infrastructure, 타임스탬프 유틸리티
 ai_analysis/            # AI 로그 분석 라우터 및 vEOS-lab 프롬프트 템플릿
-report/                 # Markdown, HTML, Excel, PPTX 렌더러 및 내보내기 플러그인
+report/                 # Markdown, HTML, Excel, PDF, PPTX 렌더러 및 내보내기 플러그인
 labs/                   # 랩 정의 (stages, target_state, catalog 등)
 data/<customer>/<profile>/  # 정기점검 실행 워크스페이스 (raw, masked, parsed, reports)
 ```
 
 ---
 
-## ⚠️ 알려진 제약 사항 (Known Constraints)
+## 알려진 제약 사항 (Known Constraints)
 
 - **네트워크 접근성**: 실제 장비 수집 및 채점은 대상 네트워크 장비 또는 EVE-NG 등 가상 실습망에 SSH 접근이 가능한 환경에서 동작합니다.
 - **벤더 드라이버 지원 범위**: Arista vEOS 및 physical 드라이버가 풀 기능 기준으로 지원되며, Cisco 드라이버는 부분 구현되어 있습니다.
@@ -203,7 +223,7 @@ data/<customer>/<profile>/  # 정기점검 실행 워크스페이스 (raw, maske
 
 ---
 
-## 📄 개발자 참고 문서 & 라이선스 (Developer Resources & License)
+## 개발자 참고 문서 & 라이선스 (Developer Resources & License)
 
 - **버전 변경 이력**: [CHANGELOG.md](CHANGELOG.md)
 - **시스템 아키텍처 상세**: [ARCHITECTURE.md](ARCHITECTURE.md)
