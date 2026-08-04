@@ -1,0 +1,1505 @@
+/* ===== Design System ===== */
+@font-face {
+  font-family: 'Pretendard';
+  src: local('Pretendard'), local('Segoe UI'), local('Malgun Gothic');
+}
+
+/* 아이콘 폰트 — 예전에는 index.html에서 Google Fonts CDN(fonts.googleapis.com)을 링크했다.
+   그러면 시작 직후 폰트가 도착할 때까지 모든 아이콘이 리거처 원문("business", "dashboard",
+   "folder_managed" ...) 그대로 렌더링돼서 글자가 깨진 것처럼 보였고, 사내망/오프라인에서는
+   그 상태가 영구적이었다. 그래서 woff2를 vendor/에 넣고 로컬에서만 읽는다.
+   font-display:block — 폰트가 준비되기 전에는 리거처 원문을 그리지 않고 자리만 비워 둔다
+   (로컬 파일이라 실제 대기 시간은 사실상 0). */
+@font-face {
+  font-family: 'Material Symbols Rounded';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('vendor/material-symbols/material-symbols-rounded.woff2') format('woff2');
+}
+
+.material-symbols-rounded {
+  font-family: 'Material Symbols Rounded';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+:root, :root[data-theme="dark"] {
+  /* Color (dark, default) */
+  --bg: #111827;
+  --sidebar: #0F172A;
+  --card: #1E293B;
+  --hover: #334155;
+  --input-bg: #0B1220;
+  --primary: #3B82F6;
+  --primary-dim: #1D4ED8;
+  --success: #22C55E;
+  --warning: #F59E0B;
+  --major: #F97316;
+  --critical: #EF4444;
+  --text: #F8FAFC;
+  --sub: #94A3B8;
+  --border: rgba(148, 163, 184, 0.16);
+  --shadow: rgba(0,0,0,0.28);
+  --overlay-hover: rgba(255,255,255,0.35);
+  /* 고정 표 헤더 배경 — 행(--card)과 반드시 달라야 스크롤 중에 헤더가 묻히지 않는다.
+     라이트에서 --sidebar를 쓰면 --card와 똑같이 흰색이라 구분이 사라져서 별도 토큰으로 뺐다. */
+  --thead-bg: #0F172A;
+
+  /* 장비 목록 연결 확인 결과 행 하이라이트 — 어두운 배경 위에서 뜨도록 채도를 올림 */
+  --row-ok-bg: rgba(34, 197, 94, 0.20);
+  --row-ok-bg-hover: rgba(34, 197, 94, 0.30);
+  --row-fail-bg: rgba(239, 68, 68, 0.20);
+  --row-fail-bg-hover: rgba(239, 68, 68, 0.30);
+  --row-checking-bg: rgba(148, 163, 184, 0.14);
+
+  /* Grid / spacing (4px base)
+     v0.5.4에서 GitHub식 고밀도로 재조정했다. 예전 값(radius 16 / pad 24 / gap-lg 32)은
+     카드 하나에 안쪽 24px + 바깥 32px를 써서 1080p에서 표가 12행밖에 안 들어갔다.
+     '떠 있는 카드'를 '1px 선으로 구분된 섹션'으로 바꾸는 게 핵심이라 라운드도 6px로 낮춘다. */
+  --grid: 4px;
+  --radius: 6px;
+  --radius-sm: 4px;
+  --pad: 12px;
+  --pad-card: 12px 14px;   /* 카드 안쪽 여백 — 좌우를 살짝 더 줘서 글자가 선에 붙지 않게 */
+  --gap-sm: 8px;
+  --gap-lg: 16px;
+  --line: 1px solid var(--border);
+
+  /* 크롬 높이 — .term-page / .rtm-page의 calc()가 이 값을 참조한다(하드코딩 금지) */
+  --topbar-h: 40px;
+  --statusbar-h: 22px;
+  --sidebar-w: 200px;
+  --sidebar-w-collapsed: 48px;
+
+  /* Motion */
+  --dur: 180ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Type */
+  --font-sans: 'Pretendard', 'Segoe UI', 'Malgun Gothic', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+}
+
+:root[data-theme="light"] {
+  --bg: #F1F5F9;
+  --sidebar: #FFFFFF;
+  --card: #FFFFFF;
+  --hover: #E2E8F0;
+  --input-bg: #FFFFFF;
+  --primary: #2563EB;
+  --primary-dim: #1D4ED8;
+  --success: #16A34A;
+  --warning: #D97706;
+  --major: #EA580C;
+  --critical: #DC2626;
+  --text: #0F172A;
+  --sub: #64748B;
+  --border: rgba(15, 23, 42, 0.10);
+  --shadow: rgba(15, 23, 42, 0.12);
+  --overlay-hover: rgba(0,0,0,0.06);
+  --thead-bg: #F6F8FA;
+
+  /* 흰 배경은 같은 알파라도 훨씬 흐리게 보여서, 빨강만 살짝 낮추고 초록은 다크와 맞춤
+     (라이트에서 0.13까지 내려보니 '성공'으로 안 읽혀서 올림) */
+  --row-ok-bg: rgba(22, 163, 74, 0.20);
+  --row-ok-bg-hover: rgba(22, 163, 74, 0.30);
+  --row-fail-bg: rgba(220, 38, 38, 0.17);
+  --row-fail-bg-hover: rgba(220, 38, 38, 0.27);
+  --row-checking-bg: rgba(15, 23, 42, 0.05);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --bg: #F1F5F9;
+    --sidebar: #FFFFFF;
+    --card: #FFFFFF;
+    --hover: #E2E8F0;
+    --input-bg: #FFFFFF;
+    --primary: #2563EB;
+    --primary-dim: #1D4ED8;
+    --success: #16A34A;
+    --warning: #D97706;
+    --major: #EA580C;
+    --critical: #DC2626;
+    --text: #0F172A;
+    --sub: #64748B;
+    --border: rgba(15, 23, 42, 0.10);
+    --shadow: rgba(15, 23, 42, 0.12);
+    --overlay-hover: rgba(0,0,0,0.06);
+    --thead-bg: #F6F8FA;
+
+    /* 라이트 테마와 동일 */
+    --row-ok-bg: rgba(22, 163, 74, 0.20);
+    --row-ok-bg-hover: rgba(22, 163, 74, 0.30);
+    --row-fail-bg: rgba(220, 38, 38, 0.17);
+    --row-fail-bg-hover: rgba(220, 38, 38, 0.27);
+    --row-checking-bg: rgba(15, 23, 42, 0.05);
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow: hidden;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+
+/* ===== Layout ===== */
+#app {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  grid-template-rows: var(--topbar-h) 1fr var(--statusbar-h);
+  grid-template-areas:
+    "topbar topbar"
+    "sidebar content"
+    "statusbar statusbar";
+  height: 100vh;
+}
+/* 접힘은 그리드 열 자체를 줄인다 — #sidebar에만 width를 주면 열은 200px로 남아
+   본문이 안 넓어졌다(예전 .collapsed{width:64px}의 문제). */
+#app.sidebar-collapsed { grid-template-columns: var(--sidebar-w-collapsed) 1fr; }
+
+#topbar {
+  grid-area: topbar;
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  padding: 0 10px;
+  background: var(--sidebar);
+  border-bottom: var(--line);
+}
+
+#sidebar {
+  grid-area: sidebar;
+  background: var(--sidebar);
+  border-right: var(--line);
+  padding: 6px 6px 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+/* 접힌 상태에서 마우스를 올리면 본문을 밀지 않고 위로 겹쳐서 펼친다 —
+   탭이 16개라 아이콘만으로는 못 찾는데, 열 폭을 되돌리면 표가 리플로우된다. */
+#app.sidebar-collapsed #sidebar {
+  position: relative;
+  width: var(--sidebar-w-collapsed);
+  transition: width var(--dur) var(--ease);
+}
+#app.sidebar-collapsed #sidebar:hover {
+  width: var(--sidebar-w);
+  z-index: 50;
+  box-shadow: 4px 0 16px var(--shadow);
+}
+#app.sidebar-collapsed #sidebar:hover .nav-label,
+#app.sidebar-collapsed #sidebar:hover .nav-badge { display: inline; }
+#app.sidebar-collapsed #sidebar:hover .nav-group-label {
+  padding: 10px 10px 3px; height: auto; margin: 0;
+  background: none; font-size: 10px; letter-spacing: 0.8px;
+}
+
+#content {
+  grid-area: content;
+  overflow-y: auto;
+  padding: 10px 14px 14px;
+}
+
+#statusbar {
+  grid-area: statusbar;
+  background: var(--sidebar);
+  border-top: var(--line);
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  font-size: 11px;
+  color: var(--sub);
+  gap: 14px;
+  white-space: nowrap;
+}
+
+/* ===== TopBar ===== */
+.tb-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: var(--line);
+  color: var(--sub);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background var(--dur) var(--ease);
+}
+.tb-item:hover { background: var(--hover); color: var(--text); }
+.tb-spacer { flex: 1; }
+.tb-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  width: 220px;
+}
+.tb-search input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 13px;
+  width: 100%;
+}
+.tb-icon-btn {
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--sub);
+  cursor: pointer;
+  position: relative;
+  transition: background var(--dur) var(--ease);
+}
+.tb-icon-btn:hover { background: var(--hover); color: var(--text); }
+.tb-icon-btn .material-symbols-rounded { font-size: 18px; }
+.tb-badge {
+  position: absolute; top: 2px; right: 2px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--critical);
+}
+.tb-user {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer;
+}
+
+/* ===== Sidebar ===== */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 9px;
+  border-radius: var(--radius-sm);
+  color: var(--sub);
+  cursor: pointer;
+  margin-bottom: 1px;
+  font-size: 12.5px;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.nav-item:hover { background: var(--hover); color: var(--text); }
+/* 활성 표시를 채운 배경 대신 왼쪽 액센트 바 + 옅은 배경으로 — GitHub 사이드바 방식.
+   폭이 좁아져서 통배경은 아이콘까지 삼켜 답답해 보였다. */
+.nav-item.active {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--primary);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--primary);
+}
+.nav-item .material-symbols-rounded { font-size: 18px; flex-shrink: 0; }
+.nav-badge {
+  margin-left: auto;
+  background: var(--critical);
+  color: white;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+#app.sidebar-collapsed .nav-label, #app.sidebar-collapsed .nav-badge { display: none; }
+
+/* 준비 / 실행 / 결과 / 기타 — 탭이 16개라 구분선만으로는 어디까지가 한 단계인지 안 보인다.
+   접었을 때는 글자가 아이콘 폭을 넘치므로 얇은 구분선으로 대체한다. */
+.nav-group-label {
+  padding: 10px 10px 3px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.8px;
+  color: var(--sub); opacity: 0.7;
+  white-space: nowrap; overflow: hidden;
+}
+.nav-group-label:first-child { padding-top: 3px; }
+#app.sidebar-collapsed .nav-group-label {
+  padding: 0; height: 1px; margin: 7px 6px;
+  background: var(--border); font-size: 0; letter-spacing: 0;
+}
+
+/* ===== Card =====
+   GitHub 방식: 그림자로 띄우지 않고 1px 테두리로만 구분한다. hover 시 2px 부상 + 그림자는
+   표가 촘촘해지면 행이 흔들려 보여서 없앴다(.hoverable은 호출부가 169곳이라 클래스는 남기고
+   효과만 테두리 강조로 바꿨다). */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  border: var(--line);
+  padding: var(--pad-card);
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.card.hoverable:hover {
+  border-color: var(--primary);
+  background: var(--card);
+}
+/* 카드 제목줄은 헤어라인으로 본문과 나눈다 — 아이콘 타일이 36px씩 먹던 자리를 회수 */
+.card-header {
+  display: flex; align-items: center; gap: 8px;
+  padding-bottom: 7px; margin-bottom: 9px;
+  border-bottom: var(--line);
+}
+.card-icon {
+  width: 22px; height: 22px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; color: var(--primary);
+  flex-shrink: 0;
+}
+.card-icon .material-symbols-rounded { font-size: 18px; }
+.card-title { font-size: 13px; font-weight: 600; margin: 0; }
+.card-desc { font-size: 11.5px; color: var(--sub); margin: 1px 0 0; }
+
+/* 카드를 세로로 이어 붙일 때 사이 간격을 없애고 경계선을 공유한다 (GitHub 리스트 룩).
+   <div class="stack"> 안에 .card를 넣으면 된다 — 카드마다 16px씩 벌어지던 걸 0으로. */
+.stack { display: flex; flex-direction: column; }
+.stack > .card { border-radius: 0; margin: 0; }
+.stack > .card + .card { border-top: none; }
+.stack > .card:first-child { border-top-left-radius: var(--radius); border-top-right-radius: var(--radius); }
+.stack > .card:last-child { border-bottom-left-radius: var(--radius); border-bottom-right-radius: var(--radius); }
+
+/* ===== Buttons ===== */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; border: none;
+  transition: background var(--dur) var(--ease), transform 100ms var(--ease);
+  position: relative; overflow: hidden;
+  height: 28px;
+  white-space: nowrap;
+}
+.btn:active { transform: scale(0.98); }
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: var(--primary-dim); }
+.btn-outlined { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.btn-outlined:hover { background: var(--hover); }
+.btn-danger { background: transparent; color: var(--critical); border: 1px solid rgba(239,68,68,0.4); }
+.btn-danger:hover { background: rgba(239,68,68,0.12); }
+.btn .material-symbols-rounded { font-size: 16px; }
+.btn.loading .material-symbols-rounded { animation: spin 800ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Ripple */
+.ripple { position: absolute; border-radius: 50%; background: var(--overlay-hover); transform: scale(0); animation: ripple 500ms var(--ease); pointer-events: none; }
+@keyframes ripple { to { transform: scale(3); opacity: 0; } }
+
+/* ===== Input ===== */
+.field {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 0 8px;
+  height: 28px;
+  font-size: 12px;
+  outline: none;
+  transition: border-color var(--dur) var(--ease);
+  width: 100%;
+  font-family: var(--font-sans);
+}
+/* textarea/select에도 .field를 붙이는 곳이 있어서 고정 height가 한 줄로 눌리는 걸 막는다 */
+textarea.field { height: auto; min-height: 56px; padding: 6px 8px; line-height: 1.45; }
+.field:focus { border-color: var(--primary); }
+.field-label { font-size: 11px; color: var(--sub); margin-bottom: 3px; display: block; }
+
+/* ===== Table ===== */
+table.dtable { width: 100%; border-collapse: collapse; font-size: 12px; }
+/* 헤더 배경을 --card에서 --sidebar로 — 행과 같은 색이라 스크롤하면 헤더가 본문에 묻혔다.
+   z-index는 행 안의 .field(포커스 테두리)보다 위여야 첫 행이 헤더를 뚫고 올라오지 않는다. */
+table.dtable thead th {
+  position: sticky; top: 0; z-index: 3;
+  background: var(--thead-bg);
+  color: var(--sub);
+  text-align: left; font-weight: 600;
+  padding: 5px 8px;
+  font-size: 11px;
+  border-bottom: var(--line);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+table.dtable tbody tr { transition: background var(--dur) var(--ease); }
+table.dtable tbody tr:hover { background: var(--hover); }
+table.dtable td { padding: 4px 8px; border-bottom: var(--line); }
+/* 행 높이를 낮췄으니 셀 안의 입력/버튼도 같이 낮춘다 — 안 그러면 40px 필드가 행을 되돌린다 */
+table.dtable td .field { height: 24px; font-size: 11.5px; padding: 0 6px; }
+table.dtable td .btn { height: 22px; font-size: 11px; padding: 0 7px; }
+table.dtable td .btn .material-symbols-rounded { font-size: 14px; }
+
+/* ===== 장비 목록: 자동 연결 확인 결과 행 하이라이트 =====
+   선택 표시(파란 테두리)와 연결 결과(초록/빨강 배경)는 서로 다른 정보라 겹쳐도
+   둘 다 보여야 한다. 그래서 선택은 outline, 결과는 background로 분리했다.
+   :hover 규칙보다 아래에 둬서(같은 특이도) 마우스를 올려도 색이 안 사라진다. */
+table.dtable tbody tr.inv-selected {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+table.dtable tbody tr.probe-checking,
+table.dtable tbody tr.probe-checking:hover { background: var(--row-checking-bg); }
+table.dtable tbody tr.probe-ok { background: var(--row-ok-bg); box-shadow: inset 4px 0 0 var(--success); }
+table.dtable tbody tr.probe-ok:hover { background: var(--row-ok-bg-hover); }
+table.dtable tbody tr.probe-fail { background: var(--row-fail-bg); box-shadow: inset 4px 0 0 var(--critical); }
+table.dtable tbody tr.probe-fail:hover { background: var(--row-fail-bg-hover); }
+
+/* 결과 행 안의 입력 필드는 배경을 비워 행 색이 그대로 비쳐 보이게 한다 —
+   불투명한 --input-bg가 덮으면 행 절반이 원래 색으로 남아 얼룩덜룩해진다. */
+table.dtable tbody tr.probe-ok .field,
+table.dtable tbody tr.probe-fail .field { background: transparent; }
+
+/* 버튼 옆이 아니라 아래에 깐다 — 옆에 두면 셀 폭이 (버튼 + 문구)가 되어 표 전체가
+   화면 밖으로 밀려나고, 정작 결과가 안 보인다. 아래로 내리면 둘 중 넓은 쪽만큼만 차지한다.
+   전체 문구는 title 툴팁에 있으므로 넘치면 말줄임 처리해도 정보 손실은 없다. */
+.probe-status {
+  display: block;
+  font-size: 11px; margin-top: 3px; white-space: nowrap;
+  max-width: 124px; overflow: hidden; text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+/* 장비 목록은 열이 10개라 기본 td 여백(좌우 12px)만으로 240px를 먹는다 —
+   이 표에서만 여백을 줄여 1280px 창에서 가로 스크롤 없이 다 보이게 한다. */
+#inv-table th, #inv-table td { padding: 3px 5px; }
+.probe-status.ok { color: var(--success); }
+.probe-status.fail { color: var(--critical); }
+.probe-status.checking { color: var(--sub); }
+
+/* ===== Status Badge ===== */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 1px 7px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.2px;
+}
+.badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; }
+.badge-pass { background: rgba(34,197,94,0.14); color: var(--success); }
+.badge-pass::before { background: var(--success); }
+.badge-warn { background: rgba(245,158,11,0.14); color: var(--warning); }
+.badge-warn::before { background: var(--warning); }
+.badge-fail { background: rgba(239,68,68,0.14); color: var(--critical); }
+.badge-fail::before { background: var(--critical); }
+.badge-running { background: rgba(59,130,246,0.14); color: var(--primary); }
+.badge-running::before { background: var(--primary); animation: pulse 1s var(--ease) infinite; }
+@keyframes pulse { 50% { opacity: 0.3; } }
+.badge-neutral { background: rgba(148,163,184,0.14); color: var(--sub); }
+.badge-neutral::before { background: var(--sub); }
+
+/* ===== Misc ===== */
+.grid-cols-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--gap-sm); }
+.grid-cols-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--gap-sm); }
+/* 제목 20px + 설명줄 13px + 아래 32px = 약 80px를 헤더에만 쓰고 있었다.
+   제목을 15px로 낮추고 설명은 같은 줄 우측으로 흘려 40px 안에 들어오게 한다.
+   설명이 길면 말줄임 — title 속성 없이도 한 줄 요약이라 정보 손실은 작다. */
+.page-title {
+  font-size: 15px; font-weight: 700; margin: 0;
+  padding-bottom: 6px; border-bottom: var(--line);
+  display: flex; align-items: baseline; gap: 10px;
+}
+.page-sub {
+  font-size: 11.5px; color: var(--sub); font-weight: 400;
+  margin: -6px 0 10px; padding-bottom: 6px;
+  border-bottom: var(--line);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* .page-title 바로 뒤에 .page-sub가 오면 선이 두 줄로 겹친다 — 위쪽 선을 지운다. */
+.page-title:has(+ .page-sub) { border-bottom: none; padding-bottom: 2px; }
+.kpi-value { font-size: 20px; font-weight: 700; margin: 2px 0 0; }
+.kpi-label { font-size: 11px; color: var(--sub); }
+.section-gap { margin-top: var(--gap-lg); }
+/* 표가 길어지면 제목·검색·액션이 위로 사라져 못 눌렀다 — 카드 헤더를 #content에 붙여 둔다.
+   좌우 -14px는 카드 안쪽 여백만큼 넓혀서 배경이 카드 폭을 다 덮게 하는 것(안 그러면 옆으로 글자가 비친다). */
+.card-header.sticky {
+  position: sticky; top: -10px; z-index: 4;
+  background: var(--card);
+  margin: 0 -14px 9px; padding: 8px 14px 7px;
+}
+/* 고정 헤더는 높이가 곧 손실이다 — 긴 설명문이 두세 줄로 감기면 표가 그만큼 가려진다. */
+.card-header.sticky .card-desc {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* table.dtable thead의 sticky는 '가장 가까운 스크롤 조상'에 붙는다. 표를 감싼
+   overflow-x:auto 래퍼가 그 조상인데 높이 제한이 없어서 스크롤이 안 생겼고, 결과적으로
+   헤더가 본문과 함께 그냥 위로 사라졌다. 래퍼에 높이를 주면 표 안에서만 스크롤되고
+   헤더가 제자리에 남는다 — 열 이름 없이 10열을 읽는 상황이 없어진다. */
+.table-scroll {
+  overflow: auto;
+  /* 228px = 페이지 제목(25) + 설명(24+10) + 접힌 설정 블록(40) + 섹션 간격(16) +
+     고정 카드 헤더(54) + 카드 상하 패딩·테두리(26) + #content 상하 패딩(24) + 여유(9).
+     이 값이 모자라면 표 스크롤과 페이지 스크롤이 겹쳐(중첩 스크롤) 휠이 어디에 먹는지 알 수 없게 된다. */
+  max-height: calc(100vh - var(--topbar-h) - var(--statusbar-h) - 228px);
+  min-height: 200px;
+}
+
+/* 자주 안 건드리는 설정 블록은 접어 둔다 — 펼친 채로 두면 정작 보려는 표를 화면 밖으로 밀어낸다. */
+details.fold { border: var(--line); border-radius: var(--radius); background: var(--card); }
+details.fold > summary {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px; cursor: pointer; list-style: none;
+  font-size: 13px; font-weight: 600;
+}
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary:hover { background: var(--hover); border-radius: var(--radius); }
+details.fold[open] > summary { border-bottom: var(--line); border-radius: var(--radius) var(--radius) 0 0; }
+details.fold > summary .fold-desc { font-size: 11.5px; font-weight: 400; color: var(--sub); }
+details.fold > summary .fold-caret { margin-left: auto; color: var(--sub); font-size: 18px; transition: transform var(--dur) var(--ease); }
+details.fold[open] > summary .fold-caret { transform: rotate(180deg); }
+.fold-body { padding: var(--pad-card); }
+.mono { font-family: var(--font-mono); font-size: 12px; }
+.terminal {
+  background: #0B1220; border-radius: var(--radius-sm);
+  padding: 8px; font-family: var(--font-mono); font-size: 12px;
+  color: #8ee08e; height: 260px; overflow-y: auto;
+}
+.history-viewer { position:relative; display:flex; min-height:360px; margin-top:8px; }
+.history-viewer .terminal { flex:1; height:auto; min-height:360px; }
+.history-resizer { width:6px; cursor:col-resize; background:var(--border); }
+/* ===== AI 제공자 순서(드래그 재정렬) ===== */
+.ai-order-list { display: flex; flex-direction: column; gap: 5px; }
+.ai-order-item {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--card); border: var(--line); border-radius: var(--radius-sm);
+  padding: 6px 10px; cursor: grab; user-select: none;
+  transition: transform 220ms var(--ease), box-shadow 220ms var(--ease), border-color 220ms var(--ease), background 220ms var(--ease);
+}
+.ai-order-item .drag-handle { color: var(--sub); font-size: 20px; flex-shrink: 0; }
+.ai-order-item .order-rank {
+  width: 22px; height: 22px; border-radius: 50%; background: var(--hover); color: var(--sub);
+  display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0;
+}
+.ai-order-item .order-icon {
+  width: 24px; height: 24px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(59,130,246,0.14); color: var(--primary); flex-shrink: 0;
+}
+.ai-order-item .order-label { font-size: 13px; font-weight: 600; color: var(--text); }
+.ai-order-item .order-desc { font-size: 11px; color: var(--sub); }
+.ai-order-item.dragging { opacity: 0.55; box-shadow: 0 10px 28px var(--shadow); border-color: var(--primary); cursor: grabbing; }
+
+/* ===== 커맨드 카탈로그(드래그 재정렬/카테고리 이동) ===== */
+.catalog-row {
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  transition: transform 220ms var(--ease), box-shadow 220ms var(--ease), border-color 220ms var(--ease), background 220ms var(--ease), opacity 220ms var(--ease);
+}
+.catalog-row.dragging { opacity: 0.55; box-shadow: 0 10px 28px var(--shadow); border-color: var(--primary); cursor: grabbing; }
+.catalog-row.drop-target { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(59,130,246,0.25); }
+.catalog-row.selected { background: rgba(59,130,246,0.10); border-color: var(--primary); }
+.catalog-drop-zone.drop-target { background: var(--hover); border-radius: var(--radius-sm); }
+.catalog-drag-handle:active { cursor: grabbing; }
+.catalog-rank-input { transition: border-color 160ms var(--ease); }
+.catalog-row.cmd-disabled { opacity: 0.6; }
+.catalog-row.cmd-disabled input[data-edit-command],
+.catalog-row.cmd-disabled input[data-edit-description] { color: var(--sub); text-decoration: line-through; }
+.ai-order-item.drop-target { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(59,130,246,0.25); }
+
+/* ===== 멀티 SSH 터미널 (Connection 탭) ===== */
+/* 24px = #content의 상하 패딩 합(10 + 14). 크롬 높이는 토큰을 참조한다 —
+   예전에는 56px/28px가 박혀 있어서 상단바 높이를 바꾸면 터미널이 화면 밖으로 밀렸다. */
+.term-page { display: flex; flex-direction: column; height: calc(100vh - var(--topbar-h) - var(--statusbar-h) - 24px); min-height: 0; }
+.term-page .page-title, .term-page .page-sub { flex-shrink: 0; }
+.term-page .card { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.term-toolbar { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; flex-shrink: 0; }
+.term-split { display: flex; gap: 8px; align-items: stretch; min-height: 0; flex: 1; }
+.term-side-panel {
+  width: 190px; flex: 0 0 190px; display: flex; flex-direction: column; min-height: 0;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.term-side-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  padding: 8px 10px; font-size: 11px; color: var(--sub); border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.connection-device-list { display:flex; flex-direction:column; gap:2px; overflow:auto; flex: 1; min-height: 0; padding: 6px; }
+.connection-device {
+  display:flex; align-items:center; gap:6px; padding:4px 8px; border-radius:var(--radius-sm); cursor:pointer;
+  user-select: none; font-size: 12px;
+}
+.connection-device:hover { background: var(--hover); }
+.connection-device.selected { background: var(--hover); }
+.connection-device.session-active { outline: 1px solid var(--primary); }
+.connection-device .device-name { font-weight: 600; }
+.connection-device span.ip { color:var(--sub); font-size:11px; margin-left:auto; white-space: nowrap; }
+
+/* ===== 점검 로그 목록 — 실행(run) 단위 접이식 그룹 (js/log-run-groups.js) ===== */
+/* 점검 로그/로그 분석/마스킹 세 탭이 공유한다. 회차가 쌓이면 파일이 수십~수백 개가 되어
+   평평하게 늘어놓으면 원하는 회차를 찾기 어렵다 — run_id로 묶어 접었다 펼 수 있게 한다. */
+.log-run-group { margin-bottom: 4px; }
+.log-run-group-head {
+  display: flex; align-items: center; gap: 4px; padding: 6px 6px 6px 2px;
+  border-radius: var(--radius-sm); cursor: pointer; user-select: none;
+}
+.log-run-group-head:hover { background: var(--hover); }
+.log-run-group-caret {
+  font-size: 18px; color: var(--sub); flex-shrink: 0; transition: transform var(--dur) var(--ease);
+  transform: rotate(-90deg);
+}
+.log-run-group-head.open .log-run-group-caret { transform: rotate(0deg); }
+.log-run-group-labels { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.log-run-group-title { font-size: 12px; font-weight: 700; }
+.log-run-group-sub { font-size: 10px; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.log-run-group-count {
+  flex-shrink: 0; background: var(--hover); border-radius: 999px; padding: 1px 7px;
+  font-size: 10px; color: var(--sub); font-variant-numeric: tabular-nums;
+}
+.log-run-group-body { display: flex; flex-direction: column; gap: 2px; padding-left: 14px; margin: 2px 0 6px; }
+.term-main { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+.term-tabs { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 4px; flex-shrink: 0; }
+.term-tab {
+  display: flex; align-items: center; gap: 6px; padding: 6px 12px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0; background: var(--hover);
+  color: var(--sub); font-size: 12px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  border-bottom: 2px solid transparent; transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.term-tab.active { background: var(--card); color: var(--text); border-bottom-color: var(--primary); font-weight: 600; }
+.term-tab .term-tab-close { font-size: 14px; opacity: 0.6; }
+.term-tab .term-tab-close:hover { opacity: 1; color: var(--critical); }
+#term-area { flex: 1; min-width: 0; min-height: 0; display: flex; }
+.term-pane-wrap { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
+.term-pane-header {
+  display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 11px; color: var(--sub);
+  background: var(--card); border: 1px solid var(--border); border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0; cursor: pointer; flex-shrink: 0;
+}
+.term-pane-header.active { border-color: var(--primary); color: var(--primary); }
+.term-pane-body {
+  flex: 1; min-width: 0; min-height: 0; background: #0B1220; color: #D7F5D7; font-family: var(--font-mono); font-size: 12.5px;
+  white-space: pre-wrap; word-break: break-all; overflow: hidden; padding: 10px;
+  border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  outline: none; cursor: text;
+}
+.term-pane-body:focus { border-color: var(--primary); }
+.term-grid { display: grid; gap: 10px; flex: 1; min-width: 0; width: 100%; }
+.term-grid .term-pane-wrap { height: 100%; }
+.term-input-bar {
+  display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-shrink: 0;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 4px 4px 4px 12px;
+}
+.term-input-bar input[type="text"] {
+  flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: var(--text);
+  font-family: var(--font-mono); font-size: 13px; height: 34px;
+}
+.term-input-bar label { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--sub); white-space: nowrap; cursor: pointer; }
+.term-pane-body { padding: 6px; cursor: text; position: relative; }
+.term-pane-body .xterm { position: absolute; top: 6px; bottom: 6px; left: 6px; right: 6px; height: auto; width: auto; overflow: hidden; }
+.term-pane-body .xterm-viewport::-webkit-scrollbar { width: 8px; }
+.term-ctx-menu {
+  position: fixed; z-index: 1200; min-width: 160px; background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); box-shadow: 0 10px 28px var(--shadow); padding: 4px; font-size: 13px;
+}
+.term-ctx-menu-item {
+  display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 6px; cursor: pointer; color: var(--text);
+}
+.term-ctx-menu-item:hover { background: var(--hover); }
+.term-ctx-menu-item.disabled { color: var(--sub); cursor: not-allowed; opacity: 0.5; }
+.term-ctx-menu-item.disabled:hover { background: none; }
+.term-ctx-menu-sep { height: 1px; background: var(--border); margin: 4px 2px; }
+.modal-overlay { position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.55); padding:16px; }
+.customer-modal { width:min(900px, 96vw); height:min(680px, 90vh); padding:0; overflow:hidden; }
+.customer-modal-header { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:var(--line); }
+/* height는 헤더 실측값에 묶여 있었다(86px) — 헤더를 줄였으므로 flex로 바꿔 계산에서 해방한다. */
+.customer-modal-body { display:grid; grid-template-columns:220px 1fr; height:calc(100% - 45px); }
+.customer-nav { border-right:var(--line); overflow:auto; padding:8px; }
+.customer-nav-actions { margin-bottom:8px; }
+.customer-nav-item { width:100%; display:flex; align-items:center; gap:7px; border:1px solid transparent; background:transparent; color:var(--text); border-radius:var(--radius-sm); padding:5px 8px; text-align:left; cursor:pointer; font-size:12.5px; }
+.customer-nav-item:hover, .customer-nav-item:focus-visible { background:var(--hover); outline:none; }
+.customer-nav-item.selected { background:rgba(59,130,246,.14); border-color:var(--primary); }
+.customer-nav-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.customer-nav-count, .profile-status, .customer-detail-header p, .profile-date { color:var(--sub); font-size:12px; }
+.customer-detail { padding:12px 14px; overflow:auto; }
+.customer-detail-header { display:flex; justify-content:space-between; gap:10px; align-items:center; margin-bottom:10px; }
+.customer-detail-header h2 { margin:0 0 2px; font-size:16px; }
+.inspection-profile-list { display:flex; flex-direction:column; gap:6px; }
+.inspection-profile-card { border:var(--line); border-radius:var(--radius-sm); background:var(--card); }
+.inspection-profile-card summary { display:flex; align-items:center; gap:8px; padding:8px 10px; cursor:pointer; list-style:none; }
+.inspection-profile-card summary::-webkit-details-marker { display:none; }
+.inspection-profile-content { border-top:var(--line); padding:10px; }
+.inspection-profile-content button { margin-right:5px; }
+.empty-state { padding:24px 14px; color:var(--sub); text-align:center; font-size:12px; }
+@media (max-width:700px) { .customer-modal-body { grid-template-columns:1fr; } .customer-nav { max-height:220px; border-right:0; border-bottom:1px solid var(--border); } .customer-detail-header { align-items:flex-start; flex-direction:column; } }
+
+/* ===== Dashboard ===== */
+/* 색맹 안전 팔레트(IBM Color Blind Safe) — 정상/비정상 대비를 초록/빨강 대신 파랑/주황으로 표현해
+   적록 색맹(남성 약 8%)에서도 두 계열이 구분된다. 상태 색(--success/--critical)은 배지·수치처럼
+   텍스트 레이블이 항상 함께 붙는 곳에만 쓰고, 차트 계열색은 아래 --cb-* 를 쓴다. */
+:root {
+  --cb-blue: #648FFF;
+  --cb-purple: #785EF0;
+  --cb-magenta: #DC267F;
+  --cb-orange: #FE6100;
+  --cb-yellow: #FFB000;
+  --cb-normal: var(--cb-blue);
+  --cb-abnormal: var(--cb-orange);
+}
+.dash-context { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: var(--gap-sm); }
+.dash-chip {
+  display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px;
+  border: var(--line); border-radius: 999px; background: var(--card);
+  font-size: 11.5px; color: var(--text);
+}
+.dash-chip .material-symbols-rounded { font-size: 16px; color: var(--sub); }
+.dash-chip .dash-chip-label { color: var(--sub); }
+.dash-chip.stale { border-color: var(--warning); color: var(--warning); }
+.dash-chip.stale .material-symbols-rounded { color: var(--warning); }
+.dash-bar { height: 8px; border-radius: 4px; background: var(--hover); overflow: hidden; display: flex; }
+.dash-bar > span { height: 100%; transition: width 400ms var(--ease); }
+.dash-legend { display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
+.dash-legend-row { display: flex; align-items: center; gap: 8px; }
+.dash-legend-mark { font-size: 12px; line-height: 1; width: 14px; text-align: center; }
+.dash-legend-row .dash-legend-value { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 600; }
+.dash-donut-wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.dash-donut { flex-shrink: 0; }
+.dash-donut-center { font-size: 13px; fill: var(--text); font-weight: 700; }
+.dash-donut-sub { font-size: 9px; fill: var(--sub); }
+.dash-metric-row { display: flex; align-items: baseline; gap: 8px; }
+.dash-metric-row .dash-metric-sub { font-size: 12px; color: var(--sub); }
+.dash-hbar-row { display: grid; grid-template-columns: 120px 1fr 76px; align-items: center; gap: 10px; font-size: 12px; padding: 4px 0; }
+.dash-hbar-row .dash-hbar-count { text-align: right; color: var(--sub); font-variant-numeric: tabular-nums; }
+.dash-note { font-size: 11px; color: var(--sub); margin: 10px 0 0; line-height: 1.5; }
+/* 골격 스크린 — 쿼리 대기 중 위젯 레이아웃을 유지한 채 점멸시켜 '빈 화면/오류' 오해를 막는다. */
+.skeleton { border-radius: var(--radius-sm); background: var(--hover); animation: skeleton-pulse 1.4s var(--ease) infinite; }
+.skeleton-card { height: 74px; }
+.skeleton-block { height: 200px; }
+.skeleton-line { height: 10px; margin-bottom: 7px; }
+@keyframes skeleton-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.85; } }
+/* 사이드바가 좁아지고 패딩이 줄어 본문이 ~190px 넓어졌다 — 4열이 버티는 폭도 그만큼 내려간다. */
+@media (max-width: 940px) { .grid-cols-4 { grid-template-columns: repeat(2, 1fr); } .grid-cols-2 { grid-template-columns: 1fr; } }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--hover); border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ===== 실시간 Baseline Diff 경고 알림 패널 (js/realtime-baseline-alerts.js) ===== */
+/* 상단바 알림 버튼을 누르면 오른쪽에서 밀려 나오는 세로 패널. 예전의 우측 하단 토스트는
+   작업 화면을 가리고 몇 초 뒤 사라져서 놓친 경고를 되짚을 수 없었다.
+   z-index는 modal-overlay(1000)보다 위 — 모달을 열어 둔 상태에서 장비가 죽어도 열 수 있어야 한다. */
+.rt-notify-panel {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 1200;
+  width: min(420px, calc(100vw - 40px));
+  display: flex; flex-direction: column;
+  background: var(--card); border-left: 1px solid var(--border);
+  box-shadow: -8px 0 24px var(--shadow);
+  transform: translateX(100%);
+  transition: transform var(--dur) var(--ease);
+}
+.rt-notify-panel.open { transform: translateX(0); }
+.rt-notify-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+  padding: 12px 14px; border-bottom: var(--line); flex-shrink: 0;
+}
+.rt-notify-head .btn { height: 28px; padding: 0 10px; font-size: 12px; }
+.rt-notify-body { flex: 1; min-height: 0; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.rt-notify-row {
+  cursor: pointer;
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 10px 12px;
+  background: var(--input-bg); color: var(--text);
+  border: 1px solid var(--border); border-left: 4px solid var(--rt-accent, var(--warning));
+  border-radius: var(--radius-sm);
+}
+.rt-notify-row:hover { background: var(--hover); }
+/* 알림 개수 배지 — 점만 찍던 것에서 숫자를 담도록 넓힌다. */
+#tb-notify-badge {
+  width: auto; min-width: 14px; height: 14px; padding: 0 4px; top: -2px; right: -2px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; color: #fff; border-radius: 999px;
+}
+.rt-alert-icon { font-size: 20px; color: var(--rt-accent, var(--warning)); flex-shrink: 0; }
+.rt-alert-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.rt-alert-head { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--sub); }
+.rt-alert-badge {
+  padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 700;
+  background: var(--rt-accent, var(--warning)); color: #0B1220;
+}
+.rt-alert-device { font-weight: 600; color: var(--text); }
+.rt-alert-time { margin-left: auto; font-variant-numeric: tabular-nums; }
+.rt-alert-msg { font-size: 13px; font-weight: 600; line-height: 1.45; word-break: break-word; }
+.rt-alert-raw {
+  font-family: var(--font-mono); font-size: 11px; color: var(--sub);
+  background: var(--input-bg); border-radius: 6px; padding: 4px 6px;
+  white-space: pre-wrap; word-break: break-all;
+}
+.rt-alert-close {
+  flex-shrink: 0; background: transparent; border: 0; color: var(--sub);
+  cursor: pointer; padding: 2px; border-radius: 6px; line-height: 1;
+}
+.rt-alert-close:hover { background: var(--hover); color: var(--text); }
+
+/* 세부 Diff 이력 모달 */
+.rt-alert-modal { width: min(720px, 96vw); max-height: 82vh; display: flex; flex-direction: column; gap: 14px; }
+.rt-alert-modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.rt-alert-modal-body { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; }
+.rt-alert-row {
+  border: 1px solid var(--border); border-left: 4px solid var(--rt-accent, var(--warning));
+  border-radius: var(--radius-sm); padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.rt-alert-row-head { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--sub); }
+.rt-alert-type { font-family: var(--font-mono); font-size: 10px; }
+.rt-alert-src { font-size: 10px; color: var(--sub); }
+
+/* ===== ?먮룞 ?ㅼ떆媛?媛먯떆 ?⑤꼸 (?곌껐 ???섎떒 ??js/realtime-monitor-panel.js) ===== */
+/* .term-page???믪씠媛 酉고룷?몄뿉 怨좎젙??flex 而щ읆?닿퀬 .term-page .card媛 flex:1?대떎.
+   ?곕???移대뱶??洹?洹쒖튃??洹몃?濡??곌퀬, 媛먯떆 ?⑤꼸? 怨좎젙 ?믪씠瑜?李⑥??섎ŉ ?섏씠吏媛 ?ㅽ겕濡ㅻ맂?? */
+.rtm-card { flex: 0 0 auto; padding: 0; overflow: hidden; }
+
+.rtm-tabbar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--sidebar);
+}
+.rtm-tab {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  font-size: 13px; font-weight: 600; color: var(--sub);
+}
+.rtm-tab.active { color: var(--text); background: var(--card); box-shadow: inset 0 -2px 0 var(--primary); }
+.rtm-tab .material-symbols-rounded { font-size: 18px; }
+.rtm-status { font-size: 11px; color: var(--sub); }
+.rtm-status-on { color: var(--success); }
+.rtm-status-bad { color: var(--critical); font-weight: 600; }
+.rtm-tabbar .btn { height: 28px; padding: 0 10px; font-size: 11px; }
+.rtm-tabbar .btn .material-symbols-rounded { font-size: 15px; }
+.rtm-auto {
+  display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--sub);
+  cursor: pointer; white-space: nowrap;
+}
+
+.rtm-body { display: flex; align-items: stretch; height: calc(100% - 45px); min-height: 0; }
+.rtm-left { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.rtm-right { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.rtm-analysis, .rtm-checklist { padding: 0 10px 10px; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.rtm-checklist { flex: 1; }
+
+/* ?쒕옒洹?援щ텇?????뉕쾶 ?먭퀬 hover/?쒕옒洹??뚮쭔 媛뺤“?쒕떎. */
+.rtm-vsplit { flex: 0 0 6px; cursor: col-resize; background: var(--border); }
+.rtm-hsplit { flex: 0 0 6px; cursor: row-resize; background: var(--border); }
+.rtm-vsplit:hover, .rtm-hsplit:hover, .rtm-split-active { background: var(--primary); }
+
+.rtm-pane-head { display: flex; align-items: center; gap: 6px; padding: 8px 10px 6px; }
+.rtm-pane-head-sticky { position: sticky; top: 0; z-index: 2; background: var(--card); margin: 0 -10px; padding-left: 10px; padding-right: 10px; }
+.rtm-pane-title { font-size: 12px; font-weight: 700; }
+.rtm-mini { height: 22px !important; padding: 0 8px !important; font-size: 10px !important; }
+.rtm-empty { font-size: 12px; color: var(--sub); padding: 12px; }
+
+/* 醫뚯륫 ?λ퉬 ??*/
+.rtm-device-tabs { display: flex; gap: 4px; overflow-x: auto; padding: 0 10px 6px; flex-shrink: 0; }
+.rtm-device-tab {
+  background: var(--input-bg); color: var(--sub); border: 1px solid var(--border);
+  border-radius: 999px; padding: 3px 10px; font-size: 11px; cursor: pointer; white-space: nowrap;
+}
+.rtm-device-tab.active { color: var(--text); border-color: var(--primary); background: var(--hover); }
+.rtm-device-tab.rtm-fail { border-color: var(--critical); color: var(--critical); }
+.rtm-device-tab b { color: var(--critical); }
+
+/* 醫뚯륫 濡쒓렇 ??諛뺤뒪 ?대????ㅽ겕濡ㅽ븯吏 ?딄퀬(理쒖떊 以꾨쭔 蹂댁엫), 諛뺤뒪?ㅼ쓣 ?댁? ??而⑦뀒?대꼫留??ㅽ겕濡ㅽ븳?? */
+.rtm-left-body { flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0; padding: 0 10px 10px; display: flex; flex-direction: column; gap: 8px; }
+.rtm-log-box {
+  flex: 0 0 auto; display: flex; flex-direction: column; overflow: hidden;
+  border: 1px solid var(--border); border-left: 3px solid var(--sub);
+  border-radius: var(--radius-sm); background: var(--input-bg);
+}
+.rtm-log-box-fill { flex: 1; min-height: 0; }
+.rtm-log-box.rtm-fail { border-left-color: var(--critical); }
+.rtm-log-box.rtm-warn { border-left-color: var(--warning); }
+.rtm-log-box.rtm-ok { border-left-color: var(--success); }
+.rtm-log-head {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  padding: 4px 8px; font-size: 11px; border-bottom: 1px solid var(--border); background: var(--card);
+}
+.rtm-log-count { font-size: 10px; color: var(--sub); font-variant-numeric: tabular-nums; }
+/* 理쒖떊 以꾩씠 ?꾨옒??遺숆퀬, ?섏튂????以꾩? ?꾨줈 ?섎젮?섍컙??諛뺤뒪 ?먯껜???ㅽ겕濡?????. */
+.rtm-log-lines { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; padding: 3px 8px; }
+.rtm-log-line {
+  font-family: var(--font-mono); font-size: 11px; line-height: 17px; height: 17px;
+  white-space: pre; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0;
+}
+.rtm-log-ts { color: var(--sub); margin-right: 8px; }
+.rtm-log-idle { color: var(--sub); font-style: italic; }
+
+/* ?곹깭 移?*/
+.rtm-chip { font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
+.rtm-chip-ok, .rtm-chip-pending { background: rgba(34,197,94,0.18); color: var(--success); }
+.rtm-chip-warn { background: rgba(245,158,11,0.18); color: var(--warning); }
+.rtm-chip-major { background: rgba(249,115,22,0.18); color: var(--major); }
+.rtm-chip-fail { background: rgba(239,68,68,0.18); color: var(--critical); }
+.rtm-chip-unknown { background: var(--hover); color: var(--sub); }
+
+/* ?곗륫 ?곷떒 ???ㅼ떆媛??ㅻ쪟 遺꾩꽍 */
+.rtm-verdict { border-radius: var(--radius-sm); padding: 10px 12px; background: var(--input-bg); border-left: 3px solid var(--success); margin-bottom: 8px; }
+.rtm-verdict.rtm-warn { border-left-color: var(--warning); }
+.rtm-verdict.rtm-fail { border-left-color: var(--critical); }
+.rtm-verdict-headline { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+.rtm-verdict-summary { font-size: 11px; color: var(--sub); line-height: 1.5; }
+.rtm-finding { border: 1px solid var(--border); border-left: 3px solid var(--warning); border-radius: var(--radius-sm); padding: 8px 10px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px; }
+.rtm-finding-head { display: flex; align-items: center; gap: 6px; font-size: 11px; flex-wrap: wrap; }
+.rtm-finding-title { font-weight: 600; font-size: 12px; }
+.rtm-finding-line { font-size: 11px; color: var(--text); line-height: 1.5; }
+.rtm-label { display: inline-block; min-width: 58px; color: var(--sub); font-weight: 600; margin-right: 6px; }
+.rtm-finding-evidence { display: flex; flex-direction: column; gap: 3px; }
+.rtm-finding-evidence code { font-family: var(--font-mono); font-size: 10px; color: var(--sub); background: var(--input-bg); border-radius: 5px; padding: 2px 5px; white-space: pre-wrap; word-break: break-all; }
+
+/* ?곗륫 ?섎떒 ???ㅼ떆媛?泥댄겕由ъ뒪??*/
+.rtm-check-group { border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; overflow: hidden; cursor: pointer; }
+.rtm-check-group:hover { border-color: var(--primary); }
+.rtm-check-group-head { display: flex; align-items: center; gap: 6px; padding: 5px 9px; background: var(--input-bg); font-size: 12px; }
+.rtm-check-hint { font-size: 10px; color: var(--sub); }
+.rtm-check-row { display: flex; align-items: center; gap: 7px; padding: 4px 9px; font-size: 11px; border-top: 1px solid var(--border); }
+.rtm-check-row .material-symbols-rounded { font-size: 15px; }
+.rtm-check-label { font-weight: 600; min-width: 132px; }
+.rtm-check-detail { color: var(--sub); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rtm-check-count { background: var(--hover); border-radius: 999px; padding: 0 6px; font-size: 10px; font-variant-numeric: tabular-nums; }
+.rtm-check-ts { color: var(--sub); font-size: 10px; font-variant-numeric: tabular-nums; }
+.rtm-check-pending .material-symbols-rounded { color: var(--success); }
+.rtm-check-warn .material-symbols-rounded { color: var(--warning); }
+.rtm-check-fail { background: rgba(239,68,68,0.08); }
+.rtm-check-fail .material-symbols-rounded { color: var(--critical); }
+.rtm-check-fail .rtm-check-label { color: var(--critical); }
+.rtm-check-recovered .material-symbols-rounded { color: var(--primary); }
+.rtm-check-unknown .material-symbols-rounded, .rtm-check-unknown .rtm-check-label { color: var(--sub); }
+
+/* 경고/주요/심각 3단계 공용 강조색 — 실시간 오류 분석 카드, 체크리스트 항목·장비 타일,
+   좌측 로그 박스, 분류/장비 열이 모두 같은 색 체계를 쓴다(치명도를 한눈에 비교할 수 있게). */
+.rtm-finding.rtm-sev-critical, .rtm-err-row.rtm-sev-critical,
+.rtm-log-box.rtm-sev-critical, .rtm-checklist-devtile.rtm-sev-critical {
+  border-left-color: var(--critical);
+}
+.rtm-finding.rtm-sev-major, .rtm-err-row.rtm-sev-major,
+.rtm-log-box.rtm-sev-major, .rtm-checklist-devtile.rtm-sev-major {
+  border-left-color: var(--major);
+}
+.rtm-finding.rtm-sev-warning, .rtm-err-row.rtm-sev-warning,
+.rtm-log-box.rtm-sev-warning, .rtm-checklist-devtile.rtm-sev-warning {
+  border-left-color: var(--warning);
+}
+.rtm-checklist-devtile.rtm-sev-ok { border-left-color: var(--success); }
+/* 심각/주요 장비는 타일·로그박스 배경도 옅게 물들여, 테두리 3px만으로는 놓치기 쉬운
+   '이 장비에 지금 문제가 있다'를 한눈에 보이게 한다(색약 대비로 배지 글자도 함께 바뀐다). */
+.rtm-checklist-devtile.rtm-sev-critical, .rtm-log-box.rtm-sev-critical { background: rgba(239,68,68,0.10); }
+.rtm-checklist-devtile.rtm-sev-major, .rtm-log-box.rtm-sev-major { background: rgba(249,115,22,0.10); }
+.rtm-checklist-devtile.rtm-sev-warning, .rtm-log-box.rtm-sev-warning { background: rgba(245,158,11,0.10); }
+.rtm-check-row.rtm-check-sev-critical { background: rgba(239,68,68,0.10); }
+.rtm-check-row.rtm-check-sev-major { background: rgba(249,115,22,0.10); }
+.rtm-check-row.rtm-check-sev-major .material-symbols-rounded,
+.rtm-check-row.rtm-check-sev-major .rtm-check-label { color: var(--major); }
+.rtm-check-row.rtm-check-sev-warning { background: rgba(245,158,11,0.10); }
+
+/* 확인이 필요한 버튼(파일 진단) — 별도 경고 줄 대신 버튼 자체를 물들인다. */
+.btn.rtm-btn-attention {
+  border-color: var(--warning); color: var(--warning); background: rgba(245,158,11,0.10);
+}
+.btn.rtm-btn-attention:hover { background: rgba(245,158,11,0.18); }
+
+/* ===== 실시간 오류 분석 좌우 2분할(오류 목록 → 상세) ===== */
+.rtm-analysis-cols { display: flex; gap: 8px; flex: 1; min-height: 0; }
+.rtm-analysis-col { min-width: 0; overflow-y: auto; border: var(--line); border-radius: var(--radius-sm); padding: 5px; }
+/* 좌측 목록 1/4 : 우측 상세 3/4 — 아래 실시간 체크리스트와 같은 조작(왼쪽에서 고르면 오른쪽에
+   상세가 뜬다)이므로 폭 비율도 같은 규칙으로 맞춘다. 고정 폭(240px)이던 때는 패널을 넓혀도
+   목록만 그대로라 상세가 과하게 넓어졌다 — 비율 폭이면 좌우가 같이 늘어난다.
+   min-width는 0으로 두어 gap 때문에 25%+75%가 넘쳐 가로 스크롤이 생기지 않게 한다. */
+.rtm-analysis-col-list { flex: 0 0 25%; }
+.rtm-analysis-col-detail { flex: 1 1 75%; padding: 8px 10px; }
+/* 제목·판정·건수 칩까지 두 열 안으로 들어왔다 — 열이 곧 스크롤 컨테이너이므로 sticky 헤더의
+   기준도 카드가 아니라 열이다. 카드 padding(10px)을 상쇄하던 음수 마진을 열 padding에 맞춰
+   되돌리지 않으면 헤더만 열 밖으로 삐져나온다. */
+.rtm-analysis-col > .rtm-pane-head-sticky {
+  margin: -5px -5px 6px; padding: 5px 7px; background: var(--card);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+.rtm-analysis-col-detail > .rtm-pane-head-sticky { margin: -8px -10px 6px; padding: 6px 10px; }
+/* 우측 열 상단은 요약만 — 헤드라인(이상 징후 없음)은 좌측 열이 갖는다. */
+.rtm-verdict-summary-only { padding: 8px 12px; }
+
+/* 좌측: 발견된 오류 한 건 = 한 박스(심각 → 주요 → 경고 순) */
+.rtm-err-row {
+  display: flex; flex-direction: column; gap: 3px; padding: 6px 8px; margin-bottom: 5px;
+  border: 1px solid var(--border); border-left: 3px solid var(--sub); border-radius: var(--radius-sm);
+  background: var(--input-bg); cursor: pointer;
+}
+.rtm-err-row:hover { background: var(--hover); }
+.rtm-err-row.active { outline: 1px solid var(--primary); background: var(--hover); }
+.rtm-err-row-head { display: flex; align-items: center; gap: 5px; font-size: 11px; }
+.rtm-err-device { font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 목록의 주 라벨 — "VLAN / 3대"처럼 큰 기술 분류와 대수. 아래 rtm-err-title(대표 문구 미리보기)
+   보다 굵고 크게 두어 "무엇이" 먼저 눈에 들어오게 한다. */
+.rtm-err-category { font-size: 13px; font-weight: 700; margin: 2px 0 1px; }
+.rtm-err-title { font-size: 11px; color: var(--sub); line-height: 1.45; }
+.rtm-cat-count { background: var(--hover); border-radius: 999px; padding: 0 6px; font-size: 10px; font-variant-numeric: tabular-nums; flex-shrink: 0; margin-left: auto; }
+/* 목록 한 줄 = 오류 한 종류. 어느 장비들이 걸렸는지는 제목 아래에 칩으로 깔아 준다 —
+   폭이 좁으므로 줄바꿈시키고, 장비명이 길면 잘라서 줄 높이가 무너지지 않게 한다. */
+.rtm-err-devcount { font-size: 10px; color: var(--sub); font-weight: 600; }
+.rtm-err-devices { display: flex; flex-wrap: wrap; gap: 3px; }
+.rtm-err-devices em {
+  font-style: normal; font-size: 10px; color: var(--sub); background: var(--hover);
+  border-radius: 999px; padding: 0 6px; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* 우측: 선택한 오류의 상세 — 어느 장비의 어떤 설정이 잘못됐는지 */
+.rtm-detail-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.rtm-detail-device { font-size: 13px; }
+.rtm-detail-title { font-size: 12.5px; font-weight: 700; margin-bottom: 7px; line-height: 1.45; }
+.rtm-detail-section {
+  font-size: 10.5px; font-weight: 700; color: var(--sub); text-transform: uppercase;
+  letter-spacing: 0.3px; margin: 10px 0 4px; padding-top: 7px; border-top: var(--line);
+}
+.rtm-detail-note { font-size: 11px; color: var(--sub); line-height: 1.6; margin-top: 10px; padding-top: 7px; border-top: var(--line); }
+/* 상세 안의 체크리스트 행은 그룹 테두리 없이 쓰이므로 위쪽 구분선만 남긴다 */
+.rtm-analysis-col-detail .rtm-check-row { border-top: var(--line); border-radius: var(--radius-sm); }
+/* 그룹 상세 — 제목 아래에 걸린 장비를 심각도 색 칩으로 늘어놓고, 그 아래 장비별 블록이 이어진다.
+   블록 사이를 선으로 끊어야 4대가 붙어 있을 때 어디까지가 한 장비인지 읽힌다. */
+.rtm-detail-devchips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.rtm-detail-device-block { padding-top: 10px; margin-top: 10px; border-top: var(--line); }
+.rtm-detail-device-block:first-of-type { padding-top: 0; margin-top: 0; border-top: none; }
+
+/* ===== 실시간 체크리스트 — 좌: 장비 그리드(2열), 우: 항목 목록 ===== */
+.rtm-checklist-body { display: flex; gap: 8px; flex: 1; min-height: 0; }
+.rtm-checklist-devgrid {
+  flex: 0 0 220px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  align-content: start; overflow-y: auto; padding-right: 2px;
+}
+.rtm-checklist-devtile {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
+  padding: 6px 8px; border: 1px solid var(--border); border-left: 3px solid var(--sub);
+  border-radius: var(--radius-sm); background: var(--input-bg); cursor: pointer; font-size: 11px;
+}
+.rtm-checklist-devtile:hover { background: var(--hover); }
+.rtm-checklist-devtile.active { outline: 1px solid var(--primary); background: var(--hover); }
+.rtm-checklist-devtile-name {
+  font-weight: 600; font-size: 11.5px; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rtm-checklist-groups { flex: 1; min-width: 0; overflow-y: auto; }
+.rtm-check-group-active { outline: 2px solid var(--primary); }
+
+/* 좌측 실시간 입력 캡처 — 심각도 그룹 분리선(심각 → 주요 → 경고 → 정상) */
+.rtm-log-sep {
+  display: flex; align-items: center; gap: 8px; margin: 2px 0; flex-shrink: 0;
+  font-size: 10px; font-weight: 700; color: var(--rtm-sep-color, var(--sub));
+}
+.rtm-log-sep::before, .rtm-log-sep::after {
+  content: ''; flex: 1; height: 1px; background: var(--rtm-sep-color, var(--border)); opacity: 0.5;
+}
+.rtm-log-sep-critical { --rtm-sep-color: var(--critical); }
+.rtm-log-sep-major { --rtm-sep-color: var(--major); }
+.rtm-log-sep-warning { --rtm-sep-color: var(--warning); }
+.rtm-log-sep-none { --rtm-sep-color: var(--success); }
+.rtm-log-sep-count { background: var(--hover); border-radius: 999px; padding: 0 6px; }
+
+/* 파일 진단 팝업 — 추적 중인 행은 하이라이트, 추적하지 않는(이전 세션/제외) 행은 흐리게 */
+.rtm-probe-body tr.rtm-probe-live { background: rgba(59,130,246,0.10); }
+.rtm-probe-body tr.rtm-probe-live td { font-weight: 600; }
+.rtm-probe-body tr.rtm-probe-fresh { background: rgba(34,197,94,0.12); }
+.rtm-probe-body tr.rtm-probe-stale td { opacity: 0.55; }
+.rtm-probe-mtime { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rtm-probe-live-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--hover); color: var(--sub);
+  font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 999px; white-space: nowrap;
+}
+.rtm-probe-tracked-badge { background: rgba(59,130,246,0.20); color: var(--primary); }
+.rtm-probe-fresh-badge { background: rgba(34,197,94,0.20); color: var(--success); }
+.rtm-probe-old-badge {
+  display: inline-flex; align-items: center; background: var(--hover); color: var(--sub);
+  font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 999px; white-space: nowrap;
+}
+
+/* ===== 실시간 감시 전용 탭 (v0.5.3에서 '세션 터미널' 아래에서 독립 페이지로 분리) ===== */
+/* 예전에는 .term-page 안에 높이 460px로 얹혀 있었다. 독립 탭이 된 뒤로는 뷰포트 높이를
+   패널이 전부 쓴다 — 3분할 화면에서 세로 공간이 부족한 것이 분리의 이유였다. */
+.rtm-page { display: flex; flex-direction: column; height: calc(100vh - var(--topbar-h) - var(--statusbar-h) - 24px); min-height: 0; }
+.rtm-page .page-title, .rtm-page .page-sub { flex-shrink: 0; }
+.rtm-page .page-sub code { font-family: var(--font-mono); font-size: 11px; background: var(--input-bg); border-radius: 5px; padding: 1px 5px; }
+.rtm-page .rtm-card { flex: 1 !important; height: auto; margin-top: 0; min-height: 0;
+  /* 카드 자체가 flex 컬럼이어야 .rtm-body가 남은 높이만 차지하고 로그 목록이 스크롤된다.
+     (예전에는 .rtm-body에 height:calc(100% - 45px) 고정값을 줘서 이 규칙이 필요 없었다.) */
+  display: flex; flex-direction: column; }
+.rtm-page .rtm-tabbar, .rtm-page .rtm-target-row, .rtm-page .rtm-warn-row { flex-shrink: 0; }
+.rtm-page .rtm-body { height: auto; flex: 1; min-height: 0; }
+
+/* 감시 대상 장비 행 — 세션 터미널의 접속 대상 체크박스와 별개로 이 탭이 자체 상태를 갖는다. */
+.rtm-target-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px; border-bottom: 1px solid var(--border); flex-wrap: nowrap;
+}
+.rtm-target-label { font-size: 11px; font-weight: 700; color: var(--sub); white-space: nowrap; }
+.rtm-target-chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; flex: 1; min-width: 0; }
+.rtm-target-chip {
+  display: flex; align-items: center; gap: 5px; cursor: pointer; white-space: nowrap;
+  border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px 2px 6px;
+  font-size: 11px; color: var(--sub); background: var(--input-bg);
+}
+.rtm-target-chip.on { color: var(--text); border-color: var(--primary); }
+.rtm-target-chip em { font-style: normal; font-size: 10px; color: var(--sub); font-variant-numeric: tabular-nums; }
+.rtm-target-chip input { margin: 0; }
+.rtm-target-empty { font-size: 11px; color: var(--sub); }
+
+/* 감시는 도는데 화면이 비어 있을 때의 원인 안내 줄 */
+.rtm-warn-row {
+  display: flex; align-items: center; gap: 7px; padding: 6px 12px;
+  font-size: 11px; color: var(--warning); background: rgba(245,158,11,0.10);
+  border-bottom: 1px solid var(--border); line-height: 1.5;
+}
+.rtm-warn-row .material-symbols-rounded { font-size: 16px; flex-shrink: 0; }
+
+/* 감시 시작 전부터 파일에 있던 줄 — 지금 들어온 입력과 눈으로 구분되게 흐리게 */
+.rtm-log-history { opacity: 0.5; }
+
+/* ===== v0.5.4 — 숨김 안내 / 상단 고정 카드 / 표시 설정 모달 ===== */
+/* 숨김 안내 줄 — rtm-warn-row와 같은 자리·같은 모양이지만 색만 중립으로(경고가 아니라 상태 알림) */
+.rtm-hidden-row {
+  display: flex; align-items: center; gap: 7px; padding: 5px 12px;
+  font-size: 11px; color: var(--sub); background: var(--input-bg);
+  border-bottom: var(--line); line-height: 1.5; flex-shrink: 0;
+}
+.rtm-hidden-row .material-symbols-rounded { font-size: 16px; flex-shrink: 0; }
+
+/* 고정 카드 줄 — 가로 스크롤만 허용한다. 줄바꿈시키면 카드가 늘어날 때 3분할 높이를 잡아먹는다. */
+.rtm-pinned-row {
+  display: flex; align-items: stretch; gap: 6px; padding: 6px 12px;
+  border-bottom: var(--line); overflow-x: auto; flex-shrink: 0;
+}
+.rtm-pinned-row .rtm-target-label { align-self: center; }
+.rtm-pin-card {
+  display: flex; align-items: center; gap: 7px; cursor: pointer;
+  border: var(--line); border-left: 3px solid var(--sub);
+  border-radius: var(--radius-sm); background: var(--card);
+  padding: 4px 8px; min-width: 190px; max-width: 280px; flex-shrink: 0;
+}
+.rtm-pin-card:hover { background: var(--hover); }
+.rtm-pin-card > .material-symbols-rounded { font-size: 17px; color: var(--sub); flex-shrink: 0; }
+.rtm-pin-card.rtm-pin-fail { border-left-color: var(--critical); }
+.rtm-pin-card.rtm-pin-fail > .material-symbols-rounded { color: var(--critical); }
+.rtm-pin-card.rtm-pin-warn { border-left-color: var(--warning); }
+.rtm-pin-card.rtm-pin-warn > .material-symbols-rounded { color: var(--warning); }
+.rtm-pin-card.rtm-pin-pending, .rtm-pin-card.rtm-pin-recovered { border-left-color: var(--success); }
+.rtm-pin-card.rtm-pin-pending > .material-symbols-rounded,
+.rtm-pin-card.rtm-pin-recovered > .material-symbols-rounded { color: var(--success); }
+.rtm-pin-body { min-width: 0; flex: 1; }
+.rtm-pin-head { display: flex; align-items: baseline; gap: 5px; font-size: 11.5px; }
+.rtm-pin-label { color: var(--sub); font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rtm-pin-detail {
+  font-size: 10.5px; color: var(--sub);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* 체크리스트 행에 붙는 핀 표시 */
+.rtm-pin-icon { font-size: 13px !important; color: var(--primary); flex-shrink: 0; }
+.rtm-check-pinned { background: rgba(59,130,246,0.06); }
+
+/* 표시 설정 모달 — 좌: 장비/항목 트리, 우: 규칙 + 키워드 */
+.rtm-settings-modal { width: min(940px, 96vw); max-height: 86vh; display: flex; flex-direction: column; gap: 10px; }
+.rtm-settings-body {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  overflow-y: auto; min-height: 0; padding-right: 4px;
+}
+@media (max-width: 780px) { .rtm-settings-body { grid-template-columns: 1fr; } }
+.rtm-tree { min-width: 0; }
+.rtm-tree-title { font-size: 12px; font-weight: 700; margin: 0 0 3px; }
+.rtm-tree-hint { font-size: 10.5px; color: var(--sub); margin: 0 0 8px; line-height: 1.5; }
+.rtm-tree-node { border: var(--line); border-radius: var(--radius-sm); margin-bottom: 6px; overflow: hidden; }
+.rtm-tree-row {
+  display: flex; align-items: center; gap: 6px; padding: 4px 8px;
+  font-size: 12px; cursor: pointer; user-select: none;
+}
+.rtm-tree-node > .rtm-tree-row { background: var(--input-bg); border-bottom: var(--line); }
+.rtm-tree-row:hover { background: var(--hover); }
+.rtm-tree-row input { margin: 0; flex-shrink: 0; }
+.rtm-tree-leaf { font-size: 11.5px; color: var(--sub); }
+.rtm-tree-leaf em { font-style: normal; font-size: 10px; opacity: 0.7; margin-left: auto; }
+.rtm-tree-leaf code { font-family: var(--font-mono); font-size: 10.5px; }
+/* 들여쓰기는 padding-left로 준다 — margin이면 hover 배경이 잘려 트리 구조가 안 읽힌다. */
+.rtm-tree-children { padding-left: 14px; }
+.rtm-rule-list {
+  border: var(--line); border-radius: var(--radius-sm);
+  max-height: 260px; overflow-y: auto; padding: 4px 4px 4px 10px; margin-bottom: 12px;
+}
+.rtm-keyword-box { min-height: 88px; font-family: var(--font-mono); font-size: 11.5px; }
+
+/* 우클릭 메뉴는 connection-context-menu.js의 .term-ctx-menu를 그대로 쓴다 —
+   .rtm-ctx-menu는 닫기 대상을 구분하기 위한 표식일 뿐 별도 모양이 없다. */
+
+/* 토스트/이력 행의 '원인 추정' 및 '복구됨' 표시 */
+.rt-alert-cause {
+  display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+  font-size: 11px; color: var(--warning); line-height: 1.5;
+}
+.rt-alert-cause .material-symbols-rounded { font-size: 14px; }
+.rt-alert-cause code {
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--text);
+  background: var(--input-bg); border-radius: 4px; padding: 1px 4px;
+}
+.rt-alert-cause em { font-style: normal; opacity: 0.75; }
+.rt-alert-fixed {
+  display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+  font-size: 11px; color: var(--success); font-weight: 600; margin-top: 3px;
+}
+.rt-alert-fixed .material-symbols-rounded { font-size: 14px; }
+.rt-alert-fixed code {
+  font-family: var(--font-mono); font-size: 10.5px; font-weight: 400;
+  background: var(--input-bg); border-radius: 4px; padding: 1px 4px; color: var(--text);
+}
+/* 해제된 경고는 지우지 않고 흐리게 남긴다 — 이력이 곧 점검 근거다. */
+.rt-alert-row-resolved { opacity: 0.72; }
+.rt-alert-row-resolved .rt-alert-msg { text-decoration: line-through; }
+.rtm-finding-intent { color: var(--warning); }
+.rtm-finding-intent code {
+  font-family: var(--font-mono); font-size: 10px; color: var(--sub);
+  background: var(--input-bg); border-radius: 4px; padding: 1px 4px; margin-left: 4px;
+}
+
+/* 파일 진단 모달 */
+.rtm-probe-modal { width: min(860px, 96vw); max-height: 84vh; display: flex; flex-direction: column; gap: 12px; }
+.rtm-probe-body { overflow: auto; min-height: 0; }
+.rtm-probe-body table.dtable { font-size: 11px; }
+.rtm-probe-body tr.rtm-probe-bad td { color: var(--critical); }
+.rtm-probe-note { font-size: 11px; color: var(--sub); line-height: 1.6; margin: 10px 0 0; }
+.rtm-probe-note code { font-family: var(--font-mono); background: var(--input-bg); border-radius: 4px; padding: 1px 4px; }
+
+/* =====================================================================
+   시인성·직관성 강화 (v0.5.6 UI 리팩토링)
+   "지금 어디를 보고 있는지"를 색·굵기·배지 세 겹으로 알려주는 규칙 모음.
+   기능 로직은 건드리지 않고, JS가 붙이는 클래스에 대한 표현만 여기서 정의한다.
+   ===================================================================== */
+
+/* 여러 패널이 공유하는 상호 하이라이트 펄스 — 같은 원인을 가리키는 서로 다른
+   패널(로그/체크리스트)이 동시에 같은 리듬으로 깜빡여야 '같은 것'으로 읽힌다. */
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55); }
+  50%      { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.05); }
+}
+@keyframes pulse-border-critical {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55); }
+  50%      { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.05); }
+}
+@keyframes live-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+/* ===== 1단계: 펼쳐진 점검 회차(대분류) 구역 ===== */
+/* 회차가 여러 개 쌓이면 어느 그룹이 펼쳐져 있는지가 caret 하나로는 잘 안 보인다 —
+   펼친 헤더에 좌측 액센트 바를, 그 본문에는 옅은 틴트 + 계층 트리선을 준다. */
+.log-run-group-head.open {
+  border-left: 3px solid var(--primary);
+  background: rgba(59, 130, 246, 0.10);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.log-run-group-head.open .log-run-group-title { color: var(--primary); }
+.log-run-group-head.open .log-run-group-caret { color: var(--primary); }
+.log-run-group-head.open .log-run-group-count {
+  background: rgba(59, 130, 246, 0.20); color: var(--primary); font-weight: 700;
+}
+.log-run-group-body {
+  background: rgba(59, 130, 246, 0.05);
+  border-left: 2px solid var(--primary-dim);
+  padding-left: 12px; margin-left: 6px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+/* ===== 2단계: 그 안에서 지금 열람 중인 파일 ===== */
+/* .log-file-item.active = 우측 뷰어/분석창에 실제로 읽혀 보이는 파일.
+   .selected(삭제 대상 다중선택)와는 다른 정보라 배경 진하기로 구분한다. */
+.log-file-item.active {
+  background: rgba(59, 130, 246, 0.20);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+.log-file-item.active .device-name { font-weight: 700; color: var(--primary); }
+.log-file-open-badge {
+  margin-left: auto; flex-shrink: 0; display: inline-flex; align-items: center; gap: 3px;
+  background: var(--primary); color: #fff; font-size: 9px; font-weight: 700;
+  border-radius: 999px; padding: 1px 6px; letter-spacing: 0.3px; white-space: nowrap;
+}
+
+/* ===== 장비 목록: 선택 행 핀 바 ===== */
+/* 선택(파랑)과 연결 확인 결과(초록/빨강)는 서로 다른 정보다 — 선택은 왼쪽 핀 바 +
+   마커로, 결과는 배경으로 표현해 한 행에 겹쳐도 둘 다 읽힌다. */
+table.dtable tbody tr.inv-selected > td:first-child {
+  box-shadow: inset 5px 0 0 var(--primary);
+  position: relative; padding-left: 16px;
+}
+table.dtable tbody tr.inv-selected > td:first-child::before {
+  content: "\25BA"; position: absolute; left: 7px; top: 50%; transform: translateY(-50%);
+  font-size: 9px; color: var(--primary); line-height: 1; pointer-events: none;
+}
+/* 연결 결과 배경 위에 선택 상태를 얹는 오버레이 — 결과 색을 지우지 않고 한 겹 밝게
+   깔아, '초록인데 선택됨' / '빨강인데 선택됨'이 모두 구별된다. */
+table.dtable tbody tr.inv-selected.probe-ok,
+table.dtable tbody tr.inv-selected.probe-ok:hover,
+table.dtable tbody tr.inv-selected.probe-fail,
+table.dtable tbody tr.inv-selected.probe-fail:hover,
+table.dtable tbody tr.inv-selected.probe-checking,
+table.dtable tbody tr.inv-selected.probe-checking:hover {
+  background-image: linear-gradient(rgba(59, 130, 246, 0.16), rgba(59, 130, 246, 0.16));
+}
+
+/* ===== 세션 터미널: 활성 탭 ↔ 좌측 장비 목록 1:1 연동 ===== */
+/* 지금 키 입력이 들어가는 장비를 좌우 양쪽에서 같은 색으로 표시한다 —
+   다른 장비에 명령을 잘못 넣는 사고를 막는 것이 목적이다. */
+.connection-device { position: relative; }
+.connection-device.term-focus-device {
+  background: rgba(59, 130, 246, 0.20);
+  box-shadow: inset 4px 0 0 var(--primary), 0 0 0 1px var(--primary),
+              0 0 10px rgba(59, 130, 246, 0.35);
+  border-radius: var(--radius-sm);
+}
+.connection-device.term-focus-device .device-name { font-weight: 700; color: var(--primary); }
+.device-session-slot { display: inline-flex; align-items: center; gap: 4px; }
+.device-focus-mark {
+  flex-shrink: 0; font-size: 9px; font-weight: 700; color: var(--primary);
+  letter-spacing: 0.3px; white-space: nowrap;
+}
+.device-online-badge {
+  display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0;
+  background: rgba(34, 197, 94, 0.16); color: var(--success);
+  font-size: 9px; font-weight: 700; border-radius: 999px; padding: 1px 6px;
+  letter-spacing: 0.3px; white-space: nowrap;
+}
+.device-online-badge::before {
+  content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--success);
+  animation: live-blink 1.4s var(--ease) infinite;
+}
+
+/* 활성 터미널 탭 — 아랫줄 2px만으로는 탭이 많을 때 눈에 잘 안 띈다. */
+.term-tab.active {
+  background: rgba(59, 130, 246, 0.14);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+/* 분할 뷰에서 지금 입력을 받는 판 — 헤더와 본문 테두리를 같이 굵게 밝힌다. */
+.term-pane-header.active {
+  border-width: 2px; border-color: var(--primary); color: var(--primary); font-weight: 700;
+  background: rgba(59, 130, 246, 0.14);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.30);
+}
+.term-pane-focus-mark { font-size: 9px; font-weight: 700; letter-spacing: 0.3px; }
+.term-pane-wrap.term-pane-focused .term-pane-body {
+  border: 2px solid var(--primary); border-top: none;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
+}
+
+/* ===== 실시간 감시: 장애 원인 ↔ 로그 ↔ 체크리스트 3-Way 교차 강조 ===== */
+/* 오류 카드를 짚으면 그 오류를 낸 장비의 CLI 로그 박스와 체크리스트가 같이 깜빡인다.
+   .rtm-xhl(경고 계열) / .rtm-xhl-critical(심각 계열) 두 색만 쓴다 — 색이 더 늘면
+   기존 심각도 색 체계와 섞여 오히려 안 읽힌다. */
+.rtm-log-box.rtm-xhl, .rtm-check-group.rtm-xhl, .rtm-check-row.rtm-xhl,
+.rtm-checklist-devtile.rtm-xhl {
+  outline: 2px solid var(--warning); outline-offset: -1px;
+  animation: pulse-border 1.5s var(--ease) infinite;
+  border-radius: var(--radius-sm);
+}
+.rtm-log-box.rtm-xhl-critical, .rtm-check-group.rtm-xhl-critical, .rtm-check-row.rtm-xhl-critical,
+.rtm-checklist-devtile.rtm-xhl-critical {
+  outline: 2px solid var(--critical); outline-offset: -1px;
+  animation: pulse-border-critical 1.5s var(--ease) infinite;
+  border-radius: var(--radius-sm);
+}
+.rtm-err-row, .rtm-finding { cursor: pointer; }
+.rtm-err-row.rtm-xhl-source, .rtm-finding.rtm-xhl-source {
+  outline: 2px solid var(--warning); outline-offset: -1px;
+}
+.rtm-err-row.rtm-xhl-source-critical, .rtm-finding.rtm-xhl-source-critical {
+  outline: 2px solid var(--critical); outline-offset: -1px;
+}
+
+/* ===== 고객사/프로파일 모달: 현재 사용 중인 회차 ===== */
+.inspection-profile-card.profile-current {
+  border: 2px solid var(--success);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
+  border-radius: var(--radius-sm);
+}
+/* 배너는 <summary> 안에 들어간다 — details가 접혀 있어도 보여야 하기 때문이다.
+   summary를 wrap으로 바꿔 배너가 첫 줄을 통째로 차지하게 한다. */
+.inspection-profile-card.profile-current > summary { flex-wrap: wrap; padding-top: 0; }
+.profile-current-banner {
+  width: calc(100% + 20px); margin: 0 -10px 6px; display: flex; align-items: center; gap: 5px;
+  background: var(--success); color: #fff;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.4px;
+  padding: 4px 10px; border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+.inspection-profile-card.profile-current > summary { font-weight: 700; }
+/* 사용 중이 아닌 회차는 시각적 무게를 낮춰 대비를 만든다. */
+.inspection-profile-card.profile-idle > summary { opacity: 0.72; font-weight: 500; }
+.inspection-profile-card.profile-idle:hover > summary { opacity: 1; }
+
+/* ===== 명령어 카탈로그: ON/OFF 배지 + 드롭 가이드 ===== */
+.cmd-state-badge {
+  flex-shrink: 0; width: 34px; text-align: center;
+  font-size: 9px; font-weight: 800; letter-spacing: 0.4px;
+  border-radius: 999px; padding: 2px 0;
+}
+.cmd-state-badge.cmd-state-on { background: rgba(34, 197, 94, 0.18); color: var(--success); }
+.cmd-state-badge.cmd-state-off { background: var(--hover); color: var(--sub); }
+/* 비활성 행은 무채색으로 눌러 둔다 — 취소선(기존 규칙)에 채도까지 빼서
+   목록을 훑을 때 '실행되는 것'만 눈에 들어오게 한다. */
+.catalog-row.cmd-disabled { filter: grayscale(1); opacity: 0.55; }
+.catalog-row.cmd-disabled:hover { filter: grayscale(0.4); opacity: 0.85; }
+
+/* 삽입 위치 가이드 — 어느 행 '사이'로 들어가는지가 테두리만으로는 애매했다. */
+.catalog-row.drop-target, .ai-order-item.drop-target { position: relative; }
+.catalog-row.drop-target::before, .ai-order-item.drop-target::before {
+  content: ""; position: absolute; left: 0; right: 0; top: -2px; height: 3px;
+  background: var(--primary); border-radius: 2px;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.7);
+}
+.catalog-row.drop-target::after, .ai-order-item.drop-target::after {
+  content: "\25B6"; position: absolute; left: -10px; top: -9px;
+  font-size: 10px; color: var(--primary); line-height: 1;
+}
+.catalog-drop-zone.drop-target { box-shadow: inset 0 -3px 0 var(--primary); }
+
+/* ===== 대시보드: 추이 배지 + 클릭 이동 가이드 ===== */
+.dash-trend {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 8px;
+  white-space: nowrap;
+}
+.dash-trend-up { background: rgba(34, 197, 94, 0.16); color: var(--success); }
+.dash-trend-down { background: rgba(239, 68, 68, 0.16); color: var(--critical); }
+.dash-trend-flat { background: var(--hover); color: var(--sub); }
+.dash-trend-none { background: var(--hover); color: var(--sub); font-weight: 500; }
+
+table.dtable tbody tr.dash-clickable { cursor: pointer; }
+table.dtable tbody tr.dash-clickable:hover { background: rgba(59, 130, 246, 0.10); }
+table.dtable tbody tr.dash-clickable .dash-goto {
+  visibility: hidden; margin-left: 6px; font-size: 10px; font-weight: 700; color: var(--primary);
+  white-space: nowrap;
+}
+table.dtable tbody tr.dash-clickable:hover .dash-goto { visibility: visible; }
+
+/* ===== 환경 설정: 1순위 AI 크라운 + API 키 미설정 경고 ===== */
+.ai-order-item { position: relative; flex-wrap: wrap; }
+.ai-order-item.ai-main-provider {
+  border: 2px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.10);
+}
+.ai-main-crown {
+  display: flex; align-items: center; gap: 5px; width: 100%;
+  background: var(--primary); color: #fff;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.4px;
+  padding: 3px 10px; border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  margin: -6px -10px 6px;
+}
+.ai-order-item.ai-main-provider .order-label { font-weight: 800; }
+.api-key-warn {
+  display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
+  background: rgba(249, 115, 22, 0.16); color: var(--warning);
+  font-size: 10px; font-weight: 700; border-radius: 999px; padding: 2px 8px;
+  white-space: nowrap;
+}
