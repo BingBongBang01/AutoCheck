@@ -18,6 +18,7 @@ import os
 import re
 import glob
 
+from engine import log_cache
 from engine.log_rule_engine import (
     ContextTracker, get_engine, load_rules, severity_rank, SEVERITY_ORDER,
 )
@@ -175,7 +176,7 @@ def format_report(source_name, findings):
 RULE_CHECK_PREFIX = "RuleCheck_"
 
 
-def extract_suspicious_context(raw_text, context_before=10, context_after=5):
+def extract_suspicious_context(raw_text, context_before=10, context_after=5, findings=None):
     """
     원본 텍스트에서 문제 블록을 찾고, 그 주변(앞뒤 N줄) 문맥을 포함한 텍스트로 추출하여 반환합니다.
     AI 분석 시 컨텍스트 크기를 줄이기 위해 사용됩니다.
@@ -183,7 +184,9 @@ def extract_suspicious_context(raw_text, context_before=10, context_after=5):
     AI에게 넘길 때는 상관분석으로 만들어진 복합 finding(원본에 없는 합성 블록)은 제외하고
     실제 원문 위치를 가진 것만 쓴다.
     """
-    findings = [f for f in analyze_text(raw_text) if not f.get("is_correlated")]
+    # findings 를 넘기면 재파싱하지 않는다 — AI 분석 경로는 이미 캐시된 판정을 갖고 있다.
+    source = findings if findings is not None else analyze_text(raw_text)
+    findings = [f for f in source if not f.get("is_correlated")]
     if not findings:
         return ""
 
@@ -217,10 +220,14 @@ def run_analysis(original_dir, problem_dir, prefix=RULE_CHECK_PREFIX, progress_c
     paths = sorted(glob.glob(os.path.join(original_dir, "*.txt")))
     total = len(paths)
     for i, path in enumerate(paths):
-        with open(path, encoding="utf-8", errors="replace") as f:
-            raw_text = f.read()
-
-        findings = analyze_text(raw_text)
+        # 캐시를 거친다 — 점검 직후 api/terminal_inspection_api.py 가 같은 파일들을 곧바로
+        # 다시 파싱하는데(경고 목록 생성), 그 두 번째 패스가 이 캐시로 사실상 공짜가 된다.
+        #
+        # 디코딩도 여기서 바뀐다: 예전에는 open(encoding="utf-8", errors="replace") 라
+        # cp949 로 저장된 레거시 로그를 이 경로만 깨진 문자로 읽었다(다른 읽기 경로는 모두
+        # cp949 를 시도한다). core/text_io.py 규칙으로 통일하면 그런 파일의 판정이
+        # 달라진다 — 틀렸던 것이 맞게 되는 방향이다.
+        findings = log_cache.cached_findings(path)
 
         out_name = None
         if findings:

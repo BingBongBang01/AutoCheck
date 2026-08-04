@@ -225,7 +225,8 @@ class TerminalInspectionApiMixin:
                     started_at = getattr(monitor, "_started_at", 0) or 0
                     if time.time() - started_at <= 600:
                         from engine import log_analysis
-                        from api.log_file_browser_api import _parse_terminal_session_filename, _read_text_auto
+                        from api.log_file_browser_api import _parse_terminal_session_filename
+                        from engine import log_cache
                         import uuid
 
                         log_analysis.run_analysis(log_paths["original"], log_paths["problem"])
@@ -234,9 +235,9 @@ class TerminalInspectionApiMixin:
                         paths = sorted(glob.glob(os.path.join(log_paths["original"], "*.txt")))
                         for path in paths:
                             device = _parse_terminal_session_filename(os.path.basename(path))
-                            raw_text = _read_text_auto(path)
-
-                            findings = log_analysis.analyze_text(raw_text)
+                            # run_analysis() 가 바로 위에서 이 파일들을 이미 파싱했다.
+                            # 캐시를 거치면 두 번째 파싱이 일어나지 않는다.
+                            findings = log_cache.cached_findings(path)
                             for finding in findings:
                                 new_alerts.append({
                                     "device": device,

@@ -15,7 +15,6 @@ import time
 import datetime
 import threading
 
-from api.log_file_browser_api import _read_text_auto
 from core.paths import AppPaths
 from api.job_runner import JobRunner
 
@@ -839,6 +838,7 @@ class LogAnalysisRunApiMixin:
 
             from ai_analysis.router import analyze_raw_log_text
             from engine.log_analysis import extract_suspicious_context
+            from engine.log_cache import cached_findings, cached_log_text
 
             problem_dir = profile_paths["problem"]
             results = []
@@ -847,10 +847,13 @@ class LogAnalysisRunApiMixin:
             total = len(paths)
             self._jobs().set(ai_mode, total=total, current=0, message="분석 중...")
             for i, path in enumerate(paths):
-                raw_text = _read_text_auto(path)
-                
-                # 원문 전체가 아닌, 의심되는 블록 주위 텍스트만 추출하여 AI에 전달 (비용 및 품질 최적화)
-                context_text = extract_suspicious_context(raw_text)
+                raw_text = cached_log_text(path)
+
+                # 원문 전체가 아닌, 의심되는 블록 주위 텍스트만 추출하여 AI에 전달 (비용 및 품질
+                # 최적화). 판정은 규칙기반 분석/대시보드가 이미 했을 수 있으므로 캐시된 것을 넘긴다 —
+                # 예전에는 extract_suspicious_context 가 내부에서 analyze_text 를 다시 돌렸다.
+                context_text = extract_suspicious_context(
+                    raw_text, findings=cached_findings(path, text=raw_text))
                 
                 if not context_text.strip():
                     analysis_text = "이 로그에서는 이상 징후를 발견하지 못했습니다."
