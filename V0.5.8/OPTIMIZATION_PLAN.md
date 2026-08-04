@@ -2,11 +2,11 @@
 
 ## 요약
 
-앱의 최대 CPU 소비처는 **로그 판정 엔진**(`engine/log_rule_engine.py`)이고, 그중 `match_signature()`가 `evaluate()` 시간의 약 56%다. 다만 이 병목의 해법으로 흔히 떠오르는 **정규식 통합(31개 → 단일 alternation)은 실측 결과 2.6배 느려서 폐기**했다. 실제로 성립하는 해법은 **줄 단위 메모화**이며(장비 20대 회차에서 3.9~4.3배, 결과 동일), 31개 signature 전부가 `scope=None`이라 순수 함수임을 확인해 안전성이 확보됐다. 단, 메모는 **회차 전체가 공유**해야 한다 — 파일 단위 메모는 1.05배로 사실상 무의미하다(0단계 하네스로 확인).
+**0~2단계 완료.** 앱의 최대 CPU 소비처였던 로그 판정 엔진(`engine/log_rule_engine.py`)이 **2.72배 빨라졌다**(`analyze_text` 70.2 → 25.8 ms). 시작 경로에서 미사용 의존성 3개(pandas/paramiko/openpyxl)를 걷어냈고, 유휴 폴링 빈도를 1/5로 줄였다. 테스트 0개에서 **160개**가 됐다.
 
-두 번째로 큰 것은 **시작 비용 약 1.27초**로, 실제로는 쓰지도 않는 pandas/paramiko/openpyxl을 eager import하기 때문이다. 세 번째는 **실시간 감시 폴링의 payload**(장비 30대에서 723 KB/s)인데, 계산 자체는 1.3ms로 싸고 문제는 전송량과 DOM 전면 재구축이다.
+이 계획의 가장 중요한 발견은 **가장 그럴듯한 최적화가 실제로는 퇴행**이었다는 것이다. "정규식 31개를 단일 alternation으로 합친다"는 실측 2.6배 느림(Python `re`가 패턴별 리터럴 접두사 최적화를 잃고 모든 위치에서 백트래킹한다). 성립한 해법은 **줄 단위 메모화**였고, 그것도 **회차 전체가 메모를 공유해야** 의미가 있다 — 파일 단위 메모는 1.05배로 사실상 무의미하다.
 
-테스트가 0개이므로 **0단계(안전망)를 먼저** 만들고, 그다음 무위험 항목(시작 비용·경로 캐시) → 핫패스(메모화) → 구조 개선 순으로 진행한다.
+남은 것은 3단계(구조 개선)다. 가장 큰 항목은 **실시간 감시 폴링 payload**(장비 30대에서 723 KB/s)인데, 계산 자체는 1.3 ms로 싸고 문제는 전송량과 DOM 전면 재구축이다. 리스크가 HIGH이므로(세 패널의 스냅샷 원자성) 신중히 진행해야 한다.
 
 ---
 
@@ -37,7 +37,7 @@
 | └ openpyxl | 269 ms (`report/inspection_excel.py:25`) | 〃 | 이전 측정(Windows) |
 | `import webview` | 200 ms | 단독 계측 | 이전 측정(Windows) |
 | `ensure_requirements()` 패키지 스캔 | 34 ms | 단독 계측 | 이전 측정(Windows) |
-| 테스트 수 | 0개 → **140개 통과**(0·1단계 완료) | `python -m pytest tests/ -q` | 이번 세션 |
+| 테스트 수 | 0개 → **160개 통과**(0·1·2단계 완료) | `python -m pytest tests/ -q` | 이번 세션 |
 
 > Linux 재측정이 Windows 대비 3배 느린 것은 머신 차이다. **절대값이 아니라 비율과 프로파일 형태가 일치**하는 것이 확인 포인트이며, 두 환경 모두 `re.search`가 지배적(54~55%)이고 호출 횟수(296,002)까지 동일하다.
 
@@ -193,64 +193,46 @@
 
 ---
 
-## 2단계 — 핫패스 최적화
+## 2단계 — 핫패스 최적화 ✅ 완료
 
-`evaluate()`가 앱 최대 CPU 소비처다. **0단계 완료 후에만** 착수한다.
+`evaluate()`가 앱 최대 CPU 소비처였다. 0단계 안전망 위에서 진행했다.
 
-### 2-1. `match_signature()` / `find_keyword()` 줄 단위 메모화 ★최우선
+**누적 결과** (장비 8대 코퍼스, 매 측정 전 메모 비움 — 즉 낙관적이지 않은 수치)
 
-- **대상 파일**: `engine/log_rule_engine.py` (`SignatureMatcher.match_signature`, `RuleEngine.find_keyword`)
-- **지금 동작**: 줄마다 signature 31개를 순차 루프하고(191 ms/9,600줄), signature가 안 걸리면 다시 keyword 17개를 순차 루프한다(103 ms/9,600줄). 실제 네트워크 로그는 중복률이 높다 — 인터페이스 표 행, 카운터 0 행, 설정 원문이 장비마다 반복된다. 합성 현실 코퍼스에서 `evaluate()`에 도달하는 1,312줄 중 **고유 줄은 417개(중복 68%)**였다.
-- **변경**: 두 함수를 줄 문자열 키로 메모화한다. **안전성 근거**: 31개 signature 전부 `scope=None`임을 실측 확인했다(`0/31`). `match_signature()`의 유일한 ctx 의존은 `if scope and not scope.search(ctx.command)`이므로 scope가 없으면 ctx를 전혀 읽지 않는다 — 줄만의 순수 함수다. `find_keyword()`는 애초에 ctx를 받지 않는다.
-  ```python
-  class SignatureMatcher:
-      def __init__(self, rules):
-          ...
-          self._memo = {}
-          # scope 보유 서명이 하나라도 있으면 메모를 끈다 — 그때는 ctx 의존이 생긴다
-          self._memo_safe = all(sc is None for _rx, sc, _e in self.signatures)
+| 지표 | 0단계 기준선 | 2-1 후 | 2-2 후 | 누적 |
+|---|---|---|---|---|
+| `analyze_text` | 70.2 ms | 33.3 ms | **25.8 ms** | **2.72배** |
+| `us/판정줄` | 39.9 | 18.9 | **14.7** | 2.72배 |
+| `evaluate` | 63.1 ms | 26.7 ms | **20.1 ms** | 3.14배 |
+| `match_signature` | 34.2 ms | **10.9 ms** | 10.9 ms | 3.14배 |
+| `find_keyword` | 22.4 ms | **6.2 ms** | 6.2 ms | 3.61배 |
+| `suppressor.check` | 11.8 ms | 11.8 ms | **4.95 ms** | 2.38배 |
 
-      def match_signature(self, line, ctx):
-          if not self._memo_safe:
-              return self._match_uncached(line, ctx)
-          hit = self._memo.get(line, _MISS)
-          if hit is _MISS:
-              hit = self._match_uncached(line, ctx)
-              if len(self._memo) < _MEMO_MAX:      # 상한으로 메모리 폭주 방지
-                  self._memo[line] = hit
-          return hit
-  ```
-  메모는 `RuleEngine` 인스턴스에 소속시킨다 — `get_engine(reload=True)`가 새 엔진을 만들므로 규칙 변경 시 자동 무효화된다. 상한(`_MEMO_MAX`, 예: 50,000 엔트리)에 도달하면 더 담지 않는다(캐시 자체를 비우지는 않는다 — 고유 줄이 많은 로그에서 진동을 피하기 위함).
-  - `self._memo_safe` 가드가 핵심이다. 앞으로 누군가 `log_rules.json`에 `scope`를 가진 signature를 추가하면 메모가 자동으로 꺼지고 정확성이 유지된다. 0-1의 `test_no_signature_declares_scope`가 그때 실패해 알려 준다.
-  - **메모는 반드시 회차 전체를 살아남아야 한다.** 파일마다 새로 만들면 1.05배로 이득이 사라진다(위 곡선 표). `RuleEngine`이 프로세스 싱글턴이므로 인스턴스 속성으로 두면 자동 충족되지만, 파일 단위로 엔진을 새로 만들거나 메모를 비우는 코드를 넣으면 이 항목이 무의미해진다.
-- **예상 이득**(0-2 하네스 실측, Linux): 회차 공유 기준 **장비 4대 2.5배 / 8대 3.2배 / 20대 3.9배**(`match_signature`), `find_keyword`는 2.6 / 3.5 / 4.3배. 장비 수가 많을수록 커지고 히트율 77.7%에서 포화하는 경향이다. `evaluate()` 전체로는 `suppressor.check` 12.6 ms가 그대로 남으므로 2배 내외가 현실적이다.
-  - 이전 세션의 6.9배/9.0배 주장은 **워밍된 메모를 평균에 섞어 재서 나온 과대평가**였다. 0-2 하네스가 파일 단위와 회차 단위를 분리해 재도록 만든 이유가 이것이다.
-- **리스크**: MEDIUM — 판정 로직 경로에 캐시를 넣는 변경이다. `_memo_safe` 가드와 0-1 골든 테스트가 함께 있어야 한다. 메모리는 고유 줄 수 × 줄 길이이므로 상한이 필수다.
-- **공수**: M
-- **검증 방법**: 0-1 골든 테스트 52개 전부 통과(특히 `test_full_pipeline_snapshot`) + 메모 on/off로 `analyze_text()` 결과가 완전히 동일함을 합성 코퍼스와 실제 수집 로그 양쪽에서 확인 + `python -m tools.bench_log_analysis --check`로 `match_signature_memo_speedup_run` 개선 확인.
-- **선행 조건**: **0-1, 0-2 (완료)**
+### 2-1. 줄 단위 메모화 ✅
 
-### 2-2. `suppressor.check()` 이중 호출 제거
+- **대상**: `engine/log_rule_engine.py` (`SignatureMatcher.match_signature`, `RuleEngine.find_keyword`)
+- **적용**: 줄 문자열을 키로 메모. `RuleEngine` 인스턴스에 붙여 **회차 전체가 공유**한다(`get_engine()`이 프로세스 싱글턴).
+- **안전 게이트**: 서명 31개 전부 `scope=None`이라 순수 함수다. `scope`를 가진 서명이 추가되면 `_memo_safe`가 `False`가 되어 `set_memo_enabled(True)`로도 켜지지 않는다.
+- **회차 공유 이득**: 장비 8대 **3.11배** / 20대 **3.76배**(`match_signature`), 3.47 / 4.26배(`find_keyword`). 수용 기준 3.0/3.3배 충족.
+- **상한**: 5만 엔트리. 넘으면 더 담지 않되 비우지 않는다(비우고 다시 채우기를 반복하면 캐시 없는 것보다 느려진다).
+- **추가 API**: `set_memo_enabled()` / `clear_memo()` / `memo_stats()`. 운영 코드는 쓰지 않지만, 이게 있어야 "메모가 판정을 바꾸지 않는다"를 같은 엔진으로 대조할 수 있다.
+- **리스크**: MEDIUM(실현) / **공수**: M
 
-- **대상 파일**: `engine/log_rule_engine.py` (`RuleEngine.evaluate`)
-- **지금 동작**: `evaluate()`가 `suppressor.check(line, None, ctx, include_config_scope=False)`로 한 번 부르고, 키워드가 걸린 줄에서는 `suppressor.check(line, keyword, ctx)`로 다시 부른다. 두 번째 호출은 `benign_phrases` 루프(7개 lowercase substring), `is_legend`, `_FEATURE_ROW_RE`, 그리고 suppression 패턴 10개 루프를 **모두 재실행**한다. 첫 호출과 달라지는 부분은 `counter_value(line, keyword)`와 config-scope 판정 두 가지뿐이다.
-- **변경**: `check()`를 구조 억제(키워드 무관)와 키워드 결합 억제로 쪼갠다. `evaluate()`는 구조 억제를 1회만 실행하고, 키워드가 걸린 뒤에는 `counter_value` + config-scope만 추가 검사한다.
-- **예상 이득**: suppressor 59 ms 중 두 번째 호출분 절감. **키워드 매치 줄의 비율에 비례하므로 코퍼스 의존적이다** — 이번 합성 코퍼스에서는 키워드 매치가 적어 절감폭이 작았다. 0-2 하네스로 실제 수집 로그에서 먼저 비율을 재고 착수 여부를 정한다.
-- **리스크**: MEDIUM — 억제는 오탐 억제의 핵심이라 순서/조건을 잘못 쪼개면 오탐이 되살아난다. 골든 테스트의 오탐 케이스 4개가 이 항목의 안전망이다.
-- **공수**: M
-- **검증 방법**: 0-1 골든 테스트 + 실제 수집 로그로 before/after findings 완전 일치 확인.
-- **선행 조건**: **0-1**, 2-1(같은 함수 주변을 건드리므로 순서를 지킨다)
+### 2-2. 억제 계층 메모화 ✅ (계획 수정됨)
 
-### 2-3. `Suppressor.counter_value()` 정규식 사전 컴파일
+- **계획을 바꾼 이유**: 원래 계획은 "`suppressor.check` 이중 호출을 한 번으로 합치기"였다. 착수 전 실측하니 **그 2차 호출은 1,760줄 중 8줄(0.5%), 0.10 ms**였다. 억제는 오탐 방지의 핵심이라 MEDIUM 리스크인데 이득이 0.1 ms — 감당할 가치가 없다. 계획이 "코퍼스 의존적이므로 먼저 재고 착수 여부를 정한다"고 해 둔 대로 그 변경은 하지 않았다.
+- **대신 한 것**: 2-1로 서명/키워드가 싸지면서 `suppressor.check` **1차 호출**(모든 줄에 대해 도는 호출)이 `evaluate`의 약 45%를 차지하게 됐다. suppression 규칙도 `scope` 보유가 0/10이라 그 호출 형태(`keyword=None, include_config_scope=False`)는 줄만의 순수 함수였다 → 메모화. **11.79 → 4.95 ms (−58%)**.
+- **정확성 세부**: `ctx=None` 호출은 메모하지 않는다 — 그 경우 `is_legend` 검사를 건너뛰어 결과가 달라지므로(범례 줄이 억제되지 않는다) 같은 키로 캐시하면 한쪽이 다른 쪽의 답을 받는다. 테스트로 고정했다.
+- **리스크**: MEDIUM(실현) / **공수**: M
 
-- **대상 파일**: `engine/log_rule_engine.py` (`Suppressor.counter_value`)
-- **지금 동작**: 호출마다 `self._COUNTER_BEFORE % kw` / `_COUNTER_AFTER % kw`로 정규식 문자열을 포맷하고 `re.finditer`에 넘긴다. `re` 내부 캐시가 있어 재컴파일은 피하지만 문자열 포맷과 캐시 조회는 매번 발생한다.
-- **변경**: `counter_columns`가 고정 집합이므로 `__init__`에서 컬럼별로 두 패턴을 미리 컴파일해 dict에 담는다(15개 컬럼 × 2 = 30개).
-- **예상 이득**: `counter_row`가 2 ms/9,600줄로 이미 미미하고 `counter_value`도 같은 규모다. **실측 이득 근거 없음 — 낮은 우선순위.** 2-2를 하면서 같은 클래스를 건드릴 때 함께 정리하는 정도로 취급한다.
-- **리스크**: LOW
-- **공수**: S
-- **검증 방법**: 0-1 골든 테스트.
-- **선행 조건**: 없음
+### 2-3. `counter_value` 정규식 사전 컴파일 — ❌ 하지 않음(실측 근거)
+
+- 실제 판정 경로에서 `counter_value`가 정규식을 돌리는 줄은 **1,760줄 중 16줄(0.91%)**뿐이다. 전 줄에 강제 호출하면 11.6 ms지만 16줄이면 약 0.1 ms — 기여도가 사실상 0이다.
+- 계획에 "실측 이득 근거 없음 — 낮은 우선순위"로 적어 둔 항목이고, 재 보니 근거가 없는 것이 맞았다. **하지 않는다.**
+
+### 남은 것
+
+`evaluate` 20.1 ms 중 나머지는 `ctx.feed()`(명령/구분선 판별)와 FSM 블록 분할이다. 추가 최적화는 3단계 이후에 필요성이 확인되면 다시 측정해 판단한다.
 
 ---
 
@@ -362,8 +344,8 @@
 1. **0단계** ✅ — 테스트 69개가 현재 코드에서 전부 통과한다(`python -m pytest tests/ -q`). 하네스 측정 편차 p75 3.5%(≤5%). 기준선 조작 시 퇴행 3건을 모두 포착하고 exit 1을 낸다. 8회 연속 `--check`에서 7회 정상(1회는 컨테이너 경합에 의한 오탐 — 위 한계 참고).
 2. **1-1** ✅(부분) — 16개 믹스인이 세 패키지 **미설치 상태에서 전부 import** 됨을 확인했다. 남은 확인: Windows 에서 `python -X importtime main.py` 로 창이 뜨기까지의 시간이 **1.0초 이상** 단축되는지.
 3. **1-2** ✅ — `AppPaths.crt_log_root()` 반복 호출 **0.22 us/call**(기준 1 us 이하, 변경 전 9.8 us). 남은 확인: 앱 실행 중 `CRTlog` 를 지운 뒤에도 실시간 감시가 동작하는지(수동 확인 필요 — 쓰기 경로가 각자 `makedirs` 하는 것은 코드로 확인했다).
-4. **2-1**: 기준선 코퍼스(장비 8대, 중복률 73.2%)에서 `match_signature_memo_speedup_run` **3.0배 이상**, `find_keyword_memo_speedup_run` **3.3배 이상**. `analyze_text()` findings가 메모 on/off에서 **완전히 동일**(합성 코퍼스 + 실제 수집 로그 양쪽) — 0-1 스냅샷 테스트가 이것을 판정한다. 메모 엔트리가 상한을 넘지 않는다. 파일 단위 이득(1.05배)이 아니라 회차 공유 이득이 나오는지 반드시 확인한다.
-5. **2-2**: 실제 수집 로그에서 findings before/after 완전 일치. `suppressor.check` 호출 횟수가 키워드 매치 줄에서 2회 → 1회.
+4. **2-1/2-2** ✅ — `match_signature_memo_speedup_run` **3.11배**(기준 3.0), `find_keyword_memo_speedup_run` **3.47배**(기준 3.3). `analyze_text` 누적 **2.72배**(70.2 → 25.8 ms). 장비 20대 회차에서 메모 on/off findings **완전 일치**. 메모 상한 준수 확인. 남은 확인: **실제 수집 로그**로 on/off 일치를 한 번 더 대조(합성 코퍼스로만 확인했다).
+5. **2-3** — 하지 않기로 결정(실측 기여도 0.91% 줄, 약 0.1 ms). 별도 수용 기준 없음.
 6. **3-1**: 장비 30대 정상 상태에서 폴링 payload가 **50 KB/s 이하**(현재 723 KB/s). 경고 발생→복구→숨김→고정 시나리오에서 세 패널이 어긋나지 않는다. `seq` 재동기화가 버퍼 초과 시 정상 동작한다.
 7. **3-2**: 점검 → 대시보드 → 보고서 → AI 분석 흐름에서 raw 로그 `analyze_text()` 호출이 장비당 **1회**로 줄어든다. 네 화면의 수치가 일치한다.
 8. **전 단계 공통**: 골든 테스트가 모든 커밋에서 통과한다. 어느 단계에서 멈춰도 그 시점까지의 이득이 남고 앱이 정상 동작한다.
