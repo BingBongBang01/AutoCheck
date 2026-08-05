@@ -78,7 +78,10 @@ async function renderInventory() {
           <thead><tr>
             <th style="text-align:center;"><input type="checkbox" id="inv-select-all-checkbox" title="전체 선택"></th>
             <th data-sort="name">이름</th><th data-sort="role">역할</th><th data-sort="management_ip">IP</th>
-            <th>포트</th><th>사용자명</th><th>인증</th><th>활성</th><th>연결</th><th></th>
+            <th>포트</th><th>사용자명</th><th>인증</th>
+            <th data-sort="location" title="정기점검 보고서 장비목록의 '위치' 열">위치</th>
+            <th data-sort="warranty" title="정기점검 보고서 장비목록의 'Warranty' 열">Warranty</th>
+            <th>활성</th><th>연결</th><th></th>
           </tr></thead>
           <tbody id="inv-tbody"></tbody>
         </table>
@@ -129,7 +132,8 @@ async function renderInventory() {
     // IP를 입력하는 순간 change 이벤트가 자동 연결 확인을 띄우므로 여기서 따로 부르지 않는다
     // (지금은 IP가 비어 있어 확인할 대상이 없다).
     inventoryDevices.push(ensureRowIds([{ name: '', role: '', management_ip: '', ssh_port: 22, username: '', password: '',
-                            auth_method: 'password', key_path: '', key_content: '', key_passphrase: '', tag: [], memo: '', enabled: true }])[0]);
+                            auth_method: 'password', key_path: '', key_content: '', key_passphrase: '',
+                            location: '', warranty: '', tag: [], memo: '', enabled: true }])[0]);
     renderInventoryTable();
   });
 

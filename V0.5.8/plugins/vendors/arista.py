@@ -19,7 +19,13 @@ class AristaDriver(VendorDriver):
     COMMAND_MAP = {
         # LAB1 채점(VLAN/STP)에서 이미 실사용 중인 것 — stages.yaml에 있던 리터럴을 그대로 이관
         "vlan_status": "show vlan brief",
-        "stp_status": "show spanning-tree vlan 1,100,200,999",
+        # VLAN 목록을 커맨드에 박지 않는다. 예전에는 "show spanning-tree vlan 1,100,200,999"
+        # 처럼 특정 랩의 VLAN 번호가 하드코딩돼 있었는데, 그 VLAN 이 없는 장비(vEOS-lab 의
+        # 10/20/200/4000 구성 등)에서는 EOS 가 "% Invalid input" 을 돌려준다. 그러면 STP 를
+        # 한 줄도 못 읽은 채로 '비정상' 판정이 나가서 Finding 자체가 무효였다.
+        # 인자 없이 실행하면 모든 VLAN 섹션이 한 번에 나오고, parsers/show_spanning_tree.py 의
+        # split_combined_vlan_output() 이 VLAN 헤더 기준으로 잘라준다(이미 지원하는 형식).
+        "stp_status": "show spanning-tree",
 
         # Command Catalog 필수/선택 목록에서 이관 (engine/command_catalog.py DEFAULT_ESSENTIAL/OPTIONAL과 1:1 대응)
         "version_info": "show version",

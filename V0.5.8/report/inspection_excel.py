@@ -30,13 +30,13 @@ from core.paths import AppPaths
 # 판정 상태 문자열은 openpyxl 과 무관하므로 report/inspection_status.py 로 내렸다.
 # 여기서 재노출해 기존 import 경로(`from report.inspection_excel import STATUS_OK`)를 지킨다.
 from report.inspection_status import (
-    STATUS_NA, STATUS_OK, STATUS_UNREACHABLE, STATUS_WARN,
+    STATUS_NA, STATUS_OK, STATUS_SKIP, STATUS_UNREACHABLE, STATUS_WARN,
 )
 from report.textfsm_parser import split_raw_log
 
 __all__ = [
     "load_template", "split_transcript", "evaluate_device", "build_workbook",
-    "STATUS_OK", "STATUS_WARN", "STATUS_NA", "STATUS_UNREACHABLE",
+    "STATUS_OK", "STATUS_WARN", "STATUS_NA", "STATUS_SKIP", "STATUS_UNREACHABLE",
 ]
 
 _TEMPLATE_PATH = "inspection_report_template.yaml"
@@ -171,24 +171,103 @@ def _find_section(sections: dict, patterns) -> tuple:
 
 # --------------------------------------------------------------------------- 평가기(비즈니스 로직)
 
+# 판정 결과를 '비정상'이 아닌 쪽으로 갈라내는 두 축.
+#
+# 왜 필요한가: 예전에는 규칙 엔진이 무언가 잡기만 하면 전부 '확인필요'가 됐다. 그래서
+# vEOS-lab 같은 가상 장비에서 아래 세 가지가 전부 장애로 보고됐다 —
+#   * "% Unavailable command (...)"        명령을 지원하지 않는 플랫폼   -> 해당없음
+#   * "There seem to be no power supplies" PSU/FAN/센서가 없는 가상장비  -> 해당없음
+#   * "% BGP inactive"                     BGP 를 아예 안 쓰는 장비      -> 해당없음
+#   * "% Invalid input"                    명령이 깨져서 못 읽음          -> 미수집
+# 실기 장비(정상 판독)와 대조해 보면 이건 전부 '점검 결과'가 아니라 '점검 불가/대상 아님'이다.
+#
+# category_tag 는 config/log_rules.json 의 signature 가 붙인다 — 코드에는 '어떻게 해석할지'만
+# 두고 '무엇이 그런 종류인지'는 규칙 파일에 남긴다.
+NA_CATEGORIES = frozenset({"collection"})        # 봐야 하는데 못 봤다  -> 미수집
+SKIP_CATEGORIES = frozenset({"not_applicable"})  # 볼 것이 없다        -> 해당없음
+# 가상환경 프로파일에서 virtual_na 항목에 찍히는 값 — 셀만 보고도 '왜 비었는지' 알 수 있게.
+VIRTUAL_NA_VALUE = f"{STATUS_SKIP} (가상환경 — 해당 하드웨어 없음)"
+# 항목을 '확인필요'로 올릴 심각도. minor/info(설정변경 이력 %SYS-5-CONFIG_I, SVI
+# lowerlayerdown 등)는 참고로만 남기고 비정상으로 세지 않는다.
+WARN_SEVERITIES = frozenset({"major", "critical"})
+
+
 def _anomaly_lines(text):
-    """이상 징후 키워드가 걸린 줄만 반환 — 판정 기준을 원본로그분석 탭과 동일하게 유지하려고
-    engine.log_analysis의 키워드/benign 규칙(config/log_rules.json)을 그대로 재사용한다."""
-    from engine.log_analysis import classify_line
+    """이상 징후로 판정된 줄을 상세 정보와 함께 반환 — 판정 기준을 원본로그분석 탭과 동일하게
+    유지하려고 engine.log_analysis의 규칙(config/log_rules.json)을 그대로 재사용한다.
+
+    반환: [{"keyword", "severity", "category", "reason", "line"}]
+    예전에는 (키워드, 줄)만 돌려줬는데, 그러면 호출부가 '명령 미지원'과 '실제 장애'를
+    구분할 방법이 없어 둘 다 확인필요가 됐다. 심각도와 분류를 함께 넘긴다."""
+    from engine.log_analysis import classify_line_detailed
     hits = []
     for line in (text or "").splitlines():
-        keyword = classify_line(line)
-        if keyword:
-            hits.append((keyword, line.strip()))
+        verdict = classify_line_detailed(line)
+        if verdict:
+            hits.append({
+                "keyword": verdict["keyword"], "severity": verdict.get("severity", "major"),
+                "category": verdict.get("category_tag", "general"),
+                "reason": verdict.get("reason", ""), "line": line.strip(),
+            })
     return hits
 
 
+def _preview(hits, limit=3):
+    return "; ".join(f"{h['keyword']}: {h['line']}" for h in hits[:limit])
+
+
+def _short_reason(hit):
+    """판정 사유의 앞 절만 — 셀에 들어갈 짧은 꼬리표.
+
+    규칙의 title 은 '왜 그런지'까지 설명하는 한 문장이라(예: "해당 하드웨어 리소스 없음(가상
+    장비) — 점검 항목 미적용") 셀에 통째로 넣으면 표가 읽히지 않는다. 전문은 '특이사항'
+    블록(detail)에 그대로 남는다."""
+    return (hit.get("reason") or "").split(" — ")[0].strip() or hit.get("keyword", "")
+
+
+def _split_hits(hits):
+    """판정된 줄들을 (비정상, 미수집, 해당없음, 참고) 네 묶음으로 나눈다."""
+    warn, na, skip, note = [], [], [], []
+    for hit in hits:
+        if hit["category"] in NA_CATEGORIES:
+            na.append(hit)
+        elif hit["category"] in SKIP_CATEGORIES:
+            skip.append(hit)
+        elif hit["severity"] in WARN_SEVERITIES:
+            warn.append(hit)
+        else:
+            note.append(hit)
+    return warn, na, skip, note
+
+
+def _classify_hits(hits):
+    """줄 단위 판정들을 항목 하나의 상태로 접는다.
+
+    우선순위는 비정상 > 미수집 > 해당없음 > 정상이다. 비정상이 가장 앞인 이유: 명령 일부가
+    거부돼도 나머지 출력에서 실제 장애가 보였다면 그건 봐야 하는 장애다(미수집이라는 이유로
+    묻히면 안 된다). 참고(minor/info)만 남으면 정상이되 건수는 값에 남긴다 — 조용히
+    사라지면 운영자가 되짚을 수 없기 때문."""
+    warn, na, skip, note = _split_hits(hits)
+    if warn:
+        value = f"{STATUS_WARN} ({len(warn)}건)"
+        if note:
+            value += f" / 참고 {len(note)}건"
+        return {"value": value, "status": STATUS_WARN,
+                "detail": _preview(warn + note, 5)}
+    if na:
+        return {"value": f"{STATUS_NA} ({_short_reason(na[0])})", "status": STATUS_NA,
+                "detail": _preview(na)}
+    if skip:
+        return {"value": f"{STATUS_SKIP} ({_short_reason(skip[0])})", "status": STATUS_SKIP,
+                "detail": _preview(skip)}
+    if note:
+        return {"value": f"{STATUS_OK} (참고 {len(note)}건)", "status": STATUS_OK,
+                "detail": _preview(note, 5)}
+    return {"value": STATUS_OK, "status": STATUS_OK}
+
+
 def _eval_keyword_ok(text, item):
-    hits = _anomaly_lines(text)
-    if not hits:
-        return {"value": STATUS_OK, "status": STATUS_OK}
-    preview = "; ".join(f"{kw}: {line}" for kw, line in hits[:3])
-    return {"value": f"{STATUS_WARN} ({len(hits)}건)", "status": STATUS_WARN, "detail": preview}
+    return _classify_hits(_anomaly_lines(text))
 
 
 def _eval_uptime(text, item):
@@ -219,7 +298,13 @@ def _eval_cpu(text, item):
 
 def _eval_memory_free(text, item):
     """Free Memory 비율. show processes top의 KiB Mem 행을 먼저 보고, 없으면 show version의
-    Total/Free memory(kB)를 쓴다 — LGES 보고서가 Total/Free 바이트로 비율을 산출한 방식."""
+    Total/Free memory(kB)를 쓴다 — LGES 보고서가 Total/Free 바이트로 비율을 산출한 방식.
+
+    값은 두 가지로 내보낸다:
+      value  = "12.6%"  사람이 읽는 문자열. PDF/요약/전월값 스냅샷이 이걸 그대로 쓴다.
+      number = 0.126    엑셀 셀에 넣는 수치(number_format "0.0%"가 곱해 보여준다).
+    예전에는 value 에도 비율(0.126)을 넣어서 PDF 의 '(Free / Total) * 100' 칸에 0.126 이
+    찍혔다 — *100 이 빠진 것처럼 보이던 증상의 원인이다. 계산식 자체는 맞았다."""
     total = free = None
     mem_row = re.search(r"(?:KiB|MiB)\s+Mem\s*:?\s*(.+)", text or "")
     if mem_row:
@@ -235,10 +320,15 @@ def _eval_memory_free(text, item):
             total, free = float(total_m.group(1)), float(free_m.group(1))
     if not total:
         return {"value": STATUS_NA, "status": STATUS_NA}
-    ratio = round(free / total, 3)
+    ratio = round(free / total, 4)
     threshold = float(item.get("warn_at", 0.3))
+    # 임계값을 퍼센트(30)로 적어둔 템플릿도 받아준다 — 0.3 과 30 이 섞여 들어오면
+    # 한쪽은 항상 정상, 다른 쪽은 항상 경고가 되어 판정이 조용히 무의미해진다.
+    if threshold > 1:
+        threshold /= 100.0
     status = STATUS_WARN if ratio < threshold else STATUS_OK
-    return {"value": ratio, "status": status, "number": ratio, "number_format": "0.0%"}
+    return {"value": f"{round(ratio * 100, 1)}%", "status": status,
+            "number": ratio, "number_format": "0.0%"}
 
 
 _ERROR_COUNTER_HEADER_RE = re.compile(r"^\s*Port\s+(.*(?:FCS|CRC|Align|Symbol|Runts|Giants).*)$", re.IGNORECASE)
@@ -287,11 +377,27 @@ def _eval_route_summary(text, item):
 
 
 def _eval_log_scan(text, item):
+    """show logging 스캔 — '특이 로그'는 major/critical 만 센다.
+
+    예전에는 규칙에 걸린 모든 줄을 셌기 때문에 %SYS-5-CONFIG_I(콘솔 로그인) / %SYS-5-CONFIG_E
+    (설정모드 진입) 같은 정상 운영 로그가 장비당 30건씩 '특이 로그'로 올라왔다. syslog
+    facility 심각도 5 이하는 정보성이므로 참고 건수로만 남기고 판정에서 뺀다."""
     hits = _anomaly_lines(text)
+    warn, na, skip, note = _split_hits(hits)
     if not hits:
         return {"value": "없음", "status": STATUS_OK}
-    return {"value": f"특이 로그 {len(hits)}건", "status": STATUS_WARN,
-            "detail": "\n".join(line for _, line in hits[:20])}
+    if not warn:
+        if na and not note:
+            return {"value": f"{STATUS_NA} ({_short_reason(na[0])})", "status": STATUS_NA,
+                    "detail": _preview(na)}
+        value = "없음" if not note else f"없음 (참고 {len(note)}건)"
+        return {"value": value, "status": STATUS_OK,
+                "detail": "\n".join(h["line"] for h in note[:20])}
+    value = f"특이 로그 {len(warn)}건"
+    if note:
+        value += f" (참고 {len(note)}건)"
+    return {"value": value, "status": STATUS_WARN,
+            "detail": "\n".join(h["line"] for h in (warn + note)[:20])}
 
 
 EVALUATORS = {
@@ -305,16 +411,32 @@ EVALUATORS = {
 }
 
 
-def evaluate_device(sections: dict, template: dict) -> list:
+def evaluate_device(sections: dict, template: dict, *, is_virtual: bool = False) -> list:
     """장비 1대의 {커맨드: 출력}을 템플릿의 점검 항목 순서대로 판정해 행 목록을 만든다.
     반환 각 항목: {no, group, name, method, criteria, value, status, detail}.
     해당 커맨드를 아예 수집하지 않았으면 '미수집'으로 남긴다 — 빈칸으로 두면 정상인지
-    안 봤는지 구분이 안 되기 때문."""
+    안 봤는지 구분이 안 되기 때문.
+
+    is_virtual: 프로파일이 '가상환경'으로 설정된 경우 True. 템플릿에 virtual_na: true 로
+    표시된 항목(PSU/FAN/온도/모듈/트랜시버)은 로그를 보지 않고 곧바로 '해당없음'이 된다 —
+    가상 플랫폼에는 그 하드웨어가 없으므로 '미수집(다음 회차 재점검)'도 아니고, 출력 문구가
+    벤더/버전마다 달라 규칙에 걸리지 않아도 오탐이 남지 않는다."""
     rows = []
     for item in template["check_items"]:
+        if is_virtual and item.get("virtual_na"):
+            command = (item.get("commands") or [""])[0]
+            result = {"value": VIRTUAL_NA_VALUE, "status": STATUS_SKIP,
+                      "detail": "프로파일이 가상환경으로 설정되어 있습니다 — 해당 하드웨어가 없어 점검 대상이 아닙니다."}
+            rows.append({
+                "no": item.get("no"), "group": item.get("group", ""), "name": item.get("name", ""),
+                "method": command, "criteria": item.get("criteria", ""),
+                "value": result["value"], "status": result["status"], "detail": result["detail"],
+                "number": None, "number_format": None,
+            })
+            continue
         command, output = _find_section(sections, item.get("commands"))
         if command is None:
-            result = {"value": STATUS_NA, "status": STATUS_NA}
+            result = {"value": f"{STATUS_NA} (해당 명령 출력 없음)", "status": STATUS_NA}
         else:
             evaluator = EVALUATORS.get(item.get("evaluator"), _eval_keyword_ok)
             result = evaluator(output, item)
@@ -385,7 +507,9 @@ def _status_style(status):
         return FONT_BAD, FILL_BAD
     if status == STATUS_WARN:
         return Font(bold=True, size=10, color="7F6000"), FILL_WARN
-    if status == STATUS_NA:
+    if status in (STATUS_NA, STATUS_SKIP):
+        # 미수집/해당없음은 '판정하지 않음'이라 회색으로 죽여 둔다 — 정상(검정)과 같은 무게로
+        # 보이면 점검했다는 착각을 준다.
         return Font(size=10, color="808080"), None
     return FONT_BODY, None
 
@@ -446,8 +570,10 @@ def _build_cover(ws, ctx):
 
 def _build_inventory_sheet(ws, ctx):
     """장비현황 — 장비 수만큼 아래로 동적으로 팽창하는 2차원 매트릭스."""
-    headers = ["Hostname", "모델명", "IP", "S/N", "OS Version", "용도/역할", "비고"]
-    _widths(ws, {"A": 26, "B": 22, "C": 16, "D": 18, "E": 14, "F": 16, "G": 30})
+    headers = ["Hostname", "모델명", "IP", "S/N", "OS Version", "용도/역할", "위치",
+               "Warranty", "비고"]
+    _widths(ws, {"A": 26, "B": 22, "C": 16, "D": 18, "E": 14, "F": 16, "G": 16, "H": 14,
+                  "I": 30})
     _merge(ws, f"A1:{get_column_letter(len(headers))}1", "장비현황",
            font=Font(bold=True, size=13), fill=FILL_HEAD)
     for index, header in enumerate(headers, start=1):
@@ -457,23 +583,29 @@ def _build_inventory_sheet(ws, ctx):
         row = 3 + offset
         values = [device["name"], device.get("model", ""), device.get("ip", ""),
                   device.get("serial", ""), device.get("os_version", ""),
-                  device.get("role", ""), device.get("memo", "")]
+                  device.get("role", ""), device.get("location", ""),
+                  device.get("warranty", ""), device.get("memo", "")]
         unreachable = device.get("unreachable")
         for index, value in enumerate(values, start=1):
             _put(ws, f"{get_column_letter(index)}{row}", value,
                  font=FONT_BAD if unreachable else FONT_BODY,
                  fill=FILL_BAD if unreachable else None,
-                 align=LEFT if index in (1, 7) else CENTER)
+                 align=LEFT if index in (1, len(values)) else CENTER)
         if unreachable:
-            ws[f"G{row}"].value = STATUS_UNREACHABLE
+            ws[f"{get_column_letter(len(values))}{row}"].value = STATUS_UNREACHABLE
     ws.freeze_panes = "A3"
 
 
 def _build_summary_sheet(ws, ctx):
     """점검요약 — 장비별 특이사항과 소견. NC 보고서의 '요약' 시트가 이 역할을 한다."""
-    headers = ["Hostname", "용도/역할", "IP", "점검결과", "특이사항", "조치 및 점검 소견"]
-    _widths(ws, {"A": 26, "B": 16, "C": 16, "D": 12, "E": 62, "F": 30})
-    _merge(ws, "A1:F1", f"{ctx['customer']} {ctx['profile']} 점검 요약",
+    # 항목 수를 정상/비정상/미수집 세 열로 나눠 적는다 — 합계 하나만 있으면 '판정하지 못한
+    # 항목'이 정상 쪽에 묻혀 점검 커버리지가 실제보다 좋아 보인다.
+    headers = ["Hostname", "용도/역할", "IP", "점검결과", "점검항목", "정상", "비정상",
+               "미수집/해당없음", "특이사항", "조치 및 점검 소견"]
+    _widths(ws, {"A": 26, "B": 16, "C": 16, "D": 12, "E": 10, "F": 8, "G": 8, "H": 15,
+                  "I": 52, "J": 30})
+    _merge(ws, f"A1:{get_column_letter(len(headers))}1",
+           f"{ctx['customer']} {ctx['profile']} 점검 요약",
            font=Font(bold=True, size=13), fill=FILL_HEAD)
     for index, header in enumerate(headers, start=1):
         _put(ws, f"{get_column_letter(index)}2", header, font=FONT_HEAD, fill=FILL_HEAD)
@@ -483,12 +615,18 @@ def _build_summary_sheet(ws, ctx):
         ws.row_dimensions[row].height = 30
         overall = device.get("overall_status", STATUS_OK)
         font, fill = _status_style(overall)
+        counts = device.get("status_counts") or {}
         _put(ws, f"A{row}", device["name"], align=LEFT)
         _put(ws, f"B{row}", device.get("role", ""))
         _put(ws, f"C{row}", device.get("ip", ""))
         _put(ws, f"D{row}", overall, font=font, fill=fill)
-        _put(ws, f"E{row}", device.get("remarks") or "특이사항 없음", align=TOP_LEFT)
-        _put(ws, f"F{row}", device.get("opinion", ""), align=TOP_LEFT)
+        _put(ws, f"E{row}", counts.get("total", len(device.get("items", []))))
+        _put(ws, f"F{row}", counts.get(STATUS_OK, 0))
+        _put(ws, f"G{row}", counts.get(STATUS_WARN, 0),
+             font=Font(bold=True, size=10, color="7F6000") if counts.get(STATUS_WARN) else FONT_BODY)
+        _put(ws, f"H{row}", counts.get("not_judged", 0), font=Font(size=10, color="808080"))
+        _put(ws, f"I{row}", device.get("remarks") or "특이사항 없음", align=TOP_LEFT)
+        _put(ws, f"J{row}", device.get("opinion", ""), align=TOP_LEFT)
     ws.freeze_panes = "A3"
 
 

@@ -97,6 +97,14 @@
   ],
 
   "signatures": [
+    { "_comment": "command_unsupported_platform 은 반드시 command_rejected 보다 앞에 있어야 한다 — Arista 는 '% Unavailable command (not supported on this hardware platform)' 처럼 두 패턴에 모두 걸리는 한 줄을 내는데, 배열 순서가 우선순위이므로 뒤에 두면 '명령 거부(미수집)'로만 잡히고 '플랫폼 미지원(해당없음)'이라는 사실이 사라진다." },
+    {
+      "id": "command_unsupported_platform",
+      "pattern": "not supported on this (hardware )?platform|is not supported on this (platform|hardware|system)|Unavailable command \\(not supported",
+      "severity": "info",
+      "category": "not_applicable",
+      "title": "이 하드웨어 플랫폼이 지원하지 않는 명령 — 장애가 아니라 점검 항목 미적용"
+    },
     {
       "id": "command_rejected",
       "pattern": "^%\\s*(Invalid input|Incomplete command|Unavailable command|Ambiguous command|Unrecognized)",
@@ -106,10 +114,10 @@
     },
     {
       "id": "resource_absent",
-      "pattern": "There seem to be no (power supplies|fans|sensors)",
+      "pattern": "There seem to be no (power supplies|fans|sensors)|No (power supplies|fans|temperature sensors|modules) (are )?(present|installed|available)",
       "severity": "info",
-      "category": "collection",
-      "title": "해당 하드웨어 리소스 없음(가상 장비일 가능성) — 점검 항목 미적용"
+      "category": "not_applicable",
+      "title": "해당 하드웨어 리소스 없음(가상 장비) — 점검 항목 미적용"
     },
     {
       "id": "ntp_not_synced",
@@ -126,6 +134,14 @@
       "title": "비정상 재기동 이력"
     },
     { "_comment": "signatures는 배열 순서대로 먼저 맞는 것이 이긴다. 아래 4개는 뒤쪽의 일반 규칙(interface_line_down / mlag_peer_problem / mlag_partial_bundle)에 가려지므로 반드시 그보다 앞에 있어야 한다 — 상관규칙이 이 구체적인 id들을 참조하기 때문이다." },
+    {
+      "_comment": "svi_down 보다 앞. SVI 가 lowerlayerdown 인 것은 SVI 자체의 장애가 아니라 '그 VLAN 에 up 상태인 멤버 포트가 하나도 없다'는 하위 계층의 결과다. 랩/미구축 구간에서는 정상 상태이므로 major 로 올리면 매 회차 오탐이 된다. 원인 포트를 함께 확인하라는 minor 로 남긴다 — 실제 단절이면 그 물리 포트 쪽에서 interface_line_down 이 별도로 잡힌다.",
+      "id": "svi_lowerlayerdown",
+      "pattern": "(^\\s*Vlan\\d+\\b.*\\blowerlayerdown\\b|^Vlan\\d+ is down, line protocol is lowerlayerdown)",
+      "severity": "minor",
+      "category": "topology",
+      "title": "SVI가 lowerlayerdown — 해당 VLAN에 up 상태인 멤버 포트가 없음(상위 물리포트 연결 여부 확인)"
+    },
     {
       "id": "svi_down",
       "pattern": "(^Vlan\\d+\\s+is\\s+down|Interface\\s+Vlan\\d+,?\\s*changed\\s+state\\s+to\\s+down|^\\s*Vlan\\d+\\s+\\S*\\s*down\\s+down\\b|%SVI-\\d-\\w*DOWN)",
@@ -220,10 +236,10 @@
     },
     {
       "id": "protocol_not_running",
-      "pattern": "^%\\s*(BGP|OSPF|ISIS|PIM|VXLAN)\\s+(inactive|not (running|enabled|configured))",
+      "pattern": "^%?\\s*(BGP|OSPF|ISIS|PIM|VXLAN|EVPN|MPLS|VRRP|VARP)\\s+(is\\s+)?(inactive|disabled|not\\s+(running|enabled|configured|active))|^%\\s*(No such (address family|process)|\\S+ is not configured)",
       "severity": "info",
-      "category": "collection",
-      "title": "해당 라우팅/오버레이 프로토콜 미구성 — 점검 항목 미적용"
+      "category": "not_applicable",
+      "title": "해당 라우팅/오버레이 프로토콜이 이 장비에 구성돼 있지 않음 — 점검 대상 아님(해당없음)"
     },
     {
       "id": "vrrp_state_change",

@@ -9,7 +9,11 @@ import urllib.error
 
 from core import cloud_providers
 
-_RAW_LOG_PROMPT_PREFIX = (
+# 프롬프트는 두 벌이다 — 프로파일의 '가상환경' 옵션이 어느 쪽을 쓸지 고른다.
+# 예전에는 가상(vEOS-lab) 프롬프트만 있어서, 실기 장비를 점검하는 프로파일에서도 AI가
+# "하드웨어/전원/온도 이상은 가상 플랫폼 제약이니 무시하라"는 지시를 받았다 — 실제 PSU 고장이
+# 보고되지 않을 수 있는 지시라, 물리 장비용 프롬프트를 따로 둔다.
+_VIRTUAL_LOG_PROMPT_PREFIX = (
     "You are a Senior Network Engineer analyzing raw CLI logs from an Arista vEOS-lab virtual platform.\n"
     "CRITICAL CONTEXT & VIRTUAL PLATFORM CONSTRAINTS:\n"
     "- Target Device: Arista vEOS-lab (Virtual EOS lab environment).\n"
@@ -26,6 +30,28 @@ _RAW_LOG_PROMPT_PREFIX = (
     "Output ONLY the extracted operational problem lines and a concise engineering summary. "
     "Do not use markdown code block wrappers (```), output plain text so it can be saved directly as a log file.\n\n"
 )
+
+_PHYSICAL_LOG_PROMPT_PREFIX = (
+    "You are a Senior Network Engineer analyzing raw CLI logs from production network switches/routers.\n"
+    "CONTEXT:\n"
+    "- Target Device: physical hardware in a live/production network.\n"
+    "- REPORT HARDWARE FAULTS: power supply failures, fan failures/speed anomalies, temperature alarms,"
+    " module/linecard failures, and transceiver(DOM) problems are real findings — never dismiss them.\n"
+    "- Also report operational failures:\n"
+    "  * System/Reload causes (e.g., crash dumps, kernel panic, unexpected reboot).\n"
+    "  * Interface and link states (e.g., interface DOWN, errdisabled, link flap).\n"
+    "  * MLAG/port-channel operational failures (e.g., MLAG state inactive/disabled, peer-link down).\n"
+    "  * Routing and Overlay failures (e.g., BGP/EVPN neighbor Idle/Active, OSPF adjacency failure, VXLAN tunnel down).\n"
+    "  * Spanning Tree Protocol (STP) topology changes, root bridge shifts, or port blocking anomalies.\n"
+    "- Do NOT invent problems: if a command output is simply missing, say it was not collected.\n"
+    "Output ONLY the extracted operational problem lines and a concise engineering summary. "
+    "Do not use markdown code block wrappers (```), output plain text so it can be saved directly as a log file.\n\n"
+)
+
+
+def prompt_prefix(is_virtual: bool) -> str:
+    """프로파일의 '가상환경' 옵션에 맞는 프롬프트 머리말."""
+    return _VIRTUAL_LOG_PROMPT_PREFIX if is_virtual else _PHYSICAL_LOG_PROMPT_PREFIX
 
 
 def _urlopen_with_context(req, timeout, label):
@@ -124,10 +150,13 @@ def _call_local_npu_raw_text(prompt, api_cfg):
     return data["choices"][0]["message"]["content"]
 
 
-def analyze_raw_log_text(text, mode, api_cfg):
+def analyze_raw_log_text(text, mode, api_cfg, *, is_virtual=False):
     """원시 로그(raw .txt) 텍스트를 분석하여 텍스트 결과 반환.
     클라우드와 로컬의 분할(Chunk) 크기 및 max_tokens를 동적으로 결정하며,
     Rate Limit(429) 발생 시 자동 재시도 로직을 포함함.
+
+    is_virtual: 활성 프로파일이 '가상환경'이면 True — 가상 플랫폼 제약(PSU/FAN/센서/모듈
+    미지원)을 무시하라는 프롬프트를 쓴다. 기본값은 물리 장비(하드웨어 고장을 그대로 보고).
     """
     api_cfg = api_cfg or {}
     model_name = api_cfg.get("model", "").lower()
@@ -174,7 +203,7 @@ def analyze_raw_log_text(text, mode, api_cfg):
 
     for i, chunk in enumerate(chunks):
         prefix = f"(전체 {len(chunks)} 파트 중 {i + 1}번째 파트)\n" if len(chunks) > 1 else ""
-        prompt = _RAW_LOG_PROMPT_PREFIX + prefix + chunk
+        prompt = prompt_prefix(is_virtual) + prefix + chunk
 
         max_retries = 3
         for attempt in range(max_retries):

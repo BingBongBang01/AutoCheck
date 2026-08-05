@@ -9,7 +9,139 @@
 UI 좌하단에 표시되는 값도 `VERSION` 파일을 그대로 읽은 것이라 자동으로 일치한다.
 아래 v0.0.15 이하의 과거 항목은 당시 기록이라 번호를 손대지 않았다 (v0.0.15 = 폴더 V0.0.024).
 
-## (미출시) — 실시간 감시 내역의 프로파일 격리 · 오류 분석 목록 묶음 단위 수정
+## v0.5.9 (예정 — 폴더/VERSION 은 아직 0.5.8이라 릴리스 시 함께 올릴 것) — 정기점검 보고서 오탐 정리: '점검 불가/대상 아님'을 '비정상'과 분리
+
+### 프로파일 단위 '가상환경' 옵션
+
+가상 장비 대응을 로그 문구 추론에만 의존하지 않고, 회차(프로파일)마다 명시할 수 있게 했다.
+문구는 벤더/버전마다 다르고 명령이 아무 것도 출력하지 않는 경우도 있어 오탐이 남았기 때문이다.
+
+- **프로파일 메타에 `is_virtual`** (`engine/profile_manager.py`)
+  - `data/<고객사>/<프로파일>/profile/profile.json` 이 단일 출처. `read_meta()`(복구·생성 없이
+    읽기만), `is_virtual()`, `set_virtual()` 추가. 기본값은 **실제 장비(False)** — 기존 프로파일이
+    갑자기 하드웨어 점검을 건너뛰지 않는다.
+- **보고서: 하드웨어 항목 자동 '해당없음'** (`config/inspection_report_template.yaml`,
+  `report/inspection_excel.py`, `engine/inspection_report_builder.py`)
+  - 템플릿 항목에 `virtual_na: true` 필드 신설(Power/FAN/Module/Temperature/Transceiver).
+    가상환경 프로파일이면 로그를 보지 않고 `해당없음 (가상환경 — 해당 하드웨어 없음)`으로 판정한다.
+  - `build_context()`가 프로파일 설정을 읽어 `evaluate_device(..., is_virtual=)`로 넘긴다.
+- **AI 원본로그 분석 프롬프트 2종** (`ai_analysis/raw_log_analyzer.py`, `api/log_analysis_run_api.py`)
+  - 기존 vEOS-lab 프롬프트는 가상환경 전용으로 남기고, 물리 장비용 프롬프트를 새로 뒀다.
+    예전에는 실기 점검에서도 "하드웨어/전원/온도 이상은 가상 플랫폼 제약이니 무시하라"는 지시가
+    나가서 실제 PSU 고장이 보고되지 않을 수 있었다. 로컬 AI의 `[PLATFORM]` 줄도 함께 바뀐다.
+- **UI** (`web_ui/js/core-profile-modal.js`, `inspection-report.js`, `style.css`)
+  - 정기점검 추가 시 가상환경 여부를 묻고, 프로파일 카드에 '가상환경' 배지 + 전환 버튼
+    (`set_inspection_profile_virtual`). 보고서 탭에도 가상환경 안내 한 줄.
+
+
+가상 장비(vEOS-lab)로 점검하면 하드웨어·기능이 없어서 나오는 출력이 전부 '확인필요'로
+보고됐다. 같은 항목이 실기 장비(Studio Vird)에서는 정상 판독되므로 장비 상태가 아니라 판정
+로직의 문제였다. 보고서 표기(Hostname/IP/요약표/장비목록)도 함께 정리했다.
+
+- **판정 상태에 '해당없음' 추가** (`report/inspection_status.py`)
+  - 기존 4-state(정상/확인필요/미수집/접속 불가)에 `STATUS_SKIP = "해당없음"`을 더했다.
+    미수집("봐야 하는데 못 봤다" — 다음 회차 재시도)과 해당없음("볼 것이 없다" — 조치 불필요)은
+    둘 다 값이 없지만 원인과 조치가 정반대라 한 칸에 담으면 안 된다.
+  - `NOT_JUDGED_STATUSES`(미수집/해당없음/접속 불가)를 함께 내보낸다 — 요약표에서 정상 칸에도
+    비정상 칸에도 넣으면 안 되는 것들의 단일 출처.
+
+- **Power / FAN / Temperature / Module — 가상 플랫폼 미지원을 해당없음으로** (`config/log_rules.json`)
+  - 서명 `command_unsupported_platform` 추가: `% Unavailable command (not supported on this
+    hardware platform)` → info / `not_applicable`. **반드시 `command_rejected` 앞에** 둔다
+    (한 줄이 두 패턴에 모두 걸리는데 배열 순서가 우선순위라, 뒤에 두면 '플랫폼 미지원'이라는
+    사실이 사라진다).
+  - `resource_absent`(PSU/FAN/센서 없음)를 `collection` → `not_applicable`로 옮겼다.
+
+- **BGP / EVPN — 기능 미구성은 Fail 이 아니라 해당없음** (`config/log_rules.json`)
+  - `protocol_not_running` 패턴을 EVPN/MPLS/VRRP/VARP와 `is inactive`·`not active` 형태까지
+    넓히고 category를 `not_applicable`로 바꿨다. LAB1처럼 BGP/EVPN 구성 자체가 없는 장비에서
+    `% BGP inactive`가 비정상으로 잡히던 것이 사라진다.
+
+- **STP — VendorDriver 의 커맨드 생성 버그** (`plugins/vendors/arista.py`, `cisco.py`)
+  - `stp_status`가 `show spanning-tree vlan 1,100,200,999`로 특정 랩의 VLAN 번호를 하드코딩하고
+    있었다. 그 VLAN 이 없는 장비(vEOS-lab 의 10/20/200/4000 등)에서는 EOS 가 `% Invalid input`
+    을 돌려주므로, **STP 상태를 한 줄도 못 읽은 채 '비정상' 판정**이 나갔다 — Finding 자체가
+    무효였다. 인자 없는 `show spanning-tree`로 바꿨다(모든 VLAN 섹션이 한 번에 나오고,
+    `parsers/show_spanning_tree.py`의 `split_combined_vlan_output()`이 이미 그 형식을 자른다).
+
+- **Log 확인 — 심각도 필터 적용** (`report/inspection_excel.py`)
+  - `%SYS-5-CONFIG_I`(콘솔 로그인) / `%SYS-5-CONFIG_E`(설정모드 진입) 같은 정상 운영 로그가
+    장비당 29~31건씩 '특이 로그'로 계수됐다. 이제 major/critical 만 특이 로그로 세고,
+    minor/info 는 `참고 N건`으로만 남긴다(집계에서 빠지되 사라지지는 않는다).
+
+- **Interface — SVI 의 lowerlayerdown 을 실제 장애와 구분** (`config/log_rules.json`)
+  - 서명 `svi_lowerlayerdown` 추가(minor / `topology`). Vlan10/20/200/4000 의 lowerlayerdown 은
+    SVI 자체의 장애가 아니라 '그 VLAN 에 up 인 멤버 포트가 없다'는 하위 계층의 결과다. 랩
+    토폴로지에서는 정상이므로 major 로 올리면 매 회차 오탐이 된다. 실제 단절이면 그 물리
+    포트에서 `interface_line_down`이 따로 잡힌다. `svi_down`(hard down)은 critical 그대로.
+
+- **Free Memory — 값이 0.126 으로 찍히던 문제** (`report/inspection_excel.py`)
+  - `(Free/Total)*100` 계산식 자체는 맞았고, **표시값만 비율(0~1)이었다.** 이제 사람이 읽는
+    `value`는 `"12.6%"`, 엑셀 셀용 `number`는 0.126(number_format `0.0%`)으로 나눠 낸다.
+  - `warn_at` 을 `30`(퍼센트)으로 적어도 `0.3` 과 같게 동작한다 — 둘이 섞이면 판정이 조용히
+    '항상 정상'이 된다.
+
+- **Hostname 에 raw 타임스탬프가 들어가던 문제 + IP 열 전 행 공란**
+  (`engine/inspection_report_builder.py`)
+  - `latest_logs_by_device()`가 레거시 파일명(`AutoCheck_*`)만 아는 자체 정규식을 갖고 있어
+    현재 규칙(`20260805_095518_raw_Agg1.txt`)이 한 건도 매칭되지 않았다. 폴백으로 파일명 전체가
+    장비명이 되어 보고서에 `20260805_095518_raw_Agg1`이 찍혔고, 그 이름은 장비목록의 `Agg1`과
+    매칭되지 않으니 IP·모델·용도가 전부 빈칸이었다. 파일명 해석을 `core/log_naming.py`
+    단일 출처로 되돌렸다 — **이 한 줄이 Hostname 과 IP 를 동시에 고친다.**
+  - 장비목록 조인을 대소문자·공백 무시로 완화(`_inventory_record()`), 그래도 IP 가 없으면
+    원본로그의 관리 인터페이스에서 주워 온다(`_ip_from_sections()`).
+
+- **요약표에 '미수집' 열 추가** (`report/inspection_pdf.py`, `report/inspection_excel.py`)
+  - 헤더는 `정상/비정상` 2개인데 숫자는 `14 12 2`처럼 세 칸에 걸쳐 찍혀서 세 번째 숫자가
+    무엇인지 알 수 없었다. PDF 요약표에 `미수집/해당없음` 열을, 엑셀 점검요약 시트에
+    `점검항목/정상/비정상/미수집·해당없음` 4열을 추가했다.
+  - 집계도 함께 고쳤다. 예전 `passed = total - fail` 은 판정하지 못한 항목을 전부 정상으로
+    합산해서, 절반이 미수집인 가상 장비도 요약만 보면 정상 점검된 것처럼 보였다. 실측
+    항목(CPU/Memory/Uptime)도 값을 못 뽑았으면 미수집으로 센다.
+
+- **장비목록/지원목록 페이지의 placeholder 제거**
+  - 장비목록에 `location`(위치) / `warranty` 필드를 추가하고(`engine/device_inventory_core.py`,
+    엑셀 내보내기 헤더, 장비 목록 화면의 입력 칸) PDF '장비 목록' 페이지의 위치·Warranty 열이
+    그 값을 쓰게 했다 — 두 열은 채울 데이터 자체가 없어 항상 공란이었다.
+  - 지원이력은 PDF 를 만든 회차만 기록해서 처음 뽑으면 한 줄뿐이었다. 이제 같은 고객사의 지난
+    회차 `reports/_snapshot.json`을 되짚어 빠진 줄을 채우고(`_past_inspections()`), 비고에
+    점검 대수/확인필요 대수를 남긴다.
+
+- **소견 문구 분리** — 미수집/해당없음뿐인 장비까지 '확인 필요'로 적으면 실제로 손봐야 하는
+  장비와 구분이 안 된다. `이상 없음 (미수집 N항목 재점검 권고)` 형태로 갈라 적는다.
+
+- 회귀 테스트 `tests/test_inspection_report_status.py`(17건) /
+  `tests/test_inspection_report_identity.py`(8건) 추가. 규칙 개수 골든
+  (`tests/test_log_rule_engine_golden.py`)은 서명 31 → 33 으로 갱신.
+
+## v0.5.8 (현재) — 실시간 감시 '파일 진단' 모달에 다중 선택/삭제/폴더 열기 추가
+
+- **`실시간 감시 → 파일 진단`(CRT 로그 파일 진단 모달)에 다중 선택·삭제·폴더 열기 추가**
+  - `web_ui/js/realtime-monitor-panel.js` — 행을 드래그로 범위 선택하거나 Shift+클릭으로
+    범위 선택, Ctrl(Cmd)+클릭으로 개별 토글, Ctrl(Cmd)+A로 전체 선택할 수 있다. 목록 가장자리로
+    드래그하면 자동 스크롤된다(`core.js`의 `createDragRangeSelect` 공용 — 점검 로그 뷰어 등
+    기존 3곳과 같은 계약). 체크박스도 별도로 눌러 토글 가능.
+  - `api/log_analysis_run_api.py` — `delete_realtime_log_files()`(선택 삭제), 
+    `open_realtime_log_folder()`(CRTlog 폴더를 OS 탐색기로 열기) 추가. 삭제는 파일명만 받아
+    `os.path.basename()`으로만 다뤄 경로 조작을 막고, **지금 감시가 tail 중인 파일은 건너뛴다**
+    (오프셋 추적이 깨질 수 있어 감시를 먼저 멈추라고 안내).
+  - 헤더의 클래스 오타(`rtm-alert-modal-head` → 올바른 `rt-alert-modal-head`)도 함께 고쳤다 —
+    버튼을 하나 더 넣으면서 보니 이 모달만 헤더 레이아웃(flex 정렬)이 안 먹고 있었다.
+  - 회귀 테스트 `tests/test_realtime_probe_files.py` 추가(삭제/경로조작 방지/추적 중 파일 보호 7건).
+
+## v0.5.7 — 오류 해결 후에도 남아 있던 3-Way 교차 강조 잔상 수정
+
+- **실시간 오류 분석에서 오류를 해결/무시/초기화해도 장비 로그 박스·체크리스트의 강조
+  테두리가 그대로 남던 버그 수정** (`web_ui/js/realtime-monitor-panel.js`)
+  - 원인: 오류 카드를 클릭/hover하면 `rtmXhlPinned`/`rtmXhlHover`에 그 오류가 걸린 장비 목록을
+    저장해 두고, `applyRtmCrossHighlight()`는 그 장비 이름이 지금 DOM에 있는지만 보고 테두리를
+    입혔다 — "그 오류가 아직 존재하는지"는 확인하지 않았다. 그래서 오류를 해결한 뒤에도(장비
+    자체는 여전히 화면에 있으므로) 예전 강조가 계속 남았다.
+  - 수정: `renderRtmAnalysis()`가 매 폴링마다 지금 화면에 실제로 있는 오류 키(대분류 줄 +
+    선택된 그룹 안의 장비별 상세)를 모으고, 고정/미리보기가 더 이상 존재하지 않는 키를
+    가리키면 지운다.
+
+## v0.5.6 — 실시간 감시 내역의 프로파일 격리 · 오류 분석 목록 묶음 단위 수정
 
 - **실시간 오류 분석 목록이 성질이 다른 오류를 한 줄에 뭉치던 문제 수정**
   - 증상: 목록에 "기타 / 7대 · 92건" 한 줄이 떠 있는데 열어 보면 '비정상 재기동'·'인증 실패'·
@@ -41,7 +173,7 @@ UI 좌하단에 표시되는 값도 `VERSION` 파일을 그대로 읽은 것이�
     프로파일에서 체크해 둔 감시 대상 선택을 버리고 새 목록으로 다시 고른다.
   - 회귀 테스트 `tests/test_realtime_profile_state.py` 추가(전환 경계 4건).
 
-## v0.5.5 (현재) — 실시간 감시 엔진 4개 모듈 통합, UI/UX 고도화 및 연쇄 상관규칙 확장
+## v0.5.5 — 실시간 감시 엔진 4개 모듈 통합, UI/UX 고도화 및 연쇄 상관규칙 확장
 
 - **Module 1 — 세션 경로 격리 및 Baseline 자동 갱신**
   - 수동 CRT 로그 오염으로 인한 감시 무력화 버그 수정: 파일명 규칙(`{stamp}_raw_{device}.txt`) 적용 및 혼합 소스 폴백(`source_kind: "mixed"`) 지원

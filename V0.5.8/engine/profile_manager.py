@@ -151,6 +151,7 @@ class ProfileManager:
             self._write_json(meta_path, {
                 "id": uuid.uuid4().hex, "name": profile_name, "description": "",
                 "inspection_date": "", "mode": "grading", "status": "준비",
+                "is_virtual": False,
                 "created_at": now, "updated_at": now,
             })
 
@@ -168,7 +169,8 @@ class ProfileManager:
     # ---- CRUD --------------------------------------------------------------
 
     def create_profile(self, customer_name: str, profile_name: str, *,
-                        description: str = "", inspection_date: str = "", mode: str = "grading") -> dict:
+                        description: str = "", inspection_date: str = "", mode: str = "grading",
+                        is_virtual: bool = False) -> dict:
         validate_name(customer_name)
         validate_name(profile_name)
         pdir = self.profile_dir(customer_name, profile_name)
@@ -180,6 +182,7 @@ class ProfileManager:
         profile_meta = {
             "id": uuid.uuid4().hex, "name": profile_name, "description": description,
             "inspection_date": inspection_date, "mode": mode, "status": "준비",
+            "is_virtual": bool(is_virtual),
             "created_at": now, "updated_at": now,
         }
         self._write_json(pdir / "profile" / PROFILE_META_FILE, profile_meta)
@@ -198,6 +201,37 @@ class ProfileManager:
         credential_path = pdir / "profile" / CREDENTIAL_FILE
         result["credential"] = self._read_json(credential_path, default=None) if credential_path.exists() else None
         return result
+
+    def read_meta(self, customer_name: str, profile_name: str) -> dict:
+        """profile/profile.json 을 있는 그대로 읽는다(없으면 빈 dict).
+        load_profile()과 달리 폴더를 복구하지도, 파일을 만들지도 않는다 — 보고서/AI 분석처럼
+        '읽기만 하는' 경로가 조회만으로 프로파일 폴더를 만들어 버리면 안 되기 때문."""
+        return self._read_json(self.profile_dir(customer_name, profile_name) / "profile" / PROFILE_META_FILE,
+                                default={})
+
+    def is_virtual(self, customer_name: str, profile_name: str) -> bool:
+        """이 프로파일이 '가상환경'(vEOS-lab / EVE-NG 등 실습·검증망)인가.
+
+        가상환경에서는 PSU/FAN/온도센서/모듈이 물리적으로 존재하지 않으므로, 그 점검 항목은
+        '확인필요'가 아니라 '해당없음'이다. 예전에는 이 판단을 로그 출력 문구
+        ("There seem to be no power supplies" 등)로 사후 추론하기만 했는데, 문구가 벤더/버전마다
+        달라 놓치는 경우가 있었다 — 프로파일에 명시된 값이 있으면 그것을 먼저 믿는다.
+
+        이름 규칙에 맞지 않는 레거시 프로파일(validate_name 실패)이나 깨진 메타 파일은
+        '가상환경 아님'으로 본다 — 조회 한 번이 목록 전체를 죽이지 않게."""
+        try:
+            return bool(self.read_meta(customer_name, profile_name).get("is_virtual"))
+        except (ValueError, OSError, json.JSONDecodeError):
+            return False
+
+    def set_virtual(self, customer_name: str, profile_name: str, is_virtual: bool) -> dict:
+        """가상환경 플래그만 갱신하고 갱신된 메타를 반환한다."""
+        pdir = self.repair_profile(customer_name, profile_name)
+        meta = self._read_json(pdir / "profile" / PROFILE_META_FILE, default={})
+        meta["is_virtual"] = bool(is_virtual)
+        meta["updated_at"] = _now()
+        self._write_json(pdir / "profile" / PROFILE_META_FILE, meta)
+        return meta
 
     def save_profile(self, customer_name: str, profile_name: str, *, profile: dict = None,
                       customer: dict = None, settings: dict = None, variables: dict = None,

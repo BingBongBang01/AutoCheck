@@ -763,6 +763,17 @@ function renderRtmAnalysis(state) {
   const selectionChanged = rtmAnalysisSelectedKey !== rtmAnalysisRenderedKey;
   rtmAnalysisRenderedKey = rtmAnalysisSelectedKey;
 
+  // 해결/무시/초기화로 오류가 사라졌는데도 3-Way 교차 강조(장비 로그 박스·체크리스트 테두리)가
+  // 남아 있던 버그 — rtmXhlPinned/rtmXhlHover는 클릭/hover 시점의 devices를 그대로 들고 있고,
+  // applyRtmCrossHighlight()는 그 장비 이름과 지금 DOM의 data-* 를 매칭할 뿐 "그 오류가 아직도
+  // 존재하는지"는 보지 않는다. 그래서 오류를 없앤 뒤에도 이전에 고정해 둔 강조가 그대로 남았다.
+  // 여기서 지금 화면에 실제로 있는 키(대분류 줄 + 그 안의 장비별 상세)만 유효하다고 보고,
+  // 고정/미리보기가 더 이상 존재하지 않는 키를 가리키면 지운다.
+  const liveXhlKeys = new Set(groups.map(g => g.key));
+  (selected ? selected.items : []).forEach(f => liveXhlKeys.add(`detail:${f.device || ''}`));
+  if (rtmXhlPinned && !liveXhlKeys.has(rtmXhlPinned.key)) rtmXhlPinned = null;
+  if (rtmXhlHover && !liveXhlKeys.has(rtmXhlHover.key)) rtmXhlHover = null;
+
   el.innerHTML = `
     <div class="rtm-analysis-cols">
       <div class="rtm-analysis-col rtm-analysis-col-list" id="rtm-analysis-list">
@@ -1327,11 +1338,30 @@ async function openRtmSettingsModal() {
 // SecureCRT가 접속 세션마다 새 파일을 만들기 때문에, 지난 세션 파일까지 tail하면 이미 끝난
 // 작업의 입력이 지금 들어온 것처럼 다시 판정된다. 그래서 이 표는 '추적 중'인 파일을 맨 위로
 // 올려 하이라이트하고, 같은 장비의 지난 세션 파일은 '이전 세션'으로 흐리게 내려 둔다.
+//
+// 다중 선택(드래그/Shift/Ctrl+A)과 삭제·폴더 열기는 web_ui/js/collection-log-viewer.js의
+// wireLogFileList()와 같은 패턴이다 — 그쪽은 <div> 행, 여기는 <tr> 행이라 그대로 재사용하지
+// 못하고 같은 모양으로 다시 짰다. 목록은 매번 refetch로 다시 그리므로(삭제 후 등) 선택 상태는
+// 모달을 열 때마다 새로 시작한다(파일 목록이 통째로 새로 오면 이전 선택은 의미가 없다).
+let rtmProbeSelected = new Set();     // 선택된 파일명(Set) — CRTlog 폴더는 평평하므로 파일명이 곧 키다.
+let rtmProbeLastClickedIdx = null;
+
 async function openRtmProbeModal() {
   const result = await call('probe_realtime_log_files');
   if (!result) return;
   document.getElementById('rtm-probe-modal')?.remove();
+  rtmProbeSelected = new Set();
+  rtmProbeLastClickedIdx = null;
+  renderRtmProbeModal(result);
+}
+
+// 삭제 후 다시 부르는 경로와 최초 오픈 경로가 같은 모양이어야(전체 재구성) 삭제로 사라진 행이
+// 다시 나타나지 않는다 — 그래서 refetch 는 항상 이 함수를 다시 통째로 그린다.
+function renderRtmProbeModal(result) {
   const files = result.files || [];
+  const known = new Set(files.map(f => f.file));
+  // 목록이 바뀌면(삭제로 파일이 사라짐) 더 이상 없는 파일의 선택은 버린다.
+  for (const name of rtmProbeSelected) if (!known.has(name)) rtmProbeSelected.delete(name);
 
   // tracked = 감시 스레드가 지금 실제로 오프셋을 잡고 읽는 파일(백엔드 status의 active_paths).
   // latest = 그 장비의 최신 파일. 감시를 아직 시작하지 않았으면 tracked는 전부 false이므로,
@@ -1351,12 +1381,16 @@ async function openRtmProbeModal() {
   });
   const trackedCount = files.filter(isTracked).length;
 
-  const overlay = document.createElement('div');
-  overlay.id = 'rtm-probe-modal';
-  overlay.className = 'modal-overlay';
+  let overlay = document.getElementById('rtm-probe-modal');
+  const isNew = !overlay;
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'rtm-probe-modal';
+    overlay.className = 'modal-overlay';
+  }
   overlay.innerHTML = `
     <div class="card rtm-probe-modal">
-      <div class="rtm-alert-modal-head">
+      <div class="rt-alert-modal-head">
         <div>
           <h3 class="card-title">CRT 로그 파일 진단</h3>
           <p class="card-desc">${rtEscape(result.watch_dir || '')} · 파일 ${files.length}개 ·
@@ -1364,11 +1398,25 @@ async function openRtmProbeModal() {
             <b>${watching ? '추적 중' : '감시 시작 시 추적될 파일'} ${trackedCount}개</b>
             (장비별 최신 로그 1개씩)</p>
         </div>
-        <button class="btn btn-outlined" type="button" data-rtm-close>닫기</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-outlined" type="button" id="rtm-probe-open-folder">
+            <span class="material-symbols-rounded" style="font-size:15px">folder_open</span>폴더 열기
+          </button>
+          <button class="btn btn-outlined" type="button" data-rtm-close>닫기</button>
+        </div>
       </div>
-      <div class="rtm-probe-body">
+      <div class="rtm-probe-toolbar">
+        <span class="rtm-probe-hint">Shift+클릭/드래그로 범위 선택, Ctrl(Cmd)+A로 전체 선택</span>
+        <span style="flex:1"></span>
+        <span class="rtm-probe-selected-count" id="rtm-probe-selected-count">${rtmProbeSelected.size}개 선택됨</span>
+        <button class="btn btn-danger" type="button" id="rtm-probe-delete" style="height:26px;padding:0 10px;font-size:11px;"
+                ${rtmProbeSelected.size ? '' : 'disabled'}>
+          <span class="material-symbols-rounded" style="font-size:14px;">delete</span>선택 삭제
+        </button>
+      </div>
+      <div class="rtm-probe-body" id="rtm-probe-body" tabindex="0">
         <table class="dtable"><thead><tr>
-          <th>상태</th><th>로그 파일</th><th>최종 기록</th><th>파일명 매칭</th><th>내용 매칭</th><th>최종 장비</th><th>크기</th>
+          <th></th><th>상태</th><th>로그 파일</th><th>최종 기록</th><th>파일명 매칭</th><th>내용 매칭</th><th>최종 장비</th><th>크기</th>
         </tr></thead><tbody>
         ${sorted.length ? sorted.map(f => {
           const tracked = isTracked(f);
@@ -1378,8 +1426,11 @@ async function openRtmProbeModal() {
             : tracked ? '<span class="rtm-probe-live-badge rtm-probe-tracked-badge">추적 중</span>'
             : f.resolved ? '<span class="rtm-probe-old-badge">이전 세션</span>'
             : '<span class="rtm-probe-old-badge">제외</span>';
+          const selected = rtmProbeSelected.has(f.file);
           return `
-          <tr class="${f.resolved ? '' : 'rtm-probe-bad'} ${tracked ? 'rtm-probe-live' : 'rtm-probe-stale'} ${fresh ? 'rtm-probe-fresh' : ''}">
+          <tr class="${f.resolved ? '' : 'rtm-probe-bad'} ${tracked ? 'rtm-probe-live' : 'rtm-probe-stale'} ${fresh ? 'rtm-probe-fresh' : ''} ${selected ? 'rtm-probe-selected' : ''}"
+              data-rtm-probe-file="${rtEscape(f.file)}">
+            <td><input type="checkbox" data-rtm-probe-check ${selected ? 'checked' : ''}></td>
             <td>${state}</td>
             <td>${rtEscape(f.file)}</td>
             <td class="rtm-probe-mtime">${rtEscape(f.mtime_str || '')}</td>
@@ -1389,18 +1440,130 @@ async function openRtmProbeModal() {
             <td>${(f.size / 1024).toFixed(1)} KB</td>
           </tr>`;
         }).join('')
-          : '<tr><td colspan="7">CRTlog 폴더에 .txt / .log 파일이 없습니다.</td></tr>'}
+          : '<tr><td colspan="8">CRTlog 폴더에 .txt / .log 파일이 없습니다.</td></tr>'}
         </tbody></table>
         <p class="rtm-probe-note">파일명이 접속 IP여도 장비 목록의 IP와 대조해 매칭합니다. 그래도 실패하면
           로그 안의 <code>! device: X</code> 헤더나 프롬프트(<code>X#</code>)로 판정합니다.
           <b>추적 중</b>은 지금 감시가 따라가는 파일 — 장비마다 최종 기록이 가장 최신인 1개만 추적합니다.
           <b>이전 세션</b>은 같은 장비의 더 오래된 로그로, 지난 작업이 지금 입력으로 오판되지 않도록 감시에서 제외됩니다.
-          <b>제외</b>는 장비를 식별하지 못한 파일(장비 목록에 없거나 프롬프트가 아직 안 찍힌 경우)입니다.</p>
+          <b>제외</b>는 장비를 식별하지 못한 파일(장비 목록에 없거나 프롬프트가 아직 안 찍힌 경우)입니다.
+          <b>지금 감시가 추적 중인 파일은 삭제할 수 없습니다</b> — 먼저 감시를 멈추세요.</p>
       </div>
     </div>`;
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  if (isNew) {
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  }
   overlay.querySelector('[data-rtm-close]').addEventListener('click', () => overlay.remove());
-  document.body.appendChild(overlay);
+  overlay.querySelector('#rtm-probe-open-folder').addEventListener('click', async () => {
+    const res = await call('open_realtime_log_folder');
+    if (res && res.error) showToast(res.error, 'error');
+  });
+  overlay.querySelector('#rtm-probe-delete').addEventListener('click', () => rtmDeleteSelectedProbeFiles(result));
+  wireRtmProbeSelection(sorted);
+}
+
+// 표 행 다중 선택 — collection-log-viewer.js의 wireLogFileList()와 같은 계약(드래그 범위선택 +
+// 목록 가장자리 자동 스크롤은 core.js의 createDragRangeSelect 공용, Shift 범위선택, Ctrl+A).
+function wireRtmProbeSelection(sortedFiles) {
+  const body = document.getElementById('rtm-probe-body');
+  if (!body) return;
+  const rows = [...body.querySelectorAll('[data-rtm-probe-file]')];
+  let dragStartIdx = null;
+  let dragSelecting = true;
+
+  const updateSelectionUi = () => {
+    const countEl = document.getElementById('rtm-probe-selected-count');
+    const btn = document.getElementById('rtm-probe-delete');
+    if (countEl) countEl.textContent = `${rtmProbeSelected.size}개 선택됨`;
+    if (btn) btn.disabled = rtmProbeSelected.size === 0;
+  };
+  const applySelection = (idx) => {
+    const name = rows[idx].dataset.rtmProbeFile;
+    if (dragSelecting) rtmProbeSelected.add(name); else rtmProbeSelected.delete(name);
+    rows[idx].classList.toggle('rtm-probe-selected', rtmProbeSelected.has(name));
+    rows[idx].querySelector('[data-rtm-probe-check]').checked = rtmProbeSelected.has(name);
+  };
+  const applyDrag = (idx) => {
+    const start = Math.min(dragStartIdx, idx);
+    const end = Math.max(dragStartIdx, idx);
+    for (let i = start; i <= end; i++) applySelection(i);
+    updateSelectionUi();
+  };
+
+  const dragger = createDragRangeSelect({
+    container: body,
+    rowSelector: '[data-rtm-probe-file]',
+    rows,
+    applyTo: applyDrag,
+    onEnd: (dragged) => {
+      if (dragged) rtmProbeLastClickedIdx = dragStartIdx;
+      dragStartIdx = null;
+    },
+  });
+
+  rows.forEach((row, idx) => {
+    row.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      // 체크박스 자체를 누르면 드래그 범위선택을 시작하지 않는다 — 클릭 한 번으로 그 행만 토글.
+      if (e.target.closest('[data-rtm-probe-check]')) return;
+      e.preventDefault();
+      dragStartIdx = idx;
+      dragSelecting = !rtmProbeSelected.has(row.dataset.rtmProbeFile);
+      dragger.begin(idx);
+    });
+    row.addEventListener('click', (e) => {
+      if (dragger.isDragging()) return;
+      const name = row.dataset.rtmProbeFile;
+      if (e.shiftKey && rtmProbeLastClickedIdx !== null) {
+        const start = Math.min(rtmProbeLastClickedIdx, idx);
+        const end = Math.max(rtmProbeLastClickedIdx, idx);
+        for (let i = start; i <= end; i++) {
+          rtmProbeSelected.add(rows[i].dataset.rtmProbeFile);
+          rows[i].classList.add('rtm-probe-selected');
+          rows[i].querySelector('[data-rtm-probe-check]').checked = true;
+        }
+      } else if (e.ctrlKey || e.metaKey || e.target.closest('[data-rtm-probe-check]')) {
+        if (rtmProbeSelected.has(name)) rtmProbeSelected.delete(name);
+        else rtmProbeSelected.add(name);
+        rtmProbeLastClickedIdx = idx;
+        row.classList.toggle('rtm-probe-selected', rtmProbeSelected.has(name));
+        row.querySelector('[data-rtm-probe-check]').checked = rtmProbeSelected.has(name);
+      } else {
+        const wasOnly = rtmProbeSelected.size === 1 && rtmProbeSelected.has(name);
+        rows.forEach(r => { r.classList.remove('rtm-probe-selected'); r.querySelector('[data-rtm-probe-check]').checked = false; });
+        rtmProbeSelected = new Set(wasOnly ? [] : [name]);
+        rtmProbeLastClickedIdx = idx;
+        row.classList.toggle('rtm-probe-selected', !wasOnly);
+        row.querySelector('[data-rtm-probe-check]').checked = !wasOnly;
+      }
+      updateSelectionUi();
+    });
+  });
+
+  body.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+      e.preventDefault();
+      rtmProbeSelected = new Set(sortedFiles.map(f => f.file));
+      rows.forEach(r => { r.classList.add('rtm-probe-selected'); r.querySelector('[data-rtm-probe-check]').checked = true; });
+      updateSelectionUi();
+    }
+  });
+}
+
+async function rtmDeleteSelectedProbeFiles(prevResult) {
+  const names = [...rtmProbeSelected];
+  if (!names.length) return;
+  if (!confirm(`선택한 로그 파일 ${names.length}개를 삭제하시겠습니까? 되돌릴 수 없습니다.`)) return;
+  const result = await call('delete_realtime_log_files', names) || { deleted: [], errors: {} };
+  if (result.errors && Object.keys(result.errors).length) {
+    alert(`일부 파일을 삭제하지 못했습니다:\n${Object.entries(result.errors).map(([name, msg]) => `${name}: ${msg}`).join('\n')}`);
+  }
+  // 삭제된 만큼만 반영 — 에러로 남은 선택(추적 중이라 못 지운 것 등)은 유지해 다시 시도하기 쉽게 한다.
+  result.deleted.forEach(name => rtmProbeSelected.delete(name));
+  const refreshed = await call('probe_realtime_log_files');
+  if (refreshed) renderRtmProbeModal(refreshed);
+  else if (prevResult) renderRtmProbeModal(prevResult);
 }
 
 // ===== 구분선 드래그 =====

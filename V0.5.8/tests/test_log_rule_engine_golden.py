@@ -173,11 +173,15 @@ def test_severity_helpers():
 def test_rules_file_shape_is_unchanged():
     """config/log_rules.json 의 규칙 개수를 고정한다.
 
-    규칙이 늘거나 줄면 성능 수치의 전제가 바뀌므로(31개 순차 정규식이 핫패스다) 여기서
+    규칙이 늘거나 줄면 성능 수치의 전제가 바뀌므로(33개 순차 정규식이 핫패스다) 여기서
     알아채야 한다. 개수를 의도적으로 바꿨다면 이 숫자와 벤치마크 기준선을 함께 갱신한다.
+
+    v0.5.8: 가상 장비 오탐 대응으로 서명 2개(+주석 1개)를 늘렸다 — 31 -> 33.
+      command_unsupported_platform  "not supported on this hardware platform" -> 해당없음
+      svi_lowerlayerdown            SVI 의 lowerlayerdown 은 하위 계층 결과라 minor
     """
     rules = load_rules()
-    assert len(rules["signatures"]) == 33
+    assert len(rules["signatures"]) == 36
     assert len(rules["suppressions"]) == 10
     assert len(rules["correlation_rules"]) == 10
     assert len(rules["anomaly_keywords"]) == 17
@@ -185,26 +189,26 @@ def test_rules_file_shape_is_unchanged():
     assert rules["default_severity"] == "major"
 
 
-def test_two_signature_entries_are_comment_only():
-    """signature 33개 중 2개는 pattern 이 없는 주석 전용 엔트리다 — 의도된 문서다.
+def test_comment_only_signature_entries():
+    """signature 36개 중 3개는 pattern 이 없는 주석 전용 엔트리다 — 의도된 문서다.
 
     배열 순서가 곧 우선순위이므로(먼저 맞는 것이 이긴다) 이 주석들은 순서 제약을 **그 위치에서**
     설명한다(예: index 4 는 "앞의 4개가 뒤쪽 일반 규칙보다 먼저 와야 한다"). 그래서 배열 밖으로
     옮기지 않고 그대로 두며, _compile_patterns() 가 조용히 건너뛴다(OPTIMIZATION_PLAN 1-4).
 
-    개수를 고정하는 이유는 컴파일되는 서명이 31개라는 성능 전제를 지키기 위함이다.
+    개수를 고정하는 이유는 컴파일되는 서명이 33개라는 성능 전제를 지키기 위함이다.
     """
     with open(_rule_file_path(), encoding="utf-8-sig") as stream:
         raw = json.load(stream)
     signatures = raw["signatures"]
     comment_only = [entry for entry in signatures if "pattern" not in entry]
-    assert len(comment_only) == 2
+    assert len(comment_only) == 3
     assert all(set(entry) == {"_comment"} for entry in comment_only)
-    assert len(signatures) - len(comment_only) == 31
+    assert len(signatures) - len(comment_only) == 33
 
 
 def test_compiled_signature_count_matches_valid_entries(engine):
-    assert len(engine.signatures.signatures) == 31
+    assert len(engine.signatures.signatures) == 33
     assert len(engine.keyword_res) == 17
     assert len(engine.suppressor.patterns) == 10
 

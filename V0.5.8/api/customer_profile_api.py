@@ -75,7 +75,14 @@ class CustomerProfileApiMixin:
                 with open(meta_path, encoding="utf-8") as stream:
                     meta = yaml.safe_load(stream) or {}
                 if meta.get("customer_id") == customer["id"] or meta.get("customer_name") == customer["name"]:
-                    profiles.append({**project, "profile_name": meta.get("profile_name", project["display_name"]), "description": meta.get("description", ""), "inspection_date": meta.get("inspection_date", ""), "status": meta.get("status", "준비")})
+                    profile_name = meta.get("profile_name", project["display_name"])
+                    # '가상환경' 여부의 단일 출처는 data/<고객사>/<프로파일>/profile/profile.json 이다
+                    # (보고서·AI 분석도 그 파일을 읽는다) — labs/ 쪽 메타에 복제하지 않는다.
+                    profiles.append({**project, "profile_name": profile_name,
+                                      "description": meta.get("description", ""),
+                                      "inspection_date": meta.get("inspection_date", ""),
+                                      "status": meta.get("status", "준비"),
+                                      "is_virtual": prm.is_virtual(customer["name"], profile_name)})
             result.append({**customer, "profiles": profiles})
         return result
 
@@ -145,7 +152,8 @@ class CustomerProfileApiMixin:
         self._activated_profile(pm.get_active_project())
         return {"ok": True}
 
-    def create_inspection_profile(self, customer_id, name, description="", inspection_date=""):
+    def create_inspection_profile(self, customer_id, name, description="", inspection_date="",
+                                   is_virtual=False):
         name = name.strip()
         try:
             name = validate_name(name)
@@ -168,9 +176,12 @@ class CustomerProfileApiMixin:
         dump_yaml_atomic(meta, meta_path)
         pm.set_active_project(project_id)
         try:
-            prm.create_profile(customer["name"], name, description=description, inspection_date=inspection_date)
+            prm.create_profile(customer["name"], name, description=description,
+                                inspection_date=inspection_date, is_virtual=bool(is_virtual))
         except FileExistsError:
-            pass  # 폴더는 이미 있지만 labs/ 프로젝트가 새로 생겼을 뿐인 경우(재사용) — 무시하고 진행
+            # 폴더는 이미 있지만 labs/ 프로젝트가 새로 생겼을 뿐인 경우(재사용) — 프로파일 자체는
+            # 만들지 않되, 이번에 지정한 가상환경 여부는 반영해야 한다.
+            prm.set_virtual(customer["name"], name, bool(is_virtual))
 
         # 이 고객사의 두 번째 프로파일부터는 직전(최신) 회차의 장비목록을 그대로 물려받는다.
         # 같은 고객사면 장비·IP·계정이 회차가 바뀌어도 대부분 그대로라 매번 다시 입력할 이유가 없다.
@@ -189,7 +200,8 @@ class CustomerProfileApiMixin:
                 "copied_from": (previous or {}).get("profile_name") if copied else None,
                 "copied_count": (copied or {}).get("added", 0)}
 
-    def rename_inspection_profile(self, profile_id, name, description="", inspection_date=""):
+    def rename_inspection_profile(self, profile_id, name, description="", inspection_date="",
+                                   is_virtual=None):
         name = name.strip()
         try:
             name = validate_name(name)
@@ -210,8 +222,27 @@ class CustomerProfileApiMixin:
                 prm.rename_profile(customer_name, old_name, name)
             except FileExistsError as e:
                 return {"error": str(e)}
+        # is_virtual 을 생략하면(None) 기존 값을 그대로 둔다 — 이름만 고치는 호출이 가상환경
+        # 설정을 조용히 끄지 않도록.
+        if is_virtual is not None and customer_name:
+            prm.set_virtual(customer_name, name, bool(is_virtual))
         workspace_cache.invalidate()
         return {"ok": True}
+
+    def set_inspection_profile_virtual(self, profile_id, is_virtual):
+        """프로파일의 '가상환경' 옵션을 켜고 끈다.
+
+        켜면 (1) 보고서에서 PSU/FAN/온도/모듈/트랜시버 항목이 로그와 무관하게 '해당없음'이 되고,
+        (2) AI 로그 분석이 가상 플랫폼용 프롬프트(하드웨어 미지원 출력 무시)를 쓴다.
+        vEOS-lab/EVE-NG 같은 실습·검증망 회차에서 매번 같은 오탐을 손으로 걸러내지 않기 위한 옵션."""
+        for customer in self.get_customer_profiles():
+            profile = next((p for p in customer["profiles"] if p["id"] == profile_id), None)
+            if not profile:
+                continue
+            prm.set_virtual(customer["name"], profile["profile_name"], bool(is_virtual))
+            workspace_cache.invalidate()
+            return {"ok": True, "is_virtual": bool(is_virtual)}
+        return {"error": "정기점검 프로파일을 찾을 수 없습니다."}
 
     def delete_inspection_profile(self, profile_id):
         customer_name, profile_name = None, None

@@ -19,6 +19,10 @@
 #               log_scan        - 이상 키워드가 걸린 줄 수 요약
 #               keyword_ok      - 이상 키워드 유무로 정상/이상 판정(기본값)
 #   warn_at   : (cpu/memory_free 전용) 이 값을 넘거나 못 미치면 '경고'로 서식 강조
+#   virtual_na: true 이면 '가상환경' 프로파일에서 로그를 보지 않고 '해당없음'으로 판정한다.
+#               vEOS-lab/EVE-NG 같은 가상 플랫폼에는 PSU/FAN/온도센서/모듈/트랜시버가
+#               물리적으로 없어서 점검 대상 자체가 성립하지 않는다(프로파일의 '가상환경'
+#               옵션으로 켠다 — engine/profile_manager.py: is_virtual).
 
 meta:
   # 표지 제목: "{customer}" / "{profile}" / "{title_suffix}" 3줄로 조립된다.
@@ -53,21 +57,25 @@ check_items:
     commands: [show environment power, show environment all]
     criteria: Power Supply Status OK 확인
     evaluator: keyword_ok
+    virtual_na: true
   - group: H/W 구동 상태
     name: FAN 상태 확인
     commands: [show environment cooling, show environment all]
     criteria: Fan Status OK / Speed 80% 미만 확인
     evaluator: keyword_ok
+    virtual_na: true
   - group: H/W 구동 상태
     name: Module 상태 확인
     commands: [show module]
     criteria: Module Status Ok 확인
     evaluator: keyword_ok
+    virtual_na: true
   - group: H/W 구동 상태
     name: Temperature 상태 확인
     commands: [show environment temperature, show environment all]
     criteria: Limit 범위 안 Sensor 온도 확인
     evaluator: keyword_ok
+    virtual_na: true
 
   - group: 시스템 상태 확인
     name: CPU 사용률
@@ -115,6 +123,8 @@ check_items:
     evaluator: interface_error
   - group: L2/인터페이스
     name: Transceiver
+    # 가상 플랫폼에는 광 모듈 DOM 진단이 없다.
+    virtual_na: true
     commands: [show interfaces transceiver]
     criteria: Transceiver 온도 및 광값 정상 범위 확인
     evaluator: keyword_ok

@@ -17,7 +17,9 @@ class CiscoDriver(VendorDriver):
     COMMAND_MAP = {
         # AristaDriver.COMMAND_MAP과 1:1 대응되는 check_id에 Cisco IOS 커맨드 매핑
         "vlan_status": "show vlan brief",
-        "stp_status": "show spanning-tree vlan 1,100,200,999",
+        # VLAN 번호 하드코딩 제거 — 이유는 AristaDriver 쪽 주석 참고(없는 VLAN 을 지정하면
+        # "% Invalid input" 이 돌아와 STP 를 못 읽은 채 비정상 판정이 났다).
+        "stp_status": "show spanning-tree",
 
         "version_info": "show version",
         "power_status": "show environment power",

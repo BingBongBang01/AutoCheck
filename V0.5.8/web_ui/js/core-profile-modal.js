@@ -41,13 +41,16 @@ async function openCustomerProfileModal() {
     const customer = tree.find(item => item.id === selectedId);
     const detail = overlay.querySelector('#customer-detail');
     if (!customer) { detail.innerHTML = '<div class="empty-state">고객사를 선택하세요.</div>'; return; }
-    detail.innerHTML = `<div class="customer-detail-header"><div><h2>${customer.name}</h2><p>${customer.profiles.length}개 정기점검 프로파일</p></div><div><button class="btn btn-primary" id="profile-add">정기점검 추가</button><button class="btn btn-danger" id="customer-delete">고객사 삭제</button></div></div><div class="inspection-profile-list">${customer.profiles.map(profile => `<details class="inspection-profile-card ${profile.id === active ? 'profile-current' : 'profile-idle'}"${profile.id === active ? ' open' : ''}><summary>${profile.id === active ? '<span class="profile-current-banner"><span class="material-symbols-rounded" style="font-size:14px">check_circle</span>CURRENT ACTIVE PROFILE / 현재 사용 중</span>' : ''}<span class="material-symbols-rounded">folder</span><span>${profile.profile_name}</span>${profile.id === active ? '<span class="profile-status">사용 중</span>' : ''}<span class="profile-status">${profile.status}</span></summary><div class="inspection-profile-content"><p>${profile.description || '설명 없음'}</p><p class="profile-date">점검일: ${profile.inspection_date || '미정'}</p><button class="btn btn-primary" data-profile-select="${profile.id}">선택</button><button class="btn btn-outlined" data-profile-edit="${profile.id}">수정</button>${profile.id === active ? '' : `<button class="btn btn-outlined" data-profile-copy-devices="${profile.id}" title="이 프로파일의 장비목록을 지금 사용 중인 프로파일로 가져옵니다"><span class="material-symbols-rounded" style="font-size:15px">content_copy</span>장비목록 복사</button>`}<button class="btn btn-danger" data-profile-delete="${profile.id}">삭제</button></div></details>`).join('') || '<div class="empty-state">정기점검 프로파일이 없습니다.</div>'}</div>`;
+    detail.innerHTML = `<div class="customer-detail-header"><div><h2>${customer.name}</h2><p>${customer.profiles.length}개 정기점검 프로파일</p></div><div><button class="btn btn-primary" id="profile-add">정기점검 추가</button><button class="btn btn-danger" id="customer-delete">고객사 삭제</button></div></div><div class="inspection-profile-list">${customer.profiles.map(profile => `<details class="inspection-profile-card ${profile.id === active ? 'profile-current' : 'profile-idle'}"${profile.id === active ? ' open' : ''}><summary>${profile.id === active ? '<span class="profile-current-banner"><span class="material-symbols-rounded" style="font-size:14px">check_circle</span>CURRENT ACTIVE PROFILE / 현재 사용 중</span>' : ''}<span class="material-symbols-rounded">folder</span><span>${profile.profile_name}</span>${profile.id === active ? '<span class="profile-status">사용 중</span>' : ''}<span class="profile-status">${profile.status}</span>${profile.is_virtual ? '<span class="profile-virtual-badge" title="가상환경 — 전원/FAN/온도/모듈/트랜시버 점검을 해당없음으로 처리합니다"><span class="material-symbols-rounded" style="font-size:12px">cloud</span>가상환경</span>' : ''}</summary><div class="inspection-profile-content"><p>${profile.description || '설명 없음'}</p><p class="profile-date">점검일: ${profile.inspection_date || '미정'}</p><button class="btn btn-primary" data-profile-select="${profile.id}">선택</button><button class="btn btn-outlined" data-profile-edit="${profile.id}">수정</button><button class="btn btn-outlined" data-profile-virtual="${profile.id}" title="가상환경(vEOS-lab·EVE-NG 등) 여부. 켜면 전원/FAN/온도/모듈/트랜시버 점검이 '해당없음'이 되고 AI 분석도 가상 플랫폼 기준으로 바뀝니다"><span class="material-symbols-rounded" style="font-size:15px">${profile.is_virtual ? 'cloud_off' : 'cloud'}</span>${profile.is_virtual ? '실제 장비로 전환' : '가상환경으로 전환'}</button>${profile.id === active ? '' : `<button class="btn btn-outlined" data-profile-copy-devices="${profile.id}" title="이 프로파일의 장비목록을 지금 사용 중인 프로파일로 가져옵니다"><span class="material-symbols-rounded" style="font-size:15px">content_copy</span>장비목록 복사</button>`}<button class="btn btn-danger" data-profile-delete="${profile.id}">삭제</button></div></details>`).join('') || '<div class="empty-state">정기점검 프로파일이 없습니다.</div>'}</div>`;
     // 두 번째 프로파일부터는 서버가 직전(최신) 회차의 장비목록을 자동으로 물려준다 —
     // 복사됐으면 몇 대가 넘어왔는지 알려줘야 사용자가 장비목록 탭에서 놀라지 않는다.
     detail.querySelector('#profile-add')?.addEventListener('click', async () => {
       const name = prompt('정기점검 이름');
       if (!name) return;
-      const result = await call('create_inspection_profile', customer.id, name, '', '');
+      // 가상환경 회차(vEOS-lab·EVE-NG 등)는 PSU/FAN/온도센서/모듈이 아예 없어서 그 점검 항목이
+      // 매 회차 오탐으로 올라온다 — 만들 때 물어보고 프로파일에 기록해 둔다(나중에 카드에서 전환 가능).
+      const isVirtual = confirm('가상환경(vEOS-lab·EVE-NG 등) 점검 회차입니까?\n\n확인 = 가상환경 (전원/FAN/온도/모듈/트랜시버를 해당없음으로 처리)\n취소 = 실제 장비');
+      const result = await call('create_inspection_profile', customer.id, name, '', '', isVirtual);
       if (!result || result.error) { alert(result?.error || '만들지 못했습니다.'); return; }
       tree = await call('get_customer_profiles') || [];
       render();
@@ -58,6 +61,18 @@ async function openCustomerProfileModal() {
     detail.querySelector('#customer-delete')?.addEventListener('click', async () => { if (!confirm(`고객사 '${customer.name}'와 모든 정기점검을 함께 삭제합니다. 계속할까요?`)) return; const result = await call('delete_customer', customer.id); if (result?.error) alert(result.error); else { tree = await call('get_customer_profiles') || []; selectedId = tree[0]?.id || null; render(); await refreshStatusBar(); } });
     detail.querySelectorAll('[data-profile-select]').forEach(button => button.onclick = async () => { await call('set_active_project', button.dataset.profileSelect); overlay.remove(); await refreshStatusBar(); navigate(currentPage); });
     detail.querySelectorAll('[data-profile-edit]').forEach(button => button.onclick = async () => { const profile = customer.profiles.find(item => item.id === button.dataset.profileEdit); const name = prompt('정기점검 이름', profile.profile_name); if (!name) return; const result = await call('rename_inspection_profile', profile.id, name, profile.description, profile.inspection_date); if (result?.error) alert(result.error); else { tree = await call('get_customer_profiles') || []; render(); } });
+    // 가상환경 전환 — 이미 만든 회차도 나중에 바꿀 수 있어야 한다(실습망에서 실기로, 또는 그 반대).
+    detail.querySelectorAll('[data-profile-virtual]').forEach(button => button.onclick = async () => {
+      const profile = customer.profiles.find(item => item.id === button.dataset.profileVirtual);
+      const next = !profile.is_virtual;
+      const result = await call('set_inspection_profile_virtual', profile.id, next);
+      if (!result || result.error) { alert(result?.error || '변경하지 못했습니다.'); return; }
+      tree = await call('get_customer_profiles') || [];
+      render();
+      showToast(next
+        ? `'${profile.profile_name}' — 가상환경으로 전환했습니다. 전원/FAN/온도/모듈/트랜시버는 '해당없음'으로 보고됩니다`
+        : `'${profile.profile_name}' — 실제 장비 기준으로 전환했습니다`);
+    });
     detail.querySelectorAll('[data-profile-delete]').forEach(button => button.onclick = async () => { if (!confirm('이 정기점검 프로파일을 삭제할까요?')) return; await call('delete_inspection_profile', button.dataset.profileDelete); tree = await call('get_customer_profiles') || []; render(); });
     // 장비목록 복사 — 이 프로파일(원본)의 장비를 "지금 사용 중인" 프로파일로 가져온다.
     // 이름이 같은 장비는 건너뛰므로 현재 프로파일의 데이터가 사라지지 않는다.

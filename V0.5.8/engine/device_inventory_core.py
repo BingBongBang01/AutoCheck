@@ -15,14 +15,18 @@ import os
 import yaml
 from core.atomic_io import dump_yaml_atomic
 
+# location/warranty 는 정기점검 보고서(PDF '장비 목록' 페이지의 위치·Warranty 열)를 위해
+# 추가된 필드다. 예전에는 그 두 열이 채울 데이터 자체가 없어 항상 공란으로 출력됐다.
 DEVICE_FIELDS = ["name", "role", "management_ip", "ssh_port", "username", "password",
-                  "vendor", "model", "zone", "site", "tag", "memo", "enabled",
+                  "vendor", "model", "zone", "site", "location", "warranty",
+                  "tag", "memo", "enabled",
                   "auth_method", "key_path", "key_content", "key_passphrase"]
 
 DEFAULT_DEVICE = {
     "name": "", "role": "", "management_ip": "", "ssh_port": 22,
     "username": "", "password": "", "vendor": "Arista", "model": "",
-    "zone": "", "site": "", "tag": [], "memo": "", "enabled": True,
+    "zone": "", "site": "", "location": "", "warranty": "",
+    "tag": [], "memo": "", "enabled": True,
     "auth_method": "password", "key_path": "", "key_content": "", "key_passphrase": "",
 }
 

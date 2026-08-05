@@ -102,9 +102,11 @@ def test_status_constants_have_no_openpyxl_dependency():
     code = (
         "import sys\n"
         "from report.inspection_status import STATUS_OK, STATUS_WARN, STATUS_NA, "
-        "STATUS_UNREACHABLE, ALL_STATUSES\n"
+        "STATUS_SKIP, STATUS_UNREACHABLE, ALL_STATUSES, NOT_JUDGED_STATUSES\n"
         "assert STATUS_OK == '정상'\n"
-        "assert ALL_STATUSES == (STATUS_OK, STATUS_WARN, STATUS_NA, STATUS_UNREACHABLE)\n"
+        "assert ALL_STATUSES == (STATUS_OK, STATUS_WARN, STATUS_NA, STATUS_SKIP, "
+        "STATUS_UNREACHABLE)\n"
+        "assert NOT_JUDGED_STATUSES == {STATUS_NA, STATUS_SKIP, STATUS_UNREACHABLE}\n"
         "print('openpyxl' in sys.modules)\n"
     )
     stdout, stderr, code_returned = _run(code)

@@ -7,8 +7,12 @@ from PyInstaller.utils.hooks import collect_submodules
 block_cipher = None
 
 # Hidden imports for Netmiko, PyWebview, Pandas, Openpyxl, ReportLab, pptx and app modules
+# 'pywebview'는 PyPI 배포명일 뿐 importable 모듈명이 아니다(실제 모듈은 'webview') — 이 이름
+# 그대로 hiddenimports에 넣으면 PyInstaller가 "Hidden import 'pywebview' not found"를 낸다.
+# main.py가 `import webview`를 직접 하므로 정적 분석이 어차피 잡아 주지만(빌드 자체는 성공),
+# 에러 로그가 실제 문제와 헷갈리므로 올바른 모듈명으로 고쳐 둔다.
 hidden_imports = [
-    'pywebview',
+    'webview',
     'clr',
     'pythonnet',
     'netmiko',
@@ -32,12 +36,16 @@ for pkg in ['api', 'engine', 'pipeline', 'parsers', 'plugins', 'core', 'alarm', 
         pass
 
 # Data files to bundle into EXE
+# 'labs'는 core/paths.py의 AppPaths.labs_root() 마이그레이션 이후 개발 트리에 남지 않는다
+# (사용자 문서 폴더 아래 런타임에 생성됨) — 존재할 때만(과거 레포/포터블 빌드 잔재) 담는다.
+# 무조건 넣으면 이 폴더가 없는 클린 체크아웃에서 "Unable to find 'labs'..."로 빌드가 죽는다.
 datas = [
     ('web_ui', 'web_ui'),
     ('config', 'config'),
-    ('labs', 'labs'),
     ('VERSION', '.'),
 ]
+if os.path.isdir('labs'):
+    datas.append(('labs', 'labs'))
 
 for optional_file in ['ai_config.yaml', 'connection.yaml', 'ai_settings.yaml', 'requirements.txt', '실행방법.txt']:
     if os.path.exists(optional_file):

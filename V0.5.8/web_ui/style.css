@@ -1121,6 +1121,13 @@ details.fold[open] > summary .fold-caret { transform: rotate(180deg); }
 .rtm-probe-body tr.rtm-probe-live td { font-weight: 600; }
 .rtm-probe-body tr.rtm-probe-fresh { background: rgba(34,197,94,0.12); }
 .rtm-probe-body tr.rtm-probe-stale td { opacity: 0.55; }
+/* 다중 선택(드래그/Shift/Ctrl+A) — 선택된 행은 다른 상태 배경(추적 중/이전 세션)보다 위에 보여야
+   하므로 outline으로 구분한다(background를 덮어쓰면 '추적 중' 강조가 사라져 헷갈린다). */
+.rtm-probe-body tr[data-rtm-probe-file] { cursor: pointer; user-select: none; }
+.rtm-probe-body tr.rtm-probe-selected { outline: 2px solid var(--primary); outline-offset: -2px; }
+.rtm-probe-body td:first-child { width: 22px; }
+.rtm-probe-toolbar { display: flex; align-items: center; gap: 10px; }
+.rtm-probe-hint, .rtm-probe-selected-count { font-size: 11px; color: var(--sub); white-space: nowrap; }
 .rtm-probe-mtime { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rtm-probe-live-badge {
   display: inline-flex; align-items: center; gap: 4px;
@@ -1442,6 +1449,14 @@ table.dtable tbody tr.inv-selected.probe-checking:hover {
   background: var(--success); color: #fff;
   font-size: 10px; font-weight: 800; letter-spacing: 0.4px;
   padding: 4px 10px; border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+/* 가상환경(vEOS-lab·EVE-NG 등) 회차 — 하드웨어 점검 항목이 '해당없음'으로 나오므로,
+   실기 점검 회차와 목록에서 바로 구분돼야 한다. */
+.profile-virtual-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: var(--hover); color: var(--sub);
+  border: var(--line); border-radius: 999px;
+  font-size: 10px; font-weight: 700; padding: 1px 7px;
 }
 .inspection-profile-card.profile-current > summary { font-weight: 700; }
 /* 사용 중이 아닌 회차는 시각적 무게를 낮춰 대비를 만든다. */

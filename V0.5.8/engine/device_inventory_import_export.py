@@ -93,8 +93,8 @@ def copy_from_inventory(src_inventory, dst_inventory, overwrite=False):
 
 # ---------- Export ----------
 EXCEL_HEADERS = ["name", "role", "management_ip", "ssh_port", "username", "password",
-                  "vendor", "model", "zone", "site", "tag", "memo", "enabled",
-                  "auth_method", "key_path"]
+                  "vendor", "model", "zone", "site", "location", "warranty",
+                  "tag", "memo", "enabled", "auth_method", "key_path"]
 
 
 def export_to_excel(devices, path):
@@ -112,10 +112,12 @@ def export_to_excel(devices, path):
             d.get("name", ""), d.get("role", ""), d.get("management_ip", ""),
             d.get("ssh_port", 22), d.get("username", ""), d.get("password", ""),
             d.get("vendor", ""), d.get("model", ""), d.get("zone", ""), d.get("site", ""),
+            d.get("location", ""), d.get("warranty", ""),
             ",".join(d.get("tag") or []) if isinstance(d.get("tag"), list) else (d.get("tag") or ""),
             d.get("memo", ""), "TRUE" if d.get("enabled") else "FALSE",
             d.get("auth_method", "password"), d.get("key_path", ""),
         ])
-    for col, width in zip("ABCDEFGHIJKLMNO", (14, 10, 16, 8, 12, 12, 10, 14, 10, 10, 14, 20, 8, 12, 20)):
+    for col, width in zip("ABCDEFGHIJKLMNOPQ",
+                          (14, 10, 16, 8, 12, 12, 10, 14, 10, 10, 14, 12, 14, 20, 8, 12, 20)):
         ws.column_dimensions[col].width = width
     wb.save(path)

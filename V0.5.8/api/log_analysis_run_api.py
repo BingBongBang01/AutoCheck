@@ -528,6 +528,53 @@ class LogAnalysisRunApiMixin:
                 "files": rows, "watching": bool(status.get("running")),
                 "tracked_count": len(tracked)}
 
+    def open_realtime_log_folder(self):
+        """'CRT 로그 파일 진단' 모달의 '폴더 열기' — CRTlog 폴더를 OS 탐색기로 연다."""
+        from engine import log_storage
+        root = str(AppPaths.crt_log_root())
+        log_storage.open_in_file_explorer(root)
+        return {"ok": True, "path": root}
+
+    def delete_realtime_log_files(self, filenames):
+        """'CRT 로그 파일 진단' 모달의 다중 삭제 — probe_realtime_log_files()와 같은 폴더
+        (CRTlog 최상위, 하위 폴더 없음)의 파일만 지운다.
+
+        filenames: 파일명 목록(경로 아님) — os.path.basename()으로만 다뤄 경로 조작을 막는다.
+        지금 감시가 tail 중인 파일(watcher의 active_paths)은 건너뛴다. 열려서 오프셋을 추적
+        중인 파일을 지우면 다음 tick에 파일이 사라진 것으로 보여 감시가 그 장비를 놓치거나,
+        곧바로 같은 이름의 새 세션 로그가 생겼을 때 오프셋이 꼬일 수 있다 — 지우려면 먼저
+        감시를 멈추라고 안내한다.
+
+        반환: {"deleted": [파일명,...], "errors": {파일명: 메시지}}.
+        """
+        from core.crt_stream_watcher import DEFAULT_EXTENSIONS
+        root = os.path.abspath(str(AppPaths.crt_log_root()))
+        watcher = getattr(self, "_baseline_stream_watcher", None)
+        status = watcher.status() if watcher else {}
+        tracked = {os.path.normcase(os.path.abspath(p)) for p in (status.get("active_paths") or [])}
+
+        deleted, errors = [], {}
+        for raw in filenames or []:
+            name = os.path.basename(str(raw or "").strip())
+            if not name:
+                continue
+            if not name.lower().endswith(DEFAULT_EXTENSIONS):
+                errors[name or raw] = "txt/log 파일만 삭제할 수 있습니다."
+                continue
+            abs_path = os.path.join(root, name)
+            if os.path.normcase(abs_path) in tracked:
+                errors[name] = "지금 감시가 추적 중인 파일입니다 — 감시를 멈춘 뒤 삭제하세요."
+                continue
+            if not os.path.isfile(abs_path):
+                errors[name] = "파일이 존재하지 않습니다."
+                continue
+            try:
+                os.remove(abs_path)
+                deleted.append(name)
+            except OSError as e:
+                errors[name] = str(e)
+        return {"ok": True, "deleted": deleted, "errors": errors}
+
     # ---------- 자동 시작 설정(앱 전역) ----------
     def _realtime_watch_config_path(self):
         return str(AppPaths.config_root() / "realtime_watch.yaml")
@@ -852,6 +899,13 @@ class LogAnalysisRunApiMixin:
         if not glob.glob(os.path.join(original_dir, "*.txt")):
             return {"error": "분석할 점검 로그가 없습니다. 먼저 점검을 1회 수행하세요."}
 
+        # 프로파일의 '가상환경' 옵션에 따라 AI 프롬프트를 바꾼다 — 가상환경이면 하드웨어/센서
+        # 미지원 출력을 무시하고, 실기 장비면 그것을 실제 장애로 보고하게 한다.
+        # 워커 스레드가 아니라 여기서 읽는다(스레드 안에서 활성 프로파일이 바뀔 수 있다).
+        from engine.profile_manager import profile_manager
+        names = self._active_names()
+        is_virtual = bool(names[0]) and profile_manager.is_virtual(*names)
+
         # 클라우드는 API 키 등록 여부를 즉시 확인해 사용자에게 바로 알림(로컬은 모델 준비에
         # 시간이 걸릴 수 있으므로 백그라운드 스레드 안에서 확인).
         if ai_mode == "cloud":
@@ -904,16 +958,27 @@ class LogAnalysisRunApiMixin:
                     if ai_mode == "local":
                         # 로컬 AI용 경량화 구조화 템플릿 (토큰 페이로드 축소 및 500 오류/타임아웃 방지)
                         fname = os.path.basename(path)
+                        if is_virtual:
+                            platform = "Arista vEOS-lab (Virtual Platform)"
+                            task = ("Focus strictly on operational failures (Reloads, Interface/MLAG down, "
+                                    "BGP/EVPN, STP changes). Ignore expected virtual limitations "
+                                    "(show module/environment unavailable).")
+                        else:
+                            platform = "Physical network switch (production hardware)"
+                            task = ("Report hardware faults (power/fan/temperature/module/transceiver) as well as "
+                                    "operational failures (Reloads, Interface/MLAG down, BGP/EVPN, STP changes).")
                         payload_text = (
                             f"[DEVICE_NAME]: {fname}\n"
-                            f"[PLATFORM]: Arista vEOS-lab (Virtual Platform)\n"
+                            f"[PLATFORM]: {platform}\n"
                             f"[FILTERED_PRE_CHECK_OUTPUT]:\n{context_text}\n"
-                            f"[ANALYSIS_TASK]: Focus strictly on operational failures (Reloads, Interface/MLAG down, BGP/EVPN, STP changes). Ignore expected virtual limitations (show module/environment unavailable)."
+                            f"[ANALYSIS_TASK]: {task}"
                         )
-                        analysis_text = analyze_raw_log_text(payload_text, ai_mode, api_cfg)
+                        analysis_text = analyze_raw_log_text(payload_text, ai_mode, api_cfg,
+                                                             is_virtual=is_virtual)
                     else:
-                        # 클라우드 AI 모드는 기존 컨텍스트 텍스트 전달 (vEOS 프롬프트 덧붙임)
-                        analysis_text = analyze_raw_log_text(context_text, ai_mode, api_cfg)
+                        # 클라우드 AI 모드는 기존 컨텍스트 텍스트 전달 (프롬프트 머리말은 라우터가 붙인다)
+                        analysis_text = analyze_raw_log_text(context_text, ai_mode, api_cfg,
+                                                             is_virtual=is_virtual)
                 
                 if analysis_text.startswith("[AI 분석 오류]"):
                     print(f"[AI 분석] 실패: {os.path.basename(path)} -> {analysis_text}")

@@ -37,6 +37,9 @@ class InspectionReportApiMixin:
         # template 전체(설정 원문)는 UI에서 쓰지 않으므로 항목 수만 넘긴다 — 브리지 전송량 절약.
         return {
             "customer": customer, "profile": profile,
+            # 가상환경 프로파일이면 하드웨어 항목이 '해당없음'으로 나온다 — 미리보기에서
+            # 왜 그런지 보이도록 플래그를 그대로 내려준다.
+            "is_virtual": context["is_virtual"],
             "title": f"{customer} {profile}",
             "inspection_date": context["inspection_date"],
             "generated_at": context["generated_at"],
@@ -51,8 +54,9 @@ class InspectionReportApiMixin:
             "original_log_dir": next((str(d) for d in builder.original_log_dirs(customer, profile)), ""),
             "devices": [
                 {k: device[k] for k in ("name", "model", "ip", "serial", "os_version", "role",
+                                         "location", "warranty",
                                          "unreachable", "collected_at", "command_count",
-                                         "warn_count", "overall_status", "remarks")}
+                                         "warn_count", "na_count", "overall_status", "remarks")}
                 for device in context["devices"]
             ],
             "device_items": {

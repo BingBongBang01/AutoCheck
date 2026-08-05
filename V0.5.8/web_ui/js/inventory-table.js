@@ -76,6 +76,8 @@ function renderInventoryTable() {
       <td><input class="field" style="height:30px;width:60px" value="${d.ssh_port||22}" data-idx="${idx}" data-field="ssh_port"></td>
       <td><input class="field" style="height:30px;width:90px" value="${d.username||''}" placeholder="기본값" data-idx="${idx}" data-field="username"></td>
       <td>${authCell}</td>
+      <td><input class="field" style="height:30px;width:100px" value="${d.location||''}" placeholder="예: 1층 IDF" data-idx="${idx}" data-field="location"></td>
+      <td><input class="field" style="height:30px;width:100px" value="${d.warranty||''}" placeholder="예: ~2027-05" data-idx="${idx}" data-field="warranty"></td>
       <td style="text-align:center"><input type="checkbox" ${d.enabled ? 'checked' : ''} data-idx="${idx}" data-field="enabled"></td>
       <td style="white-space:nowrap;">
         <button class="btn btn-outlined" style="height:30px;padding:4px 8px;font-size:11px;" data-test="${idx}" title="지금 바로 연결 확인"><span class="material-symbols-rounded" style="font-size:14px">wifi_tethering</span></button>

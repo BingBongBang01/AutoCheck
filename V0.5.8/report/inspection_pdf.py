@@ -35,7 +35,7 @@ from reportlab.platypus import (
     BaseDocTemplate, Frame, PageBreak, PageTemplate, Paragraph, Spacer, Table, TableStyle,
 )
 
-from report.inspection_status import STATUS_OK
+from report.inspection_status import NOT_JUDGED_STATUSES, STATUS_OK, STATUS_WARN
 
 FONT_R = "ReportKR"
 FONT_B = "ReportKR-Bold"
@@ -124,29 +124,59 @@ def _item_by_name(items: list, name: str) -> dict:
 
 
 def _binary(item: dict) -> str:
-    """표준 표의 '결과' 칸 — 정상이면 정상, 그 외(확인필요/미수집/접속 불가)는 있는 그대로 노출.
-    확인필요만 표준의 '비정상'과 같은 뜻이라 별도 표기하고, 미수집/접속불가는 정보 손실을
-    막기 위해 원래 상태 문구를 그대로 남긴다."""
+    """표준 표의 '결과' 칸 — 정상이면 정상, 그 외(확인필요/미수집/해당없음/접속 불가)는
+    있는 그대로 노출. 확인필요만 표준의 '비정상'과 같은 뜻이라 별도 표기하고, 나머지는
+    정보 손실을 막기 위해 원래 상태 문구를 그대로 남긴다."""
     status = item.get("status")
     if status == STATUS_OK:
         return "정상"
     if status is None:
         return ""
-    if status == "확인필요":
+    if status == STATUS_WARN:
         return "비정상"
     return status
 
 
+def _device_counts(device: dict, total: int) -> tuple:
+    """(정상, 비정상, 미수집) — 표준 14개 항목 기준 요약표 숫자.
+
+    미수집(미수집/해당없음/접속 불가)을 따로 세는 이유: 예전에는 passed = total - fail 이라
+    판정하지 못한 항목이 전부 '정상'으로 합산됐다. 가상 장비처럼 절반이 미수집인 경우
+    보고서만 보면 전부 정상 점검된 것처럼 보인다.
+
+    실측 항목(CPU/Memory/Uptime)도 값을 못 뽑았으면 미수집으로 센다 — 판정 대상이 아니라는
+    것과 값을 못 봤다는 것은 다르다."""
+    rows = _switch_rows(device)
+    fail = na = 0
+    for label, _cmd, _yaml in PERF_STD + INTF_STD:
+        value = rows.get(label)
+        if value == "비정상":
+            fail += 1
+        elif value in NOT_JUDGED_STATUSES:
+            na += 1
+    return total - fail - na, fail, na
+
+
 def _switch_rows(device: dict) -> dict:
-    """표준 14개 항목의 표시값 — {표준 라벨: 결과 문자열}."""
+    """표준 14개 항목의 표시값 — {표준 라벨: 결과 문자열}.
+
+    실측 항목(CPU/Free Memory/System Uptime)만 측정값을 그대로 쓰고, 나머지는 판정 문구
+    (정상/비정상/미수집/해당없음)로 적는다. 예전에는 PERF_STD 전체가 값을 그대로 썼는데,
+    Power/Fan/Temperature/Log 의 값은 "해당없음 (이 하드웨어 플랫폼이 …)" 같은 문장이라
+    좁은 결과 칸을 넘쳤고, 무엇보다 요약표 집계가 그 문자열을 '비정상'과도 '미수집'과도
+    맞추지 못해 판정하지 못한 항목이 조용히 정상으로 세어졌다."""
     items = device.get("items", [])
     row = {}
-    for label, _cmd, yaml_name in PERF_STD:
+    for label, _cmd, yaml_name in PERF_STD + INTF_STD:
         item = _item_by_name(items, yaml_name)
-        row[label] = txt(item.get("value")) if item else ""
-    for label, _cmd, yaml_name in INTF_STD:
-        item = _item_by_name(items, yaml_name)
-        row[label] = _binary(item) if item else ""
+        if not item:
+            row[label] = ""
+        elif label in JUDGE_LABELS or item.get("status") in NOT_JUDGED_STATUSES:
+            # 실측 항목(CPU 등)이라도 값을 못 뽑았으면 사유 문장 대신 상태만 적는다 —
+            # 그래야 아래 집계가 '판정하지 못함'으로 알아본다.
+            row[label] = _binary(item)
+        else:
+            row[label] = txt(item.get("value"))
     return row
 
 
@@ -251,33 +281,33 @@ def cover_page(ctx: dict) -> list:
 
 
 def summary_page(ctx: dict, switches: list, servers: list) -> list:
+    # 열이 하나 늘었다: 예전 헤더는 (점검항목/정상/비정상) 3개였는데 실제로는 숫자가
+    # (14 12 2)처럼 세 칸에 걸쳐 찍혀서, 세 번째 숫자가 '비정상'인지 '미수집'인지 표만 보고는
+    # 알 수 없었다. 판정하지 못한 항목을 자기 열로 분리한다.
     head = [Paragraph(h, style("h", 8.5, FONT_B)) for h in
-            ("Page", "HOSTNAME", "점검<br/>항목", "정상", "비정상", "요 약")]
+            ("Page", "HOSTNAME", "점검<br/>항목", "정상", "비정상", "미수집<br/>해당없음", "요 약")]
     data = [head]
     page = 3
     for device in switches + servers:
         total = 14 if device in switches else 2
         if device in switches:
-            # fail은 판정 대상 11개 항목 중 '비정상'만 세고, pass는 표준 스크립트와 같은 방식으로
-            # total(14, cpu/mem/uptime 등 실측값 3개 포함)에서 fail을 뺀 값을 쓴다 — 실측값
-            # 항목은 애초에 판정 대상이 아니라서 자동으로 '정상' 취급된다.
-            fail = sum(1 for label in JUDGE_LABELS if _switch_rows(device).get(label) == "비정상")
-            passed = total - fail
+            passed, fail, na = _device_counts(device, total)
         else:
-            passed, fail = total, 0
+            passed, fail, na = total, 0, 0
         data.append([
             Paragraph(str(page), style("c", 8.5)), Paragraph(txt(device["name"]), style("c", 8.5)),
             Paragraph(str(total), style("c", 8.5)), Paragraph(str(passed), style("c", 8.5)),
             Paragraph(str(fail) if fail else "", style("c", 8.5)),
+            Paragraph(str(na) if na else "", style("c", 8.5)),
             Paragraph(device.get("remarks") or "", style("c", 8.5, align=TA_LEFT)),
         ])
         page += 1
-    data.append([Paragraph("비 고", style("h", 8.5, FONT_B)), "", "", "", "", ""])
-    t = base_table(data, [14 * mm, 42 * mm, 14 * mm, 14 * mm, 14 * mm, 72 * mm])
+    data.append([Paragraph("비 고", style("h", 8.5, FONT_B)), "", "", "", "", "", ""])
+    t = base_table(data, [12 * mm, 38 * mm, 13 * mm, 13 * mm, 13 * mm, 16 * mm, 65 * mm])
     t.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), HEAD_BG),
         ("SPAN", (0, len(data) - 1), (0, len(data) - 1)),
-        ("SPAN", (1, len(data) - 1), (5, len(data) - 1)),
+        ("SPAN", (1, len(data) - 1), (6, len(data) - 1)),
         ("BACKGROUND", (0, len(data) - 1), (0, len(data) - 1), HEAD_BG),
     ]))
     site = ctx.get("site_name") or ctx["customer"]
@@ -321,7 +351,7 @@ def _system_table(device: dict, ctx: dict, server: bool) -> Table:
         ]
     else:
         pairs = [
-            ("사이트", site), ("장비 위치", txt(device.get("role"))),
+            ("사이트", site), ("장비 위치", txt(device.get("location") or device.get("role"))),
             ("모델명", txt(device.get("model"))), ("점검 날짜", ctx["inspection_date"]),
             ("Hostname", txt(device["name"])), ("Software Version", txt(device.get("os_version"))),
             ("Serial Number", txt(device.get("serial"))), ("IP", txt(device.get("ip"))),
@@ -406,7 +436,8 @@ def build_pdf(ctx: dict, pdf_path, *, equipment: list = None, history: list = No
         story += device_page(device, ctx, 0, server=True)
 
     equipment = equipment if equipment is not None else [
-        [d["name"], d.get("model", ""), d.get("serial", ""), d.get("role", ""), ""] for d in devices
+        [d["name"], d.get("model", ""), d.get("serial", ""),
+         d.get("location") or d.get("role", ""), d.get("warranty", "")] for d in devices
     ]
     if equipment:
         story += _list_page(f"{site} 네트워크 장비 목록",

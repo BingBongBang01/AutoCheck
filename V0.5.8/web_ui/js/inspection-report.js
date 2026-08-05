@@ -11,7 +11,10 @@ const REPORT_STATUS_TONE = {
   '정상': 'badge-pass',
   '확인필요': 'badge-warn',
   '접속 불가': 'badge-fail',
+  // 미수집(봐야 하는데 못 봤다)과 해당없음(볼 것이 없다)은 둘 다 판정이 아니라 회색이다.
+  // 상태 문구 자체가 다르므로 배지 색이 같아도 화면에서 구분된다.
   '미수집': 'badge-neutral',
+  '해당없음': 'badge-neutral',
 };
 
 function reportStatusBadge(status) {
@@ -64,6 +67,7 @@ function renderReportSettingsCard() {
         <div>
           <p class="card-title">보고서 정보</p>
           <p class="card-desc">표지 제목과 파일명은 고객사·정기점검 이름으로 자동 조립됩니다. 담당자/점검자는 표지 서명란에 들어갑니다.</p>
+          ${ctx.is_virtual ? '<p class="card-desc" style="color:var(--sub);">이 프로파일은 <b>가상환경</b>으로 설정되어 있습니다 — 전원/FAN/온도/모듈/트랜시버는 \'해당없음\'으로 보고됩니다.</p>' : ''}
         </div>
       </div>
       <div class="grid-cols-2" style="gap:10px;margin-top:4px;">
@@ -151,12 +155,14 @@ function renderReportDevicesCard() {
   const devices = (reportContext && reportContext.devices) || [];
   const warn = devices.filter(d => d.overall_status === '확인필요').length;
   const unreachable = devices.filter(d => d.unreachable).length;
+  // 미수집/해당없음 항목 수도 함께 보여준다 — 확인필요 0 이라고 해서 전부 점검된 것은 아니다.
+  const notJudged = devices.reduce((sum, d) => sum + (d.na_count || 0), 0);
   return `
     <div class="card">
       <div class="card-header">
         <div class="card-icon"><span class="material-symbols-rounded">dns</span></div>
         <div>
-          <p class="card-title">보고서에 포함할 장비 — ${devices.length}대 (확인필요 ${warn} / 접속 불가 ${unreachable})</p>
+          <p class="card-title">보고서에 포함할 장비 — ${devices.length}대 (확인필요 ${warn} / 접속 불가 ${unreachable} / 미수집·해당없음 ${notJudged}항목)</p>
           <p class="card-desc">장비 1대가 보고서 시트 1장이 됩니다. 행을 클릭하면 항목별 판정값을 펼쳐 봅니다.</p>
         </div>
       </div>
