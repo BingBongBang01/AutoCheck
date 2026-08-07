@@ -166,14 +166,28 @@ class ContextTracker:
 
     command       : 현재 출력의 원본 명령(프롬프트에서 파싱). 없으면 None.
     is_config     : running-config / startup-config 출력 안인가(= 설정 원문이라 상태가 아님).
+    is_help       : `?` 자동완성 출력 안인가(= 가능한 키워드 목록이라 상태가 아님).
     header_tokens : 직전 구분선 위 헤더 줄의 토큰들(카운터 표 열 정렬용). 없으면 None.
     """
 
-    _CONFIG_CMD_RE = re.compile(r"(running-config|startup-config)", re.IGNORECASE)
+    # 축약형까지 받는다. 작업자는 `show running-config` 를 끝까지 치지 않고 `show run` 이라고
+    # 친다 — 전체 이름만 보던 예전 패턴에서는 is_config 가 False 로 남아 **설정 원문 전체가
+    # 실시간 상태 출력으로 판정됐다.** 실제 세션 로그에서 running-config 안의
+    # `no service interface inactive port-id allocation disabled` 한 줄이
+    # 'keyword_inactive / major' 로 32회 잡혔다(설정 문구일 뿐 장애가 아니다).
+    # run / runn / running / running-config / star / start / startup / startup-config 를 받는다.
+    _CONFIG_CMD_RE = re.compile(
+        r"\b(?:run(?:n(?:i(?:n(?:g)?)?)?)?|star(?:t(?:u(?:p)?)?)?)(?:-config)?\b", re.IGNORECASE)
+    # `?` 로 끝나는(또는 `?` 하나뿐인) 명령의 출력은 '가능한 키워드 목록'이다 — 장비 상태가 아니다.
+    # 실제 세션 로그에서 `no ?` 의 출력에 있는
+    #     inactive            Configure actions taken when MLAG state is inactive
+    # 가 'keyword_inactive / major' 로 잡혀 실시간 감시 목록을 채웠다. 도움말은 사전이지 사실이 아니다.
+    _HELP_CMD_RE = re.compile(r"(?:^|\s)\?\s*$")
 
     def __init__(self):
         self.command = None
         self.is_config = False
+        self.is_help = False
         self.header_tokens = None
         self._prev_line = None
         self._last_nonempty_indent0 = None
@@ -191,6 +205,7 @@ class ContextTracker:
             if cmd and cmd != "!":
                 self.command = cmd
                 self.is_config = bool(self._CONFIG_CMD_RE.search(cmd))
+                self.is_help = bool(self._HELP_CMD_RE.search(cmd))
             self.header_tokens = None
             self._prev_line = line
             return True
@@ -627,6 +642,12 @@ class RuleEngine:
         구조적 억제는 서명에도 적용하되, 'running-config 구간' 억제만은 서명 다음으로
         미룬다 — 명시 서명은 스스로 scope 조건을 갖고 있기 때문."""
         if not line.strip():
+            return None
+
+        # `?` 자동완성 출력은 판정 대상이 아니다 — 명시 서명보다도 앞에서 끊는다. 도움말에는
+        # 온갖 위험 키워드가 설명문으로 들어 있어서(errdisable, inactive, reload …) 어떤 규칙에
+        # 걸리든 그것은 장비 상태가 아니라 사전 항목이다.
+        if getattr(ctx, "is_help", False):
             return None
 
         if self.suppressor.check(line, None, ctx, include_config_scope=False):

@@ -135,6 +135,14 @@ function realtimeMonitorMarkup() {
         <label class="rtm-auto" title="프로그램을 실행하면 이 감시를 자동으로 시작합니다.">
           <input type="checkbox" id="rtm-autostart">프로그램 실행 시 자동 시작
         </label>
+        <!-- 세션 로그만으로는 링크/인접/MLAG 를 알 수 없다(syslog 가 세션에 에코돼야 하고,
+             그건 장비에서 terminal monitor 를 켜야 한다). 이 토글은 우리가 직접 읽기 전용
+             조회를 돌려 그 의존을 끊는다 — 주기적으로 장비에 SSH 접속을 만드는 동작이므로
+             기본값은 꺼짐이고 사용자가 켠다. -->
+        <label class="rtm-auto" id="rtm-poll-label"
+               title="장비에 직접 접속해 링크·라우팅 인접·MLAG 상태를 주기적으로 조회합니다(읽기 전용).">
+          <input type="checkbox" id="rtm-state-poll">상태 폴링
+        </label>
       </div>
 
       <div class="rtm-target-row">
@@ -243,15 +251,44 @@ async function initRealtimeMonitorPanel() {
                               : '자동 시작을 해제했습니다.');
   });
 
+  const pollBox = document.getElementById('rtm-state-poll');
+  pollBox.addEventListener('change', async () => {
+    const result = await call('set_realtime_state_poll', pollBox.checked);
+    if (result && result.error) { showToast(result.error, 'error'); pollBox.checked = !pollBox.checked; return; }
+    applyRtmPollState(result);
+    showToast(pollBox.checked
+      ? `상태 폴링을 켰습니다 — ${result.interval_sec}초마다 장비에 읽기 전용 조회를 보냅니다.`
+      : '상태 폴링을 껐습니다. 링크·인접·MLAG는 세션 syslog가 없으면 판정 불가로 남습니다.');
+  });
+
   const setView = (mode) => { rtmViewMode = mode; persistRtmLayout(); renderRtmState(rtmLastState); };
   document.getElementById('rtm-view-tabs').addEventListener('click', () => setView('tabs'));
   document.getElementById('rtm-view-split').addEventListener('click', () => setView('split'));
 
   const status = await call('get_realtime_baseline_status');
   if (status) autoBox.checked = !!status.autostart;
+  applyRtmPollState(await call('get_realtime_state_poll'));
 
   await refreshRealtimeMonitor();
   startRtmPolling();
+}
+
+// 상태 폴링 토글의 표시를 서버 상태에 맞춘다. 실패한 장비가 있으면 그 사실을 툴팁에 남긴다 —
+// '폴링을 켰는데 아무것도 안 나온다'의 원인은 대개 인증 실패이고, 그것이 화면에 안 보이면
+// 폴링이 동작하는 것으로 오해한다.
+function applyRtmPollState(state) {
+  const box = document.getElementById('rtm-state-poll');
+  const label = document.getElementById('rtm-poll-label');
+  if (!box || !state) return;
+  box.checked = !!state.enabled;
+  const errors = Object.entries((state.status || {}).errors || {});
+  if (label) {
+    label.classList.toggle('rtm-auto-attention', errors.length > 0);
+    label.title = errors.length
+      ? '상태 폴링 실패: ' + errors.map(([dev, why]) => `${dev} — ${why}`).join(' / ')
+      : `장비에 직접 접속해 링크·라우팅 인접·MLAG 상태를 ${state.interval_sec}초마다 조회합니다`
+        + '(읽기 전용 show 명령만 보냅니다).';
+  }
 }
 
 // ===== 감시 대상 장비 행 =====
@@ -561,11 +598,33 @@ function renderRtmToolbar(state) {
     (running ? '감시 중지' : '실시간 감시 시작');
   const devices = state.devices || [];
   const fails = devices.filter(d => d.status === 'fail').length;
+  // '이상 없음'을 쓸 수 있는지부터 확인한다 — 아무 입력도 없거나 syslog가 한 줄도 없으면
+  // 링크/STP/MLAG는 판정 자체가 불가능하고, 그 상태를 '이상 없음'으로 적으면 안 된다.
+  const q = state.watch_quality || {};
+  const blind = !!running && q.devices > 0 && (q.command_devices || 0) === 0
+                                           && (q.syslog_devices || 0) === 0
+                                           && (q.polled_devices || 0) === 0;
+  // 상태 폴링이 돌고 있으면 syslog 가 없어도 링크/인접/MLAG 를 판정할 수 있다 — 그때는
+  // '판정 불가'가 아니다(체크리스트도 서버에서 이미 풀려 있다).
+  const stateBlind = (q.syslog_missing_devices || []).filter(
+    d => !(q.polled_device_names || []).includes(d));
+  const partial = !!running && !blind && stateBlind.length > 0;
+  const tail = fails ? ` · 이상 ${fails}대`
+             : blind ? ' · 입력 없음'
+             : partial ? ` · 상태 판정 불가 ${stateBlind.length}대` : ' · 이상 없음';
   statusEl.textContent = running
-    ? `감시 중 · 장비 ${devices.length}대 · 로그파일 ${state.tracked_files || 0}개${fails ? ` · 이상 ${fails}대` : ' · 이상 없음'}`
+    ? `감시 중 · 장비 ${devices.length}대 · 로그파일 ${state.tracked_files || 0}개${tail}`
     : '감시 중지됨';
-  statusEl.classList.toggle('rtm-status-on', running && !fails);
+  statusEl.title = blind
+    ? '감시 대상 장비에서 읽은 로그 줄이 없습니다 — 세션이 열려 있는지, 파일이 장비로 인식되는지 확인하세요.'
+    : partial
+      ? `링크·인접·STP/MLAG를 판정할 근거가 없는 장비: ${stateBlind.join(', ')}\n`
+        + '세션에 syslog가 에코되거나(장비에서 terminal monitor) 상태 폴링을 켜야 합니다.'
+      : '';
+  // 초록은 '확인했고 정상'일 때만 쓴다. 판정 불가는 중립색으로 남긴다.
+  statusEl.classList.toggle('rtm-status-on', running && !fails && !blind && !partial);
   statusEl.classList.toggle('rtm-status-bad', running && !!fails);
+  statusEl.classList.toggle('rtm-status-unknown', running && !fails && (blind || partial));
 }
 
 // 장비를 알아내지 못한 로그 파일 — 대부분 이번 점검 대상이 아닌 장비의 로그다(그래서 감시도
@@ -1082,7 +1141,10 @@ function renderRtmChecklist(state) {
 
 // 이상 항목을 위로 올린다 — 스크롤을 내리지 않고도 문제부터 보이게.
 const RTM_STATUS_ORDER = { fail: 0, warn: 1, recovered: 2, pending: 3, unknown: 4 };
-const RTM_STATUS_LABEL = { fail: '이상', warn: '주의', recovered: '복구', pending: '정상', unknown: '기준없음' };
+// unknown 은 이유가 둘이다 — Baseline 기준이 없거나, 그 항목을 판정할 입력(syslog)이 오지
+// 않았거나. 라벨은 공통으로 '판정불가'만 말하고 이유는 detail(툴팁/상세)이 밝힌다.
+// '기준없음'이었을 때는 syslog 미수신을 Baseline 문제로 오독하게 만들었다.
+const RTM_STATUS_LABEL = { fail: '이상', warn: '주의', recovered: '복구', pending: '정상', unknown: '판정불가' };
 const RTM_STATUS_ICON = { fail: 'cancel', warn: 'warning', recovered: 'restart_alt', pending: 'check_circle', unknown: 'help' };
 
 function rtmChecklistGroup(device) {
@@ -1359,7 +1421,9 @@ async function openRtmProbeModal() {
 // 다시 나타나지 않는다 — 그래서 refetch 는 항상 이 함수를 다시 통째로 그린다.
 function renderRtmProbeModal(result) {
   const files = result.files || [];
-  const known = new Set(files.map(f => f.file));
+  // 하위 폴더의 파일은 선택 대상이 아니다 — 삭제는 감시 폴더 최상위만 다루므로(파일명만 받아
+  // 경로 조작을 막는다) 고를 수 있게 두면 누른 뒤에야 안 된다는 것을 알게 된다.
+  const known = new Set(files.filter(f => !f.in_subdir).map(f => f.file));
   // 목록이 바뀌면(삭제로 파일이 사라짐) 더 이상 없는 파일의 선택은 버린다.
   for (const name of rtmProbeSelected) if (!known.has(name)) rtmProbeSelected.delete(name);
 
@@ -1426,13 +1490,13 @@ function renderRtmProbeModal(result) {
             : tracked ? '<span class="rtm-probe-live-badge rtm-probe-tracked-badge">추적 중</span>'
             : f.resolved ? '<span class="rtm-probe-old-badge">이전 세션</span>'
             : '<span class="rtm-probe-old-badge">제외</span>';
-          const selected = rtmProbeSelected.has(f.file);
+          const selected = !f.in_subdir && rtmProbeSelected.has(f.file);
           return `
           <tr class="${f.resolved ? '' : 'rtm-probe-bad'} ${tracked ? 'rtm-probe-live' : 'rtm-probe-stale'} ${fresh ? 'rtm-probe-fresh' : ''} ${selected ? 'rtm-probe-selected' : ''}"
-              data-rtm-probe-file="${rtEscape(f.file)}">
-            <td><input type="checkbox" data-rtm-probe-check ${selected ? 'checked' : ''}></td>
+              ${f.in_subdir ? '' : `data-rtm-probe-file="${rtEscape(f.file)}"`}>
+            <td>${f.in_subdir ? '' : `<input type="checkbox" data-rtm-probe-check ${selected ? 'checked' : ''}>`}</td>
             <td>${state}</td>
-            <td>${rtEscape(f.file)}</td>
+            <td>${rtEscape(f.rel || f.file)}</td>
             <td class="rtm-probe-mtime">${rtEscape(f.mtime_str || '')}</td>
             <td>${f.from_filename ? rtEscape(f.from_filename) : '—'}</td>
             <td>${f.from_content ? rtEscape(f.from_content) : '—'}</td>
@@ -1544,8 +1608,14 @@ function wireRtmProbeSelection(sortedFiles) {
   body.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
       e.preventDefault();
-      rtmProbeSelected = new Set(sortedFiles.map(f => f.file));
-      rows.forEach(r => { r.classList.add('rtm-probe-selected'); r.querySelector('[data-rtm-probe-check]').checked = true; });
+      // 하위 폴더 파일은 삭제 대상이 아니므로 전체 선택에서도 뺀다(그 행에는 체크박스가 없다).
+      rtmProbeSelected = new Set(sortedFiles.filter(f => !f.in_subdir).map(f => f.file));
+      rows.forEach(r => {
+        const box = r.querySelector('[data-rtm-probe-check]');
+        if (!box) return;
+        r.classList.add('rtm-probe-selected');
+        box.checked = true;
+      });
       updateSelectionUi();
     }
   });

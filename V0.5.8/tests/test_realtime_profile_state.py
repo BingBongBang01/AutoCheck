@@ -74,7 +74,10 @@ def test_switch_hides_previous_profile_and_restores_its_own(api):
     state = api.get_realtime_monitor_state()
     assert state["devices"] == []
     assert state["alerts"] == []
-    assert state["analysis"]["verdict"] == "ok"
+    # 감시 대상이 하나도 없는 상태는 'ok'(초록)가 아니라 '판정 불가'다 — 예전에는 여기서
+    # 초록 '이상 징후 없음'이 떠서, 아무것도 보고 있지 않은 화면이 정상으로 읽혔다.
+    assert state["analysis"]["verdict"] == "unknown"
+    assert state["analysis"]["headline"] == "감시 대상 장비 없음"
 
     # 새 프로파일에서 찾은 것은 새 프로파일에만 쌓인다.
     record(api, text="shutdown", alert="Core1-2")

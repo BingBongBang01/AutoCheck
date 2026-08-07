@@ -11,6 +11,171 @@ UI 좌하단에 표시되는 값도 `VERSION` 파일을 그대로 읽은 것이�
 
 ## v0.5.9 (예정 — 폴더/VERSION 은 아직 0.5.8이라 릴리스 시 함께 올릴 것) — 정기점검 보고서 오탐 정리: '점검 불가/대상 아님'을 '비정상'과 분리
 
+### 실시간 감시 정확성 전면 수정 — '엉뚱한 것을 보고 있던' 문제
+
+증상 진단은 코드가 아니라 **실제 워크스페이스 데이터**에서 나왔다. 5일간 사용한 프로파일
+3개의 `realtime_state.json` 에 남은 경고가 **총 1건**이었고, 그 1건이 오탐이었다.
+
+```
+Access1 CRITICAL DESTRUCTIVE_COMMAND  "위험 명령 실행 감지: Reload Cause:"
+```
+
+`Reload Cause:` 는 `show reload cause` **출력의 머리글**이며 CRTlog(수동 SecureCRT 세션 로그)
+60여 개에는 한 번도 등장하지 않는 문자열이다 — 점검 결과 폴더에만 있다. 여기서 세 층의
+원인이 드러났다.
+
+- **감시 대상 폴더가 점검이 끝날 때마다 바뀌고 되돌아오지 않았다** (`api/log_analysis_run_api.py`)
+  - `refresh_realtime_baseline_after_inspection()` 이 `watcher.set_watch_dir(paths["original"])`
+    로 감시 대상을 `runs/<run>/raw` 로 옮겼고, CRTlog 로 되돌리는 코드가 없었다. 결과:
+    작업자의 SecureCRT 세션 감시가 앱 재시작까지 영구 정지 + 점검 출력이 '지금 들어온 입력'
+    으로 재판정(위 오탐의 경로). 화면은 계속 CRTlog 를 감시 중이라고 표시해 원인을 감췄다.
+  - 그 3줄을 제거했다. 점검은 별도 SSH 세션이라 CRT 세션 로그에 아무것도 쓰지 않으므로,
+    갈아끼울 것은 Baseline 스냅샷뿐이다(주석은 원래 그렇게 쓰여 있었다).
+  - 함께 있던 `engine.reset_context()` 도 뺐다 — StateTracker 를 비우므로 점검이 끝나는 순간
+    열려 있던 장애가 '취소 불가'가 되고, 나중에 `no shutdown` 을 쳐도 해제되지 않았다.
+  - 2차 방어: `core/crt_stream_watcher.py` 의 순회가 점검 결과 파일명
+    (`{stamp}_raw_{device}.txt`)을 **이름으로** 건너뛴다. 폴더를 잘못 지정하는 어떤 경로에도 걸린다.
+  - `watch_dir` 보고를 상수에서 실측값으로 바꿨다(`_realtime_watch_dir()`) — 불일치는 화면이
+    드러내야 한다. 진단 모달도 감시 스레드와 **같은 순회 함수**(`iter_session_log_files()`)를 쓴다.
+    예전에는 진단만 최상위를 `listdir` 해서, 하위 폴더 로깅 환경에서 '감시는 추적 중인데
+    진단에는 없다'가 됐다. `max_depth` 계산의 off-by-one(1단계 지정인데 2단계까지 내려감)도 고쳤다.
+
+- **'작업자 입력'과 '장비 출력'을 구분하지 않았다** (`engine/baseline_diff_engine.py`)
+  - 모든 정규식이 `^\s*` 로 시작해서 들여쓰인 출력도 명령으로 읽혔다. 실제 로그에서 확인된 것:
+    `Reload Cause:`, `?` 도움말의 `  reload   Reboot the system`(파일당 5줄),
+    running-config 의 `   no shutdown`(장비 7대 전부 2줄) · `vlan N`(4~8줄) · `interface EthernetN`(18~42줄).
+  - **오탐보다 심각한 것은 취소 방향이었다.** 작업자가 `no vlan 100` 으로 CRITICAL 을 띄운 뒤
+    `show running-config` 를 한 번 보면, 출력 안의 `vlan 100` / `no shutdown` 이 복구 이벤트로
+    읽혀 진짜 경고가 '복구됨'으로 지워졌다 — 설정을 들여다보는 것이 감시를 무력화하는 경로.
+  - `classify_line()` 신설: 프롬프트가 붙은 줄만 COMMAND, 나머지는 OUTPUT(선행 공백 불허).
+    설정변경·파괴명령 패턴은 COMMAND 에만, syslog 패턴은 OUTPUT 에만 적용한다. 판정 못 한 줄은
+    OUTPUT 으로 취급한다(보수적 — 놓치는 것은 생기지만 없는 일을 만들지 않는다).
+  - config 문맥을 **프롬프트 괄호**에서 읽는다(`config-if-Et1` → Ethernet1). `interface X` 줄을
+    따라다니는 것보다 안전하고, 프롬프트가 특권 모드로 돌아오면 낡은 문맥을 즉시 버린다.
+  - `show mlag` 같은 조회 출력에서는 **복구 이벤트를 받지 않는다**(syslog 모양일 때만 허용).
+    비대칭인 이유: 틀린 DOWN 은 보이는 잡음이지만 틀린 UP 은 진짜 장애를 조용히 지운다.
+  - `show logging` 계열 출력에서 나온 경고는 `history` 로 표시한다 — 며칠 전 이벤트를 그대로
+    다시 뿌리는 출력이다.
+  - 실측: 점검 로그 1,528줄 투입 → 경고 0건·취소 0건(열린 조건 유지). 실제 CRT 세션 로그
+    2,977줄 → 오탐 0건, 작업자가 실제로 친 `no vlan …`/`no interface …` **14건 검출**.
+
+- **볼 수 없는 것을 '정상'으로 표시했다** (`engine/realtime_monitor.py`, `web_ui/`)
+  - CRT 세션 로그 전체에 syslog 줄이 **0건**이었다(`terminal monitor` 미설정). 링크/인접/
+    STP·MLAG 판정은 syslog 에서만 나오므로 체크리스트 7항목 중 3개가 구조적으로 영원히
+    '변경 없음(정상)'이었다 — 그 화면을 근거로 점검을 마무리한다.
+  - `CHECK_ITEMS` 에 판정에 필요한 입력원(sources)을 붙였다. 그 입력원이 한 번도 관측되지
+    않은 항목은 `pending`(정상)이 아니라 `unknown`(판정 불가 — syslog 미수신)으로 **읽는 시점에**
+    파생시킨다(syslog 가 들어오기 시작하면 곧바로 풀린다). 관측된 판정(fail/warn)은 덮지 않는다.
+  - `BaselineDiffEngine.observations()` 가 장비별 commands/syslog/output 을 센다. 스냅샷에
+    저장돼 재실행 후에도 유지된다.
+  - 요약 문구를 셋으로 갈랐다: 진짜 이상 없음 / 명령은 보이는데 syslog 없음(판정 불가) /
+    아무 입력 없음. 앞의 둘은 초록색이 아니다 — `verdict: "unknown"` + 중립색(`.rtm-unknown`),
+    상단 상태줄에도 '입력 없음' · 'syslog 없음 N대' 배지와 툴팁을 붙였다.
+    체크리스트 라벨 `기준없음` → `판정불가`(이유는 detail 이 밝힌다).
+  - STP mnemonic 수정: `STP-\d-` 는 Arista/Cisco 어느 쪽에도 매치되지 않았다(실제 mnemonic 은
+    `%SPANTREE-n-…`) — STP 로그를 통째로 놓치고 있었다.
+
+- **링크 복구가 영원히 인식되지 않았다** (`engine/baseline_diff_engine.py`)
+  - `%LINEPROTO-5-UPDOWN` 은 up 이든 down 이든 mnemonic 에 'down' 을 품고 있는데, 방향 판정이
+    줄 전체를 봤다. 그래서 `changed state to up` 이 DOWN 으로 읽혀 **LINK_UP 이 한 번도 발행되지
+    않았고**, 작업자가 링크를 되살려도 CRITICAL 이 화면에 남았다. BGP `Up` 도 같았다.
+  - `_SYSLOG_PATTERNS` 에 상태 캡처 그룹을 명시하고, 그 값으로 방향을 정한다. 값으로 판정이
+    안 되는 경우(`administratively down`)만 mnemonic 을 지운 줄로 되짚는다.
+
+- **플랩이 '복구됨'으로 뒤집혔다** (`engine/baseline_diff_engine.py`)
+  - dedupe 창(10초) 안에서 down → up → down 이 벌어지면 두 번째 down 이 '중복'으로 버려져
+    조건이 다시 열리지 않았다. 상태가 전이된 구성요소의 억제 기록을 버려 다음 전이가 반드시
+    통과하게 했고, 줄 단위 처리 순서도 '판정→억제→상태추적' 일괄에서 줄마다 완결로 바꿨다
+    (한 덩어리에 왕복이 들어오면 순서가 무시됐다).
+  - 접은 재발은 버리지 않고 `drain_repeats()` → `RealtimeMonitor.bump_repeats()` 로 원래 경고의
+    반복 횟수로 남긴다 — 30초간 열 번 흔들린 링크가 '한 번 내려갔다'로 읽히면 안 된다.
+
+- **재실행마다 같은 사건이 쌓였다** (`engine/realtime_monitor.py`)
+  - 감시 시작 시 세션 로그의 마지막 256KB 를 다시 판정하는데(seed) `alert_id` 는 프로세스마다
+    새로 발급되어 저장본의 id 대조로 걸러지지 않았다. 자동시작이 켜져 있으면 앱을 켤 때마다
+    어제 친 `no vlan 100` 이 한 건씩 늘었다. history 경고를 **내용 서명**으로 중복 제거하고,
+    저장본 복원 시에도 서명을 등록한다. 라이브 경고는 서명 중복 제거 대상이 아니다.
+  - history 경고의 `ts` 를 `--:--:--` 로 둔다 — 되짚어 읽은 구간에서 '판정을 돌린 시각'은
+    거짓말이다(어제 친 명령이 '지금 15:54 발생'으로 찍혔다).
+
+- **규칙 엔진이 실시간 경로에 없었다** (`engine/realtime_rule_stream.py` 신설)
+  - `RealtimeMonitor` 는 처음부터 규칙 경고를 전제로 만들어져 있었다(rule_id 로 묶기, 우클릭
+    '이 규칙 숨기기', 고정 항목 check_id). 그런데 rule_id 를 만들어 주는 곳이 점검 직후 1회
+    배치뿐이어서 `config/log_rules.json` 의 서명 수십 개가 사장돼 있었다.
+  - 역할 분리: diff 엔진은 '작업자가 무엇을 바꿨나', 규칙 스트림은 '장비가 무엇을 말하나'
+    (`show mlag` 의 `state: Inactive`, 비정상 재기동, 인터페이스 oper down 등).
+  - 노이즈 문턱은 실측으로 정했다. 실제 세션 로그 2,977줄에서 규칙 판정 70건 중 66건이
+    설정 문구와 도움말 사전이었다 → major 이상만 올리고, 아래 두 게이트로 끊어 **4건**(전부
+    진짜)이 됐다.
+  - `engine/log_rule_engine.py` 게이트 2개:
+    * `ContextTracker._CONFIG_CMD_RE` 가 축약형을 받는다. 작업자는 `show run` 이라고 치는데
+      전체 이름만 보던 패턴에서는 `is_config` 가 False 로 남아 **설정 원문 전체가 상태 출력으로
+      판정됐다**(running-config 의 `no service interface inactive …` 한 줄이 major 로 32회).
+    * `is_help` 신설 — `?` 로 끝나는 명령의 출력은 가능한 키워드 목록이다. 도움말에는
+      errdisable·inactive·reload 가 설명문으로 들어 있어 어떤 규칙에 걸리든 사실이 아니다.
+
+- **스레드 안전** — `BaselineDiffEngine` 에 RLock 추가(감시 스레드가 판정하는 동안 다른
+  스레드가 `reset_context()`/`open_conditions()` 를 부를 수 있다).
+
+- **진단 모달** — 하위 폴더 파일도 목록에 나오므로 상대 경로(`rel`)를 표시하고, 삭제 대상이
+  아닌 그 행은 선택 자체를 막았다(누른 뒤에야 안 된다는 것을 알게 되지 않도록). 이름만으로
+  가리킬 수 없는 삭제 요청에는 이유를 밝힌다.
+
+- **config session(스테이징) 변경을 확정 변경과 구분** (`engine/baseline_diff_engine.py`)
+  - 실제 세션 로그에서 작업자가 `conf session reset` 안에서 `no vlan 4093` / `no mlag` 를 쳤다.
+    Arista 의 config session 은 `commit` 할 때까지 적용되지 않는데, 예전에는 그 줄이 곧바로
+    CRITICAL '삭제 명령 감지'로 올라갔다 — 아직 아무것도 지워지지 않았는데 즉시 조치 대상이
+    됐고, 반대로 실제로 적용되는 순간(`commit` 한 단어)에는 아무 경고도 나오지 않았다.
+  - 프롬프트 `config-s-<name>` 을 세션 문맥으로 읽는다(`config-s-w1-if-Et1` 처럼 세션 안에서
+    인터페이스에 들어간 경우도 대상을 잡는다). 세션 안의 변경은 심각도를 한 단계 낮추고
+    `[예정 · 세션 X]` 로 표시하며, **상태추적을 열지 않는다** — 존재하지 않는 장애를 세워 두면
+    되돌릴 복구 이벤트가 없어 영구히 fail 로 남는다.
+  - `commit`(세션 안) / `configure session <name> commit`(밖) 을 보면 원래 심각도로 승격하고
+    그때 상태추적이 열린다. `abort` 면 화면에 올린 '예정' 경고를 해제한다(지우지 않는다 —
+    위험한 변경을 준비했다가 되돌린 것도 점검 이력이다).
+  - dedupe 키에 `staged` 를 넣었다 — 예정과 확정은 같은 (장비, type, target)이지만 다른
+    사건이라, 넣지 않으면 예정 경고가 직후의 확정 변경을 창 안에서 통째로 삼킨다.
+
+- **능동 상태 폴링 — 두 번째 입력원 신설** (`engine/state_poller.py`, `api/log_analysis_run_api.py`)
+  - 세션 로그 tail 로는 링크·라우팅 인접·MLAG 를 알 수 없다. 그건 syslog 에서만 나오고 syslog 는
+    작업자가 장비에서 `terminal monitor` 를 켜야 세션에 에코된다 — 실제 CRT 로그에는 0줄이었다.
+    즉 감시의 절반이 우리가 통제할 수 없는 설정에 달려 있었다. 이 폴러가 그 의존을 끊는다.
+  - **읽기 전용 조회만** 보낸다: `show interfaces status` / `show ip bgp summary` /
+    `show ip ospf neighbor` / `show mlag`. 감시가 감시 대상을 변경하는 일은 없어야 한다.
+  - **절대 상태가 아니라 전이만 보고한다.** 현장에는 원래 내려가 있는 포트가 흔해서 매 주기
+    그것을 올리면 화면이 즉시 무의미해진다. 첫 폴링은 기준을 세우고, 그때 이미 이상인 것은
+    `history` 로 표시해 토스트를 띄우지 않는다(CRTStreamWatcher seed 와 같은 규칙).
+    관리자가 내려 둔 포트(`disabled`)는 의도된 상태라 제외하고, 한 번에 8개 이상이 동시에
+    내려가면(재부팅·모듈 리셋 — 원인은 하나다) 한 줄로 묶는다.
+  - **판정은 `BaselineDiffEngine.ingest_state_events()` 를 통과한다.** 폴러가 alert 를 직접
+    만들면 평행 세계가 두 개 생긴다. 같은 (device, component_id) 축을 쓰기 때문에 **출처가
+    달라도 서로 취소된다** — 폴링이 잡은 LINK_DOWN 을 나중에 도착한 syslog LINK_UP 이 해제하고,
+    반대로 syslog 로 잡힌 장애를 폴링이 '이제 정상'으로 확인해 해제한다.
+  - **조용한 폴링도 관측으로 센다.** 전이가 없는 것은 '아무것도 못 봤다'가 아니라 '봤고 정상
+    이다'이므로, 그 사실이 링크/인접/MLAG 체크리스트를 '판정 불가'에서 풀어 준다
+    (`CHECK_ITEMS` 의 입력원에 `polled` 추가).
+  - 라우팅 인접만 폴러 안에서 따로 읽는다. `parsers/show_routing_neighbor.py` 는 '마지막 컬럼이
+    PfxRcd'라는 전제로 줄 끝에 고정돼 있어 컬럼 수가 다른 레이아웃에 매치되지 않는다(실제
+    Arista `show ip ospf neighbor` 는 IP 다음이 VRF 이름이다). 여기서 필요한 것은 컬럼 정렬이
+    아니라 '이 피어가 정상인가' 하나이므로 상태 단어의 유무로 판정한다 — Arista/Cisco 양쪽 통과.
+    읽을 것이 없으면(`% BGP inactive`) 아무 상태도 만들지 않는다(구성되지 않은 기능을 장애로
+    잡지 않는다). MLAG/인터페이스 파서는 기존 것을 그대로 쓰고, 워크스페이스의 실제 출력으로 검증했다.
+  - **기본값은 꺼짐**이다 — 주기적으로 운영 장비에 SSH 접속을 만드는 외부 동작이므로 사용자가
+    켠다(`config/realtime_watch.yaml` 의 `state_poll`). 상단바에 '상태 폴링' 토글을 두고,
+    접속/인증이 실패하는 장비가 있으면 토글 자체에 색과 사유를 얹는다 — '켰으니 되고 있다'로
+    읽히면 안 된다. 주기는 15~900초로 제한한다.
+  - 상단 상태줄 문구도 함께 정리했다: 폴링이 도는 장비는 syslog 가 없어도 판정 가능하므로
+    'syslog 없음 N대'가 아니라 '상태 판정 불가 N대'(두 근거가 모두 없는 장비)를 센다.
+
+- **회귀 테스트 7파일 111건 추가**
+  - `tests/test_realtime_watch_dir.py`(15) — 감시 폴더 불변·점검 결과 파일 제외·watch_dir 실측
+  - `tests/test_realtime_line_classify.py`(27) — 입력/출력 분류·오탐·오취소·프롬프트 문맥
+  - `tests/test_realtime_observability.py`(12) — 판정 불가 유지·감시 품질·SPANTREE
+  - `tests/test_realtime_flap_and_history.py`(10) — 방향 판정·플랩·재실행 중복
+  - `tests/test_realtime_rule_stream.py`(18) — 규칙 스트림·도움말/설정 게이트·문턱
+  - `tests/test_realtime_config_session.py`(14) — 예정/확정/폐기 경계
+  - `tests/test_realtime_state_poller.py`(19) — 전이만 보고·양방향 취소·실제 Arista 출력 파싱
+
 ### 프로파일 단위 '가상환경' 옵션
 
 가상 장비 대응을 로그 문구 추론에만 의존하지 않고, 회차(프로파일)마다 명시할 수 있게 했다.

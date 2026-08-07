@@ -79,7 +79,14 @@ class CRTStreamWatcher:
 
     # ---------- 라이프사이클 ----------
     def set_watch_dir(self, watch_dir):
-        """Dynamically re-register the watch directory and reset file states."""
+        """감시 폴더를 바꾸고 파일 상태(오프셋/장비 판정)를 전부 비운다.
+
+        **살아 있는 세션 로그 폴더만 넘겨야 한다.** 오프셋을 비우므로 새 폴더의 파일은
+        '감시 시작 전부터 있던 것'으로 등록되어 끝부분이 재판정된다(seed). 점검 결과
+        폴더를 넘기면 이미 끝난 점검의 출력이 지금 입력처럼 판정된다 — 실제로 그 버그가
+        있었고(api/log_analysis_run_api.py의 refresh_realtime_baseline_after_inspection
+        주석 참고), 지금은 _iter_log_files()가 점검 결과 파일을 이름으로 걸러 2차 방어한다.
+        """
         self.watch_dir = str(watch_dir)
         self._offsets.clear()
         self._partial.clear()
@@ -120,18 +127,7 @@ class CRTStreamWatcher:
             self._stop.wait(self.interval)
 
     def _iter_log_files(self):
-        """감시 폴더와 (max_depth까지의) 하위 폴더에서 대상 확장자 파일 경로를 훑는다.
-        SecureCRT를 세션별 하위 폴더로 로깅하도록 설정한 환경도 있어서 1단계는 내려간다."""
-        root = self.watch_dir
-        if not os.path.isdir(root):
-            return
-        for dirpath, dirnames, filenames in os.walk(root):
-            depth = os.path.relpath(dirpath, root).count(os.sep) if dirpath != root else 0
-            if depth >= self.max_depth:
-                dirnames[:] = []
-            for name in filenames:
-                if name.lower().endswith(self.extensions):
-                    yield os.path.join(dirpath, name)
+        return iter_session_log_files(self.watch_dir, self.extensions, self.max_depth)
 
     def _select_active(self):
         """이번 tick에 tail할 파일 목록 — 장비별로 mtime이 가장 최신인 파일 1개씩.
@@ -329,6 +325,39 @@ class CRTStreamWatcher:
             # 장비를 못 찾은 파일 — '감시가 안 된다'의 원인이 대개 이것이라 화면에 노출한다.
             "unmatched": sorted(self._unresolved.values()),
         }
+
+
+def iter_session_log_files(root, extensions=DEFAULT_EXTENSIONS, max_depth=1):
+    """감시 대상이 되는 '살아 있는 세션 로그' 파일 경로를 훑는다.
+
+    감시 스레드(_iter_log_files)와 진단 화면(api의 probe_realtime_log_files)이 **같은 함수**를
+    써야 한다. 예전에는 진단 쪽만 최상위 폴더를 listdir했기 때문에, 하위 폴더로 로깅하는
+    환경에서 '감시는 추적 중인데 진단 목록에는 안 보이는' 화면이 나왔다 — 진단이 감시를
+    설명하지 못하면 진단이 아니다.
+
+    두 가지를 제외한다:
+      * 대상 확장자(.txt/.log)가 아닌 파일.
+      * 점검 SSH 세션이 남긴 결과 파일({stamp}_raw_{device}.txt). 그건 지나간 한 시점의
+        스냅샷이고 여기서 다루는 것은 '지금 들어오는 입력'이다. 섞이면 이미 끝난 점검의
+        출력이 방금 친 명령처럼 재판정된다(`show reload cause` 출력 헤더 'Reload Cause:'가
+        CRITICAL '위험 명령 실행'으로 잡힌 실제 사고). 감시 폴더를 잘못 지정하는 어떤 경로
+        에도 걸리도록 디렉터리가 아니라 **파일 이름**으로 막는다.
+    """
+    from engine.baseline_store import is_inspection_log
+    root = str(root)
+    suffixes = tuple(e.lower() for e in extensions)
+    if not os.path.isdir(root):
+        return
+    for dirpath, dirnames, filenames in os.walk(root):
+        # depth: root=0, 바로 아래 폴더=1. 예전 식은 relpath 의 구분자 개수만 셌는데
+        # 'session1' 에는 구분자가 없어서 1단계 하위가 0으로 계산됐고, 결과적으로
+        # max_depth=1 인데 2단계까지 내려갔다(문서와 동작이 어긋난 채로 더 많이 훑었다).
+        depth = 0 if dirpath == root else os.path.relpath(dirpath, root).count(os.sep) + 1
+        if depth >= max_depth:
+            dirnames[:] = []
+        for name in filenames:
+            if name.lower().endswith(suffixes) and not is_inspection_log(name):
+                yield os.path.join(dirpath, name)
 
 
 def _default_device_resolver(path, head_text=""):

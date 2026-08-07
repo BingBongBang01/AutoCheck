@@ -878,12 +878,16 @@ details.fold[open] > summary .fold-caret { transform: rotate(180deg); }
 .rtm-status { font-size: 11px; color: var(--sub); }
 .rtm-status-on { color: var(--success); }
 .rtm-status-bad { color: var(--critical); font-weight: 600; }
+/* 판정 불가 — 초록(정상)도 빨강(이상)도 아니다. 주의색으로 '확인이 필요하다'만 말한다. */
+.rtm-status-unknown { color: var(--warning); }
 .rtm-tabbar .btn { height: 28px; padding: 0 10px; font-size: 11px; }
 .rtm-tabbar .btn .material-symbols-rounded { font-size: 15px; }
 .rtm-auto {
   display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--sub);
   cursor: pointer; white-space: nowrap;
 }
+/* 켜 놨는데 실패하고 있는 토글 — '켰으니 되고 있다'고 읽히면 안 된다(원인은 툴팁에 있다). */
+.rtm-auto-attention { color: var(--warning); font-weight: 600; }
 
 .rtm-body { display: flex; align-items: stretch; height: calc(100% - 45px); min-height: 0; }
 .rtm-left { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
@@ -949,6 +953,9 @@ details.fold[open] > summary .fold-caret { transform: rotate(180deg); }
 .rtm-verdict { border-radius: var(--radius-sm); padding: 10px 12px; background: var(--input-bg); border-left: 3px solid var(--success); margin-bottom: 8px; }
 .rtm-verdict.rtm-warn { border-left-color: var(--warning); }
 .rtm-verdict.rtm-fail { border-left-color: var(--critical); }
+/* 판정 불가 — '이상 없음'(초록)과 절대 같은 색이면 안 된다. 못 보고 있는 상태를 초록으로
+   칠하면 그 화면을 근거로 점검을 끝내게 된다. 중립색으로 '아직 모른다'를 말한다. */
+.rtm-verdict.rtm-unknown { border-left-color: var(--sub); }
 .rtm-verdict-headline { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
 .rtm-verdict-summary { font-size: 11px; color: var(--sub); line-height: 1.5; }
 .rtm-finding { border: 1px solid var(--border); border-left: 3px solid var(--warning); border-radius: var(--radius-sm); padding: 8px 10px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px; }

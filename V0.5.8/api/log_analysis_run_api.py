@@ -279,13 +279,21 @@ class LogAnalysisRunApiMixin:
         running = bool(watcher and watcher.is_running())
 
         if running:
-            paths = self._active_profile_log_paths()
-            if paths and "original" in paths:
-                watcher.set_watch_dir(paths["original"])
-                engine = getattr(self, "_baseline_diff_engine", None)
-                if engine is not None:
-                    engine.reset_context()
-                
+            # 감시 폴더(CRTlog)와 판정 문맥은 여기서 건드리지 않는다.
+            #
+            # 예전에는 watcher.set_watch_dir(paths["original"]) 로 감시 대상을 점검 결과
+            # 폴더(runs/<run>/raw)로 바꿨고, 되돌리는 코드가 없었다. 그래서 점검을 한 번
+            # 하면 작업자의 SecureCRT 세션 감시가 앱 재시작 때까지 영구히 멈췄고, 대신
+            # 점검 출력이 '지금 들어온 입력'으로 재판정됐다 — `show reload cause` 의 출력
+            # 헤더 'Reload Cause:' 가 CRITICAL '위험 명령 실행'으로 잡힌 실제 사례가 있다
+            # (data/*/realtime_state.json 에 그 경고 1건만 남아 있었다).
+            # 점검은 별도 SSH 세션이라 CRT 세션 로그에 아무것도 쓰지 않으므로, 스트림은
+            # 끊기지 않았고 갈아끼울 것은 Baseline 스냅샷뿐이다(BaselineDiffEngine 이
+            # store 객체를 들고 있으므로 다음 줄부터 새 기준으로 대조된다).
+            #
+            # reset_context() 도 함께 뺐다 — 그건 StateTracker 까지 비우므로, 점검이
+            # 끝나는 순간 열려 있던 장애들이 '취소 불가' 상태가 된다(작업자가 나중에
+            # no shutdown 을 쳐도 해제되지 않는다).
             self._push_baseline_refreshed({
                 "devices": store.device_names(),
                 "gained": gained,
@@ -307,6 +315,18 @@ class LogAnalysisRunApiMixin:
                                f"window.onRealtimeBaselineRefreshed({json.dumps(payload, ensure_ascii=False)})")
         except Exception as exc:
             print(f"[실시간 Diff] Baseline 갱신 push 실패: {exc}")
+
+    def _realtime_watch_dir(self):
+        """화면에 '무엇을 감시하고 있다'고 말할 때 쓸 폴더 — 감시가 돌고 있으면 **실측값**.
+
+        예전에는 이 자리에 늘 AppPaths.crt_log_root() 상수를 넣었다. 그래서 감시 폴더가
+        엉뚱한 곳으로 바뀌어도(그런 버그가 있었다) 화면은 계속 CRTlog 를 가리켰고, 진단
+        모달의 '추적 중 0건'이 원인을 설명하지 못했다. 불일치는 화면이 드러내야 한다.
+        """
+        watcher = getattr(self, "_baseline_stream_watcher", None)
+        if watcher is not None and getattr(watcher, "watch_dir", None):
+            return str(watcher.watch_dir)
+        return str(AppPaths.crt_log_root())
 
     def _realtime_inventory_targets(self):
         """장비 목록(Device Inventory)의 활성 장비 [{name, ip, port}...]."""
@@ -351,6 +371,8 @@ class LogAnalysisRunApiMixin:
         watched = self._realtime_watch_devices(device_names)
         self._realtime_watch_targets = {name.lower() for name in watched}
         self._baseline_diff_engine = BaselineDiffEngine(store)
+        from engine.realtime_rule_stream import RealtimeRuleStream
+        self._realtime_rule_stream = RealtimeRuleStream()
         monitor = self._realtime_monitor()
         monitor.reset(watched, store.device_names())
         # reset()은 필터를 건드리지 않지만, 사용자가 다른 창/YAML에서 고쳤을 수 있으므로
@@ -376,18 +398,130 @@ class LogAnalysisRunApiMixin:
         )
         self._baseline_stream_watcher = watcher
         watcher.start()
+
+        # 두 번째 입력원 — 켜져 있을 때만 시작한다(운영 장비에 SSH 를 만드는 동작이므로).
+        poll = self.get_realtime_state_poll()
+        if poll["enabled"]:
+            try:
+                self._start_state_poller(poll["interval_sec"])
+            except Exception as exc:
+                print(f"[상태 폴링] 시작 실패: {exc}")
+
         return {"ok": True, "devices": watched, "baseline_devices": store.device_names(),
                 "interval": watcher.interval, "warning": baseline_warning,
                 "restored_devices": restored,
+                "state_poll": self.get_realtime_state_poll(),
                 "watch_dir": str(AppPaths.crt_log_root())}
 
+    # ---------- 능동 상태 폴링(두 번째 입력원) ----------
+    # 세션 로그 tail 로는 링크·인접·MLAG 를 알 수 없다 — 그건 syslog 에서만 나오고, syslog 는
+    # 세션에 `terminal monitor` 가 걸려 있어야 에코된다(실제 워크스페이스의 CRT 로그에는 한 줄도
+    # 없었다). 이 폴러는 우리가 직접 읽기 전용 조회를 돌려 그 의존을 끊는다.
+    # 기본값은 꺼짐이다 — 주기적으로 운영 장비에 SSH 접속을 만드는 외부 동작이므로 사용자가 켠다.
+    _STATE_POLL_DEFAULTS = {"enabled": False, "interval_sec": 60}
+
+    def get_realtime_state_poll(self):
+        cfg = self._read_realtime_watch_config().get("state_poll") or {}
+        out = dict(self._STATE_POLL_DEFAULTS)
+        if isinstance(cfg, dict):
+            out["enabled"] = bool(cfg.get("enabled", out["enabled"]))
+            try:
+                # 너무 짧으면 장비에 부담이고, 너무 길면 감시라고 부를 수 없다.
+                out["interval_sec"] = min(900, max(15, int(cfg.get("interval_sec") or
+                                                           out["interval_sec"])))
+            except (TypeError, ValueError):
+                pass
+        poller = getattr(self, "_realtime_state_poller", None)
+        out["running"] = bool(poller and poller.is_running())
+        out["status"] = poller.status() if poller else None
+        return out
+
+    def set_realtime_state_poll(self, enabled=None, interval_sec=None):
+        """토글/주기 변경 — 감시가 돌고 있으면 즉시 반영한다(다음 감시 시작까지 기다리지 않는다)."""
+        current = self.get_realtime_state_poll()
+        merged = {
+            "enabled": current["enabled"] if enabled is None else bool(enabled),
+            "interval_sec": current["interval_sec"] if interval_sec is None else interval_sec,
+        }
+        self._write_realtime_watch_config({"state_poll": merged})
+        settings = self.get_realtime_state_poll()
+        watcher = getattr(self, "_baseline_stream_watcher", None)
+        if watcher is not None and watcher.is_running():
+            self._stop_state_poller()
+            if settings["enabled"]:
+                self._start_state_poller(settings["interval_sec"])
+        return {"ok": True, **self.get_realtime_state_poll()}
+
+    def _start_state_poller(self, interval):
+        from engine.state_poller import StatePoller
+
+        def targets():
+            """매 주기 대상을 다시 읽는다 — 감시 대상 선택이 바뀌면 따라가야 한다.
+
+            _resolve_terminal_targets()를 쓴다(get_terminal_targets()가 아니다) — 후자는 JS
+            노출용이라 비밀번호를 뺀 목록이고, 그것으로는 접속할 수 없다.
+            """
+            watched = getattr(self, "_realtime_watch_targets", None) or set()
+            try:
+                inventory = self._resolve_terminal_targets()
+            except Exception:
+                return []
+            return [t for t in inventory
+                    if not watched or (t.get("name") or "").lower() in watched]
+
+        poller = StatePoller(targets, self._on_realtime_state_events,
+                             interval=interval,
+                             on_error=lambda exc: print(f"[상태 폴링] 오류: {exc}"))
+        self._realtime_state_poller = poller
+        poller.start()
+        return poller
+
+    def _stop_state_poller(self):
+        poller = getattr(self, "_realtime_state_poller", None)
+        if poller is not None:
+            poller.stop()
+            poller.reset()
+
+    def _on_realtime_state_events(self, device, events):
+        """StatePoller 콜백(워커 스레드) — 상태 전이를 판정 파이프라인에 넣는다.
+
+        전이가 없어도(조용한 폴링) 불린다. 그 사실 자체가 '봤고 정상이다'라는 근거이므로
+        관측 카운트를 갱신해 체크리스트를 '판정 불가'에서 풀어 준다.
+        """
+        engine = getattr(self, "_baseline_diff_engine", None)
+        if engine is None:
+            return
+        targets = getattr(self, "_realtime_watch_targets", None)
+        if targets and (device or "").lower() not in targets:
+            return
+        monitor = self._realtime_monitor()
+        alerts = engine.ingest_state_events(device, events)
+        for alert in alerts:
+            alert["source_file"] = "(상태 폴링)"
+        if alerts:
+            monitor.apply_alerts(alerts)
+        monitor.set_observations(engine.observations())
+        monitor.bump_repeats(engine.drain_repeats())
+        resolved = monitor.resolve_alerts(engine.drain_resolutions())
+        visible = [a for a in alerts if not a.get("history") and not monitor.is_hidden(a)]
+        if visible:
+            self._push_realtime_alerts(visible)
+        if resolved:
+            self._push_realtime_resolutions(resolved)
+        if alerts or resolved:
+            self._save_realtime_state()
+
     def stop_realtime_baseline_watch(self):
+        self._stop_state_poller()
         watcher = getattr(self, "_baseline_stream_watcher", None)
         if watcher is not None:
             watcher.stop()
         engine = getattr(self, "_baseline_diff_engine", None)
         if engine is not None:
             engine.reset_context()
+        rule_stream = getattr(self, "_realtime_rule_stream", None)
+        if rule_stream is not None:
+            rule_stream.reset()
         # 감시를 멈추는 순간이 상태를 남길 마지막 기회다(프로그램 종료가 바로 뒤따르는 경우가 많다).
         self._save_realtime_state(force=True)
         return {"ok": True}
@@ -407,7 +541,7 @@ class LogAnalysisRunApiMixin:
             "resolved_count": len([a for a in monitor.alerts(limit=10000) if a.get("resolved")]),
             "autostart": self.get_realtime_watch_autostart().get("autostart", False),
             "watcher": watcher.status() if watcher else None,
-            "watch_dir": str(AppPaths.crt_log_root()),
+            "watch_dir": self._realtime_watch_dir(),
             # "mixed"면 Baseline에 수동 CRT 로그가 섞였다는 뜻 — 감시 신뢰도가 떨어지므로 알린다.
             "baseline_source_kind": self._baseline_store().source_kind,
         }
@@ -433,7 +567,7 @@ class LogAnalysisRunApiMixin:
         # 장비별로 지금 열고 있는 로그 파일 + 세션 재접속으로 파일이 바뀐 이력.
         state["device_files"] = status.get("device_files", {})
         state["rollovers"] = status.get("rollovers", [])
-        state["watch_dir"] = str(AppPaths.crt_log_root())
+        state["watch_dir"] = self._realtime_watch_dir()
         state["ok"] = True
         return state
 
@@ -481,9 +615,9 @@ class LogAnalysisRunApiMixin:
         감시가 아직 안 돌고 있으면 tracked는 전부 False이고, latest만으로 '감시를 시작하면
         어느 파일이 추적될지'를 미리 보여준다."""
         from engine.stream_device_matcher import StreamDeviceMatcher
-        from core.crt_stream_watcher import DEFAULT_EXTENSIONS
+        from core.crt_stream_watcher import iter_session_log_files
 
-        root = str(AppPaths.crt_log_root())
+        root = self._realtime_watch_dir()
         matcher = StreamDeviceMatcher(self._realtime_inventory_targets())
 
         watcher = getattr(self, "_baseline_stream_watcher", None)
@@ -491,24 +625,26 @@ class LogAnalysisRunApiMixin:
         tracked = {os.path.normcase(os.path.abspath(p)) for p in (status.get("active_paths") or [])}
 
         rows = []
-        if os.path.isdir(root):
-            for name in sorted(os.listdir(root)):
-                path = os.path.join(root, name)
-                if not os.path.isfile(path) or not name.lower().endswith(DEFAULT_EXTENSIONS):
-                    continue
-                try:
-                    with open(path, "rb") as f:
-                        head = f.read(4096).decode("utf-8", errors="replace")
-                    size = os.path.getsize(path)
-                    mtime = os.path.getmtime(path)
-                except OSError:
-                    continue
-                row = matcher.probe(path, head)
-                row["size"] = size
-                row["mtime"] = mtime
-                row["mtime_str"] = datetime.datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
-                row["tracked"] = os.path.normcase(os.path.abspath(path)) in tracked
-                rows.append(row)
+        # 감시 스레드와 **같은 순회 함수**를 쓴다 — 진단이 감시가 보는 것과 다른 목록을 보여주면
+        # '감시는 추적 중인데 진단에는 없다'가 되어 원인을 못 찾는다(하위 폴더 로깅 환경).
+        for path in sorted(iter_session_log_files(root)):
+            try:
+                with open(path, "rb") as f:
+                    head = f.read(4096).decode("utf-8", errors="replace")
+                size = os.path.getsize(path)
+                mtime = os.path.getmtime(path)
+            except OSError:
+                continue
+            row = matcher.probe(path, head)
+            # 하위 폴더의 파일은 이름만으로는 가리킬 수 없다 — 목록에 상대 경로를 함께 준다
+            # (삭제는 최상위 파일만 다루므로 UI가 이 값으로 구분해 보여줄 수 있어야 한다).
+            row["rel"] = os.path.relpath(path, root).replace(os.sep, "/")
+            row["in_subdir"] = "/" in row["rel"]
+            row["size"] = size
+            row["mtime"] = mtime
+            row["mtime_str"] = datetime.datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
+            row["tracked"] = os.path.normcase(os.path.abspath(path)) in tracked
+            rows.append(row)
 
         # 같은 장비의 파일 중 mtime이 가장 큰 것 하나에만 latest=True — 감시 대상 선정 규칙과 같다.
         newest = {}
@@ -566,7 +702,13 @@ class LogAnalysisRunApiMixin:
                 errors[name] = "지금 감시가 추적 중인 파일입니다 — 감시를 멈춘 뒤 삭제하세요."
                 continue
             if not os.path.isfile(abs_path):
-                errors[name] = "파일이 존재하지 않습니다."
+                # 진단 목록은 하위 폴더까지 보여주는데(감시와 같은 순회) 삭제는 최상위만
+                # 다룬다. 그 차이를 '존재하지 않습니다'로 뭉개면 사용자가 목록에 보이는 파일을
+                # 지우려다 원인을 알 수 없게 된다.
+                if _found_in_subdir(root, name):
+                    errors[name] = "하위 폴더의 파일입니다 — '폴더 열기'에서 삭제하세요."
+                else:
+                    errors[name] = "파일이 존재하지 않습니다."
                 continue
             try:
                 os.remove(abs_path)
@@ -722,7 +864,8 @@ class LogAnalysisRunApiMixin:
         return {
             "ok": True,
             "devices": [t.get("name") for t in self._realtime_inventory_targets() if t.get("name")],
-            "checks": [{"key": key, "label": label} for key, label, _types in CHECK_ITEMS],
+            "checks": [{"key": key, "label": label, "sources": list(sources)}
+                       for key, label, _types, sources in CHECK_ITEMS],
             "rule_ids": rule_ids,
             **self._normalized_realtime_filter(),
         }
@@ -798,12 +941,29 @@ class LogAnalysisRunApiMixin:
         monitor = self._realtime_monitor()
         monitor.append_lines(device, text, is_history=is_history)
         alerts = engine.analyze_stream(device, text)
+        # 규칙 엔진(config/log_rules.json)도 같은 스트림을 본다. 역할이 나뉘어 있다 —
+        # 위(diff)는 '작업자가 무엇을 바꿨나', 아래(규칙)는 '장비가 무엇을 말하나'.
+        # 예전에는 아래쪽 공급원이 점검 직후 1회 배치뿐이어서 서명 수십 개가 사장돼 있었다.
+        rule_stream = getattr(self, "_realtime_rule_stream", None)
+        if rule_stream is not None:
+            alerts = alerts + rule_stream.analyze(device, text)
+        # '무엇을 볼 수 있었는가'를 화면 쪽으로 넘긴다 — 이 장비에서 syslog 를 한 줄도 못 봤다면
+        # 링크/STP/MLAG 체크리스트를 '정상'이라고 적을 수 없다(engine/realtime_monitor.py의
+        # _blocked_reason_locked). 엔진이 단일 출처이므로 매번 최신 사본을 통째로 넘긴다.
+        monitor.set_observations(engine.observations())
         for alert in alerts:
             alert["source_file"] = os.path.basename(path)
             if is_history:
                 alert["history"] = True
+            if alert.get("history"):
+                # ts 는 '판정을 돌린 시각'이라 되짚어 읽은 구간에서는 거짓말이 된다 — 어제 친
+                # 명령이 '지금 15:54에 발생'으로 찍힌다. 좌측 로그 줄과 같은 표기를 쓴다.
+                alert["ts"] = "--:--:--"
         if alerts:
             monitor.apply_alerts(alerts)
+        # 중복 억제로 접은 재발 횟수를 원래 경고에 더한다 — 조용히 버리면 열 번 흔들린 링크가
+        # '한 번 내려갔다'로 읽힌다.
+        monitor.bump_repeats(engine.drain_repeats())
 
         # 복구 이벤트로 취소된 경고 — alerts보다 먼저 반영해야 한다. 같은 tick 안에서
         # '내렸다 올렸다'가 함께 들어오면(터미널 에코가 몰려 도착) 순서가 뒤바뀌면 안 된다.
@@ -998,6 +1158,13 @@ class LogAnalysisRunApiMixin:
 
         self._jobs().start(ai_mode, worker)
         return {"ok": True}
+
+
+def _found_in_subdir(root, name):
+    """이 파일명이 감시 폴더의 **하위** 폴더에 있는지(최상위에는 없을 때만 묻는다)."""
+    from core.crt_stream_watcher import iter_session_log_files
+    return any(os.path.basename(p) == name and os.path.dirname(p) != root
+               for p in iter_session_log_files(root))
 
 
 def _clamp_ratio(value, fallback):

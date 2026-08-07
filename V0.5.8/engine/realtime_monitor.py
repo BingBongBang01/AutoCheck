@@ -17,16 +17,37 @@ import threading
 import time
 from collections import OrderedDict, deque
 
-# 체크리스트 항목 정의 — (키, 표시명, 이 항목을 실패로 만드는 alert type들)
+# 관측 카운터의 축(commands/syslog/output/polled)은 판정 엔진이 단일 출처다 —
+# 여기서 따로 나열하면 한쪽만 늘어났을 때 조용히 갈라진다.
+from engine.baseline_diff_engine import OBSERVED_KEYS as _OBSERVED_KEYS
+
+# 체크리스트 항목 정의 — (키, 표시명, 이 항목을 실패로 만드는 alert type들, 판정에 필요한 입력원)
+#
+# 네 번째 칸(sources)이 있는 이유: 항목마다 '무엇을 봐야 판정할 수 있는가'가 다르다.
+# 설정 삭제·shutdown·위험 명령은 작업자가 입력한 **명령**에서 읽지만, 링크/STP/MLAG 상태는
+# 장비가 뱉는 **syslog** 에서만 알 수 있다. SecureCRT 세션에 `terminal monitor` 가 안 걸려
+# 있으면 syslog 는 한 줄도 오지 않으므로(실제 워크스페이스가 그 상태였다) 그 항목들은
+# '변경 없음(정상)'이 아니라 '판정 불가'로 남아야 한다 — 이 화면에 '정상'이라고 적힌 것을
+# 근거로 점검을 마무리하기 때문이다.
+# 입력원 세 가지. polled 는 우리가 직접 SSH 로 물어본 것(engine/state_poller.py) —
+# 작업자의 `terminal monitor` 설정에 의존하지 않는 유일한 근거다.
+_SRC_COMMAND = "commands"
+_SRC_SYSLOG = "syslog"
+_SRC_POLL = "polled"
+_STATE_SOURCES = (_SRC_SYSLOG, _SRC_POLL)
 CHECK_ITEMS = (
-    ("vlan", "VLAN 설정 유지", ("CONFIG_REMOVED",)),
-    ("interface", "인터페이스 설정/활성", ("CONFIG_REMOVED", "INTERFACE_SHUTDOWN")),
-    ("route", "정적 라우팅 유지", ("CONFIG_REMOVED",)),
-    ("neighbor", "라우팅 인접(BGP/OSPF)", ("CONFIG_REMOVED", "NEIGHBOR_DOWN")),
-    ("link", "링크 상태", ("LINK_DOWN",)),
-    ("stp_mlag", "STP / MLAG 안정", ("STP_CHANGE", "MLAG_STATE")),
-    ("ops", "위험 운영 명령 없음", ("DESTRUCTIVE_COMMAND",)),
+    ("vlan", "VLAN 설정 유지", ("CONFIG_REMOVED",), (_SRC_COMMAND,)),
+    ("interface", "인터페이스 설정/활성", ("CONFIG_REMOVED", "INTERFACE_SHUTDOWN"), (_SRC_COMMAND,)),
+    ("route", "정적 라우팅 유지", ("CONFIG_REMOVED",), (_SRC_COMMAND,)),
+    # BGP 네이버 '삭제 명령'은 명령에서 보이지만 '인접 끊김'은 syslog 나 상태 폴링에서만 보인다 —
+    # 하나라도 관측 가능하면 판정 가능으로 본다.
+    ("neighbor", "라우팅 인접(BGP/OSPF)", ("CONFIG_REMOVED", "NEIGHBOR_DOWN"),
+     (_SRC_COMMAND,) + _STATE_SOURCES),
+    ("link", "링크 상태", ("LINK_DOWN",), _STATE_SOURCES),
+    ("stp_mlag", "STP / MLAG 안정", ("STP_CHANGE", "MLAG_STATE"), _STATE_SOURCES),
+    ("ops", "위험 운영 명령 없음", ("DESTRUCTIVE_COMMAND",), (_SRC_COMMAND,)),
 )
+_ITEM_SOURCES = {key: sources for key, _label, _types, sources in CHECK_ITEMS}
 
 # alert의 target prefix -> 체크리스트 항목 키. target은 diff 엔진이 붙이는 'vlan:100' 형태다.
 _TARGET_PREFIX_TO_ITEM = {
@@ -70,6 +91,7 @@ _CATEGORY_LABEL = {
     None: "기타",
 }
 _SEVERITY_RANK = {"WARNING": 1, "MAJOR": 2, "CRITICAL": 3}
+_EMPTY_OBSERVED = dict.fromkeys(_OBSERVED_KEYS, 0)
 # 한 번에 넘길 finding 수의 상한. finding 은 '장비 x 규칙' 단위라 장비 30대 x 규칙 몇 개면
 # 금세 수십 개가 된다 — 화면이 묶은 뒤의 줄 수는 그보다 훨씬 적다(규칙 수만큼).
 _FINDING_MAX = 200
@@ -93,6 +115,11 @@ class RealtimeMonitor:
         self._baseline_devices = set()  # Baseline 스냅샷이 있는 장비
         self._started_at = None
         self._last_activity = {}        # {device: epoch}
+        # {device: {"commands": n, "syslog": n, "output": n}} — BaselineDiffEngine 이 센 것.
+        # '무엇을 볼 수 있었는가'가 곧 '무엇을 정상이라고 말할 자격이 있는가'다.
+        self._observed = {}
+        # 이미 본 history 경고의 내용 서명 — 앱을 다시 켤 때마다 같은 사건이 쌓이는 것을 막는다.
+        self._history_seen = set()
         self._alert_max = 300
         # --- 델타 전송용 상태 (OPTIMIZATION_PLAN 3-1) ---
         # 로그 줄마다 단조증가 seq 를 붙인다. 프론트엔드가 마지막으로 받은 seq 를 보내면
@@ -116,6 +143,11 @@ class RealtimeMonitor:
             self._checklists = {d: self._fresh_checklist(d) for d in self._devices}
             self._alerts = []
             self._last_activity = {}
+            # 관측 카운트도 비운다 — 감시를 새로 시작하면 판정 엔진(BaselineDiffEngine)도
+            # 새로 만들어져 0에서 다시 센다. 여기만 남겨 두면 '지난 감시에서는 syslog 를
+            # 봤다'는 근거로 이번 감시의 판정 불가가 정상으로 보인다.
+            self._observed = {}
+            self._history_seen = set()
             self._started_at = time.time()
             # 버퍼를 새로 만들었으므로 프론트엔드가 들고 있는 seq 는 의미가 없다.
             self._line_seq = 0
@@ -180,7 +212,7 @@ class RealtimeMonitor:
                 # 이 항목을 fail/warn으로 만든 경고들. 전부 취소되면 항목이 '복구'로 돌아간다.
                 "alert_ids": [],
             }
-            for key, label, _types in CHECK_ITEMS
+            for key, label, _types, _sources in CHECK_ITEMS
         }
 
     # ---------- 쓰기 ----------
@@ -203,10 +235,53 @@ class RealtimeMonitor:
             if not is_history:
                 self._last_activity[device] = time.time()
 
+    def set_observations(self, observations):
+        """BaselineDiffEngine.observations() 를 그대로 받는다({장비: {commands, syslog, output}}).
+
+        누적값을 통째로 갈아끼운다(증분이 아니다) — 엔진이 단일 출처이므로 두 곳에서 세다가
+        어긋나는 것보다 매번 최신 사본을 받는 것이 안전하다.
+        """
+        with self._lock:
+            for device, counts in (observations or {}).items():
+                if not device or not isinstance(counts, dict):
+                    continue
+                self._observed[device] = {k: int(counts.get(k) or 0)
+                                         for k in _OBSERVED_KEYS}
+
+    def _blocked_reason_locked(self, device, item_key):
+        """이 항목을 '정상'이라고 말할 근거가 없으면 그 이유를, 있으면 None.
+
+        판정 근거가 되는 입력원(명령 / syslog) 중 하나도 이 장비에서 관측되지 않았다면
+        '변경 없음'이라고 쓸 수 없다. 규칙이 한 번도 걸리지 않은 것과 검사해서 통과한 것은
+        다른 이야기이고(_pin_from_alerts_locked 의 같은 판단), 이 화면은 '정상'이라고 적힌 것을
+        근거로 점검을 마무리하는 데 쓰인다.
+        """
+        sources = _ITEM_SOURCES.get(item_key)
+        if not sources:
+            return None
+        counts = self._observed.get(device) or {}
+        if any((counts.get(src) or 0) > 0 for src in sources):
+            return None
+        if sources == _STATE_SOURCES:
+            return ("판정 불가 — syslog 미수신(terminal monitor) · 상태 폴링도 꺼져 있습니다")
+        return "판정 불가 — 이 장비에서 아직 입력이 관측되지 않았습니다"
+
     def apply_alerts(self, alerts):
-        """판정된 경고를 체크리스트에 반영하고 이력에 쌓는다."""
+        """판정된 경고를 체크리스트에 반영하고 이력에 쌓는다.
+
+        history 경고(감시 시작 전부터 파일에 있던 구간을 되짚어 판정한 것)는 내용 서명으로
+        중복을 막는다. 감시를 시작할 때마다 세션 로그의 마지막 256KB 를 다시 판정하는데
+        (CRTStreamWatcher 의 seed), alert_id 는 프로세스마다 새로 발급되므로 저장본의 id 대조로는
+        걸러지지 않는다 — 자동시작을 켜 두면 앱을 켤 때마다 어제 친 `no vlan 100` 이 한 건씩
+        쌓여서, 같은 사건이 이력에 다섯 번 여섯 번 나타난다.
+        """
         with self._lock:
             for alert in alerts:
+                if alert.get("history"):
+                    signature = _history_signature(alert)
+                    if signature in self._history_seen:
+                        continue
+                    self._history_seen.add(signature)
                 device = alert.get("device")
                 self._ensure_device(device)
                 item_key = _item_key_for(alert)
@@ -215,6 +290,17 @@ class RealtimeMonitor:
                 self._alerts.append(alert)
             if len(self._alerts) > self._alert_max:
                 del self._alerts[:len(self._alerts) - self._alert_max]
+
+    def bump_repeats(self, repeats):
+        """BaselineDiffEngine.drain_repeats() 를 반영 — 억제된 재발을 원래 경고에 더한다."""
+        if not repeats:
+            return
+        with self._lock:
+            by_id = {a.get("alert_id"): a for a in self._alerts if a.get("alert_id")}
+            for alert_id, count in repeats.items():
+                alert = by_id.get(alert_id)
+                if alert is not None:
+                    alert["repeat"] = int(count)
 
     # ---------- 필터 / 고정 (Module 4) ----------
     def set_filter(self, filter_cfg):
@@ -442,6 +528,15 @@ class RealtimeMonitor:
                 for item in (self._checklists.get(device) or {}).values():
                     rank = self._pin_rank_locked(device, item["key"])
                     row = dict(item, pinned=rank is not None)
+                    # '아직 아무 경고도 없다(pending)'를 '정상'으로 읽히게 두지 않는다 —
+                    # 그 항목을 판정할 입력원이 애초에 도착하지 않았을 수 있다. fail/warn/
+                    # recovered 는 건드리지 않는다(관측된 사실이므로). 저장하지 않고 읽는
+                    # 시점에 파생시키는 이유: syslog 가 들어오기 시작하면 곧바로 풀려야 한다.
+                    if row["status"] == "pending":
+                        blocked = self._blocked_reason_locked(device, row["key"])
+                        if blocked:
+                            row["status"] = "unknown"
+                            row["detail"] = blocked
                     checklist.append(row)
                     if rank is not None:
                         pinned.append(dict(row, device=device, check_id=item["key"], pin_rank=rank))
@@ -459,6 +554,8 @@ class RealtimeMonitor:
                     "warn_count": len(warns),
                     "status": "fail" if fails else ("warn" if warns else "ok"),
                     "last_activity": self._last_activity.get(device, 0),
+                    # 이 장비에서 무엇을 볼 수 있었는지 — 화면이 '정상'의 근거를 밝히는 데 쓴다.
+                    "observed": dict(self._observed.get(device) or _EMPTY_OBSERVED),
                 })
             # 고정 항목의 check_id가 체크리스트 키(CHECK_ITEMS)가 아닐 수도 있다 —
             # 설정 예시의 'power_status' / 'mlag_peer_problem'처럼 규칙 엔진의 서명 id를
@@ -492,6 +589,8 @@ class RealtimeMonitor:
                 # 우클릭 메뉴가 '이 규칙 숨기기'를 제시할 수 있게 지금 등장한 규칙 목록을 넘긴다.
                 "seen_rules": sorted({a.get("rule_id") or a.get("type")
                                       for a in self._alerts if (a.get("rule_id") or a.get("type"))}),
+                # 감시 품질 — '경고 0건'이 '이상 없음'인지 '아무것도 못 보고 있음'인지 구분한다.
+                "watch_quality": self._watch_quality_locked(devices),
             }
 
             # 섹션 버전 — 프론트엔드가 바뀐 패널만 다시 그리게 한다. 0.8초마다 DOM 을 통째로
@@ -538,6 +637,34 @@ class RealtimeMonitor:
                         entry["checklist"] = None
             return payload
 
+    def _watch_quality_locked(self, devices):
+        """'경고 0건'의 뜻을 화면이 구분할 수 있게 하는 요약.
+
+        세 가지가 전혀 다른 상황인데 예전에는 화면에서 똑같이 '이상 징후 없음'이었다:
+          * 명령도 syslog 도 들어오고 있고 아무 문제가 없다        -> 진짜 이상 없음
+          * 명령은 보이는데 syslog 가 한 줄도 없다                 -> 링크/STP/MLAG 판정 불가
+          * 아무 입력도 없다(파일-장비 매칭 실패, 세션 미접속 등)  -> 감시가 안 되고 있다
+        """
+        names = [d["device"] for d in devices]
+        with_syslog = [n for n in names if (self._observed.get(n) or {}).get("syslog")]
+        with_command = [n for n in names if (self._observed.get(n) or {}).get("commands")]
+        with_poll = [n for n in names if (self._observed.get(n) or {}).get("polled")]
+        silent = [n for n in names
+                  if not any((self._observed.get(n) or {}).get(k)
+                             for k in _OBSERVED_KEYS)]
+        return {
+            "devices": len(names),
+            "syslog_devices": len(with_syslog),
+            "command_devices": len(with_command),
+            "polled_devices": len(with_poll),
+            "polled_device_names": with_poll,
+            "silent_devices": silent,
+            "syslog_lines": sum((self._observed.get(n) or {}).get("syslog", 0) for n in names),
+            # syslog 를 한 줄도 못 본 장비. 상태 폴링이 도는 장비는 그래도 판정이 가능하므로
+            # 화면은 두 값을 함께 봐야 한다(polled_device_names).
+            "syslog_missing_devices": [n for n in names if n not in with_syslog],
+        }
+
     def alerts(self, device=None, limit=200, include_hidden=True):
         with self._lock:
             items = list(reversed(self._alerts))
@@ -550,6 +677,9 @@ class RealtimeMonitor:
     def clear_alerts(self):
         with self._lock:
             self._alerts = []
+            # '초기화'는 이력을 비우는 것이므로, 다음 seed 가 같은 구간을 다시 판정해 채우는 것이
+            # 맞다 — 서명 기억까지 지우지 않으면 초기화 후 화면이 영구히 비어 있게 된다.
+            self._history_seen = set()
             for device in list(self._checklists):
                 self._checklists[device] = self._fresh_checklist(device)
             # 체크리스트/경고가 통째로 바뀌었다 — 프론트엔드가 부분 갱신으로 따라올 수 없으므로
@@ -573,6 +703,7 @@ class RealtimeMonitor:
                 "alerts": [dict(a) for a in self._alerts],
                 "lines": {d: list(buf)[-lines_per_device:] for d, buf in self._buffers.items()},
                 "last_activity": dict(self._last_activity),
+                "observed": {d: dict(v) for d, v in self._observed.items()},
                 "started_at": self._started_at,
             }
 
@@ -606,6 +737,12 @@ class RealtimeMonitor:
                 activity = (snapshot.get("last_activity") or {}).get(device)
                 if activity:
                     self._last_activity[device] = activity
+                # 지난 실행에서 syslog 를 봤다는 사실도 되살린다 — 안 그러면 프로그램을 다시
+                # 켠 직후 전부 '판정 불가'로 보이고, 지난 회차에서 확인한 항목이 되돌아간다.
+                saved_obs = (snapshot.get("observed") or {}).get(device)
+                if isinstance(saved_obs, dict) and device not in self._observed:
+                    self._observed[device] = {k: int(saved_obs.get(k) or 0)
+                                              for k in _OBSERVED_KEYS}
                 restored += 1
             known = {a.get("alert_id") for a in self._alerts if a.get("alert_id")}
             for alert in snapshot.get("alerts") or []:
@@ -613,10 +750,42 @@ class RealtimeMonitor:
                     continue
                 if alert.get("alert_id") and alert["alert_id"] in known:
                     continue
+                # 저장본에 있던 사건의 서명을 등록해 둔다 — 감시를 시작하면 세션 로그의 같은
+                # 구간을 seed 로 다시 판정하므로(새 alert_id 로), 서명이 없으면 어제의 사건이
+                # 오늘 한 건 더 생긴다.
+                self._history_seen.add(_history_signature(alert))
                 self._alerts.append(dict(alert, restored=True))
             if len(self._alerts) > self._alert_max:
                 del self._alerts[:len(self._alerts) - self._alert_max]
             return restored
+
+    def _quiet_verdict_locked(self, watched):
+        """경고가 하나도 없을 때의 문구 — '이상 없음'과 '못 보고 있음'을 가른다.
+
+        예전에는 셋 다 "이상 징후 없음"이었다. 실제 워크스페이스가 세 번째 상태였고(감시 폴더가
+        엉뚱한 곳을 보고 있었다) 화면은 5일간 초록색이었다.
+        """
+        obs = self._observed
+        silent = [d for d in self._devices
+                  if not any((obs.get(d) or {}).get(k) for k in _OBSERVED_KEYS)]
+        no_syslog = [d for d in self._devices if not (obs.get(d) or {}).get("syslog")]
+
+        if len(silent) == watched:
+            return ("unknown", "감시 입력 없음 — 아직 로그가 도착하지 않았습니다",
+                    f"장비 {watched}대를 감시 대상으로 잡았지만 세션 로그에서 읽은 줄이 없습니다. "
+                    "SecureCRT 세션이 열려 있는지, '파일 진단'에서 로그 파일이 장비로 인식되는지 "
+                    "확인하세요. 이 상태에서는 '이상 없음'이라고 말할 수 없습니다.")
+        if len(no_syslog) == watched:
+            return ("unknown", "명령 감시 중 — 링크/STP/MLAG는 판정 불가",
+                    f"장비 {watched}대에서 입력된 명령은 감시하고 있지만, syslog가 한 줄도 "
+                    "관측되지 않았습니다. 링크 DOWN·라우팅 인접·STP/MLAG 변화는 세션에 syslog가 "
+                    "에코돼야만 알 수 있습니다(장비에서 `terminal monitor`). 해당 체크리스트 "
+                    "항목은 '정상'이 아니라 '판정 불가'로 남겨 둡니다.")
+        detail = (f" 그중 {len(no_syslog)}대는 syslog가 관측되지 않아 링크/STP/MLAG 판정이 "
+                  "보류됩니다." if no_syslog else "")
+        return ("ok", "이상 징후 없음",
+                f"장비 {watched}대의 세션 로그를 감시 중입니다. Baseline과 다른 변경이 감지되면 "
+                f"즉시 여기에 표시됩니다.{detail}")
 
     # ---------- 실시간 오류 분석(우측 상단) ----------
     def _analyze_locked(self):
@@ -639,6 +808,7 @@ class RealtimeMonitor:
             # 전부 복구/무시된 경우와 처음부터 조용한 경우는 다른 이야기다 — 구분해서 알려준다.
             recovered = len([a for a in self._alerts if a.get("resolved")])
             ignored = len([a for a in self._alerts if a.get("ignored")])
+            verdict = "ok"
             if recovered or ignored:
                 parts = []
                 if recovered:
@@ -649,14 +819,14 @@ class RealtimeMonitor:
                            "이력은 '세부 이력'에서 확인할 수 있습니다.")
                 headline = f"이상 없음 — 경고 {recovered + ignored}건 해제됨"
             elif watched:
-                summary = (f"장비 {watched}대의 세션 로그를 감시 중입니다. Baseline과 다른 변경이 "
-                           "감지되면 즉시 여기에 표시됩니다.")
-                headline = "이상 징후 없음"
+                verdict, headline, summary = self._quiet_verdict_locked(watched)
             else:
+                # '대상이 없다'는 정상이 아니다 — 초록색으로 칠하면 감시가 되는 것처럼 읽힌다.
+                verdict = "unknown"
                 summary = "장비 목록에서 감시할 장비를 선택하세요."
                 headline = "감시 대상 장비 없음"
             return {
-                "verdict": "ok",
+                "verdict": verdict,
                 "headline": headline,
                 "summary": summary,
                 "counts": counts,
@@ -912,6 +1082,16 @@ def _fingerprint(value):
 
     encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
     return hashlib.md5(encoded.encode("utf-8")).hexdigest()[:16]
+
+
+def _history_signature(alert):
+    """'같은 사건인가'를 판정하는 내용 서명. alert_id 는 프로세스마다 새로 발급되므로 쓸 수 없다.
+
+    ts 는 넣지 않는다 — 되짚어 판정한 시각은 판정을 돌린 시각이라 실행마다 달라진다. 그것을
+    서명에 넣으면 중복 제거가 아예 동작하지 않는다.
+    """
+    return (alert.get("device"), alert.get("type"), alert.get("target"),
+            (alert.get("raw_line") or "").strip())
 
 
 def _ids(alerts):
