@@ -1,0 +1,268 @@
+# AutoCheck - 네트워크 장비 자동 점검/채점 시스템 (v0.5.9)
+
+> **버전**: v0.5.9 | **환경**: Python 3.9+ (Windows 10/11) | **라이선스**: Internal / Proprietary
+
+> **AutoCheck**는 라우터, 스위치 등 네트워크 장비에 SSH로 자동 접속하여 원본 CLI 출력을 수집하고, 멀티 벤더 파싱, 목표 상태 대조, AI 기반 분석 및 다각도 리포트 생성까지 한 번에 처리하는 Material Design 3 기반 통합 점검/채점 솔루션입니다.
+
+버전 이력은 `CHANGELOG.md`, 개발자 구조 설명은 `ARCHITECTURE.md`, 문제 해결은 `실행방법.txt`를 참고하세요.
+
+---
+
+## 목차 (Table of Contents)
+
+- [주요 특징 (Key Features)](#-주요-특징-key-features)
+- [사전 요구 사항 (Prerequisites)](#-사전-요구-사항-prerequisites)
+- [빠른 시작 (Quick Start)](#-빠른-시작-quick-start)
+- [사용자 작업 흐름 가이드 (User Workflow Guide)](#-사용자-작업-흐름-가이드-user-workflow-guide)
+- [네트워크 구성도 자동 생성 (Auto Topology Generation)](#-네트워크-구성도-자동-생성-auto-topology-generation)
+- [실시간 감시 (SecureCRT 세션 로그 Baseline Diff)](#-실시간-감시-securecrt-세션-로그-baseline-diff)
+- [주요 설정 파일 (Configuration Files)](#-주요-설정-파일-configuration-files)
+- [아키텍처 및 파이프라인 개요 (Architecture & Pipeline Summary)](#-아키텍처-및-파이프라인-개요-architecture--pipeline-summary)
+- [프로젝트 디렉터리 구조 (Directory Structure)](#-프로젝트-디렉터리-구조-directory-structure)
+- [알려진 제약 사항 (Known Constraints)](#-알려진-제약-사항-known-constraints)
+- [개발자 참고 문서 & 라이선스 (Developer Resources & License)](#-개발자-참고-문서--라이선스-developer-resources--license)
+
+---
+
+## 주요 특징 (Key Features)
+
+- **네트워크 구성도 자동 생성 (v0.5.9)**: 수집된 CLI 로그(`show lldp neighbors`, `interfaces status/description`, `show mlag`)만으로 3계층(Core/Aggregation/Access) 물리 구성도 및 MLAG 이중화/Port-Channel 묶음/링크 상태를 자동 분석하여 SVG로 시각화. 베지어 곡선 우회 라우팅, 21개 실무 구성 검증 및 사용자 지정 드래그 배치 영속화 지원
+- **Material Design 3 웹 UI & 시인성 극대화 (v0.5.6)**: pywebview 기반의 직관적인 사용자 인터페이스, 2단계 로그 하이라이트, active 터미널 1:1 연동, 실시간 감시 3-Way 동시 포커스, 핀 바 & 레이어드 하이라이트, 카탈로그 ON/OFF 배지 & 드래그 가이드, 대시보드 트렌드 지표, AI 1순위 메인 엔진 크라운 뱃지
+- **고도화된 전문 PDF 점검 보고서 엔진 (v0.5.7)**: ReportLab 기반의 독립 렌더러 모듈(`report/inspection_pdf.py`) 및 내보내기 API(`export_inspection_pdf_report`)를 탑재하여 요약 표, 점검 항목별 상태, AI 분석 권고안을 포함한 양질의 PDF 점검 보고서 내보내기 지원
+- **자동 연결 검증 & Hostname 자동 동기화**: IP/계정 설정 즉시 실시간 접속 확인 및 장비 이름 자동 갱신
+- **회차별 장비 목록 자동 승계**: 동일 고객사의 이전 정기점검 회차 장비/IP/계정 정보 자동 물려받기
+- **SecureCRT 세션 로그 실시간 감시 (v0.5.5)**: `CRTlog/`에 기록되는 CLI 입·출력을 0.3초 간격 tail로 따라가며 사전 점검 결과(Baseline) 대비 설정 삭제·링크/인접 DOWN을 즉시 토스트로 경고하고, `StateTracker` 기반의 경고 해제/취소 추적(MLAG/VLAN/OSPF)과 11개 L2/L3/Overlay 신규 서명(VXLAN, EVPN, SVI, VARP 등) 및 5개 연쇄 상관규칙으로 장비별 체크리스트와 원인 분석을 실시간 갱신
+- **이상 탐지 & 데이터 마스킹**: 원본 로그 분석, 크리티컬 알람 및 외부 공유용 개인정보/보안 데이터 마스킹
+- **vEOS-lab & 멀티 프로바이더 AI 최적화 (v0.0.034/v0.5.0)**: Arista vEOS 가상 플랫폼 특성 감안 프롬프트, 사전 구조화 경량화 패킷 전송, Cloud Gemini / Local LLM을 비롯하여 10종 클라우드 AI 프로바이더(NVIDIA NIM, xAI Grok, Mistral, DeepSeek, Groq, Perplexity, Upstage Solar 등) 및 OpenAI 호환 커스텀 엔드포인트/모델 직접 입력 지원
+- **원자적 스토리지 I/O & 데이터 보호 (v0.0.025)**: 설정 파일 및 장비 인벤토리 YAML 저장 시 임시 파일 기반 교체 쓰기(Atomic I/O, `core/atomic_io.py`)를 적용하여 프로세스 강제 종료 시에도 파일 손상 및 장비 목록 유실을 방지
+- **고성능 비동기 로깅 & UI 스트리밍**: Queue 기반 디스크 비동기 로거, 200ms DOM Throttling, Delta streaming(`since_index`), 영속적 레벨 필터링(`INFO`/`WARN`/`ERROR`/`DEBUG`)
+- **다양한 리포트 포맷**: Markdown, HTML, Excel, PDF, PPTX 형식 리포트 내보내기 지원
+- **무인 정기점검 스케줄러**: UI 없이 백그라운드 크론(Cron) 루프로 정기 점검 자동 실행
+
+---
+
+## 사전 요구 사항 (Prerequisites)
+
+- **OS**: Windows 10 / 11 (Microsoft Edge WebView2 Runtime 필수 포함)
+- **Python**: Python 3.9 이상
+- **네트워크**: 점검 대상 장비 또는 가상 실습 환경(EVE-NG 등)에 SSH 도달 가능한 네트워크 환경
+- **의존성 패키지**: `requirements.txt`에 명시된 필수 라이브러리
+
+---
+
+## 빠른 시작 (Quick Start)
+
+### 1. 패키지 설치 및 실행
+
+```bash
+# 필수 의존성 라이브러리 설치
+pip install -r requirements.txt
+
+# GUI 앱 실행 (기본 진입점)
+python main.py
+```
+
+### 2. 무인 정기점검 스케줄러 실행 (UI 없이 실행)
+
+```bash
+# 지금 시각에 예정된 점검 작업 1회 실행
+python -m engine.scheduler
+
+# 백그라운드 크론 루프 실행 (매분 정기 체크)
+python -m engine.scheduler --loop
+```
+
+> **참고**: 스케줄러 실행 일정은 `config/scheduler.yaml`에서 설정하며, UI 실행과 동일한 채점 파이프라인(`engine/grading.py`)을 공유합니다.
+
+---
+
+## 사용자 작업 흐름 가이드 (User Workflow Guide)
+
+사이드바 메뉴는 실제 업무 진행 순서에 따라 **준비 → 실행 → 결과 → 기타** 4개 그룹으로 구성되어 있습니다.
+
+### [1] 준비 (Preparation)
+* **1. 워크스페이스**: 고객사를 추가하고 정기점검 회차(프로파일)를 생성 또는 선택합니다.
+  * *팁*: 동일 고객사의 두 번째 회차부터는 직전 회차의 장비 목록을 자동으로 물려받습니다.
+* **2. 장비 목록**: 관리 IP, 포트, 계정을 입력하고 점검할 장비를 활성화합니다.
+  * IP/계정 수정 시 자동으로 연결을 검증하며, 성공 시 장비가 알려준 `hostname`으로 이름을 자동 갱신합니다.
+* **3. EVE 구성 불러오기 (선택)**: `.unl` topology 파일에서 장비 목록을 한 번에 가져옵니다.
+* **4. 명령어 카탈로그**: 점검 시 장비에서 실행하여 수집할 CLI 커맨드를 활성화합니다.
+* **5. 점검 항목**: 단계(Stage) 구성과 검사 항목 간 의존관계를 확인합니다. (읽기 전용)
+
+### [2] 실행 (Execution)
+* **6. 세션 터미널 (선택)**: 장비에 직접 SSH로 접속하여 수동 명령어를 확인합니다.
+* **7. 실시간 감시 (선택)**: SecureCRT로 작업하는 동안 Baseline 대비 변경을 실시간으로 감시합니다. (아래 '실시간 감시' 절 참고)
+* **8. 수집/채점**: 점검 실행 버튼 클릭 시 `접속 → 수집 → 파싱 → 판정 → 채점 → 이력저장 → 리포트 생성` 과정이 일괄 처리됩니다.
+* **9. 점검 로그**: 수집된 원본 CLI 로그 확인, 이상 탐지 및 외부 제출용 데이터 마스킹을 수행합니다.
+
+### [3] 결과 (Results) & [4] 기타 (Settings & Logs)
+* **9. 대시보드 / 네트워크 구성도 / 발견사항 / 분석 / 보고서 / 이력**: 종합 건전성 점수, 자동 복원된 3계층 물리 구성도(SVG), PASS/FAIL 판정 결과, AI 조치 권고안 및 내보내기 리포트를 확인합니다.
+* **10. 환경 설정**: AI 제공자(API 키), SSH 공통 접속 인자 및 터미널 동작 설정을 맞춥니다. (모든 고객사/회차 공통 적용)
+* **11. 전체 로그**: 실시간 실행 로그를 200ms 속도제어(Throttling) 및 레벨 필터(`INFO`/`WARN`/`ERROR`/`DEBUG`)로 스트리밍 확인하고 전체 세션 로그(.txt)를 내보냅니다.
+
+---
+
+## 네트워크 구성도 자동 생성 (Auto Topology Generation)
+
+사이드바 **네트워크 구성도** 탭(v0.5.9 신규)은 장비 목록과 수집된 점검 로그에서 **물리 구성도를 자동으로 생성 및 시각화**합니다. 별도의 추가 수집 없이 정기점검 시 수집되는 4가지 출력만으로 토폴로지를 완전히 복원합니다.
+
+```
+[수집 로그 4종: lldp neighbors / interfaces status / interfaces description / show mlag]
+       │
+[engine/topology_builder.py] ──► 노드·링크·Port-Channel·MLAG 이중화 구조 파싱
+       │
+[engine/topology_layout.py]  ──► 3계층(Core/Agg/Access) 자동 배치 + 사용자 수동 좌표 영속화
+       │
+[engine/topology_svg.py]     ──► SVG 생성 (관례적 기하 도형, 곡선 우회 라라우팅, 라벨 충돌 방지)
+```
+
+### 주요 기능 및 특징
+- **4가지 로그 기반 자동 복원**:
+  - `show lldp neighbors`: 이웃 장비 및 물리 포트 연결 관계 복원
+  - `show interfaces status`: 링크 상태(UP/DOWN) 및 Port-Channel 소속 (`in Po2048`) 추적
+  - `show interfaces description`: 인터페이스 설명 라벨 (`core_agg_mlag`)
+  - `show mlag`: peer-link Po 기반 이중화 쌍 그룹핑
+- **표준 네트워크 다이어그램 심볼**: 저작권 이슈가 없는 관례적 기하 도형 적용 (L2 스위치: 나란한 화살표 4개, L3 스위치: + 라우터 화살표, 라우터: 원+방사형, 방화벽: 벽돌, 미등록: 점선+?)
+- **3계층 구조 & 노드 위치 영속화**: Core / Aggregation / Access 3계층 자동 분류 및 사용자가 마우스로 노드를 끌어 옮긴 수동 위치 좌표를 프로파일별로 영속 저장
+- **명확한 시각화 & 색약 대응**:
+  - MLAG 이중화 쌍: 점선 상자 래핑
+  - Port-Channel 묶음: 굵은 선 + `Po2048 x2` 묶음 표시 및 설명 라벨
+  - 장애 상태: DOWN 링크는 빨간 선 + ✕ 마커 (색약 및 흑백 인쇄 대응), 일부 DOWN은 반쪽 원, 미관측은 회색
+- **충돌 방지 알고리즘**:
+  - **우회 곡선 라우팅**: 직선이 다른 노드를 관통할 경우 2차 베지어 곡선으로 우회 렌더링
+  - **라벨 충돌 회피**: 선 상의 비어있는 후보 위치를 스마트 탐색하고 글자 배경 테두리(paint-order)로 시인성 확보
+  - **다양한 토폴로지 검증**: 스파인-리프, 링, 스타, 체인, 풀메시, FQDN/Cisco 명명 등 21가지 예제 토폴로지 자동 기하 검증 완료
+
+---
+
+## 실시간 감시 (SecureCRT 세션 로그 Baseline Diff)
+
+사이드바 **실시간 감시** 탭은 SecureCRT로 장비를 만지는 동안 사전 점검 결과와 달라지는 것을 즉시 알려줍니다.
+점검 로그를 나중에 분석하는 기존 흐름(`원본로그분석`)과 달리, 작업 중에 사고를 잡는 것이 목적입니다.
+
+```
+[SecureCRT 터미널 작업]
+      │ 세션 로그 append
+[Documents/AutoCheck/CRTlog/*.txt · *.log]
+      │ 바이트 오프셋 감시(0.3초) — 새로 덧붙여진 부분만
+[core/crt_stream_watcher.py]
+      │ 파일 → 장비 판정 (engine/stream_device_matcher.py)
+[engine/baseline_diff_engine.py] ◄── [engine/baseline_store.py] 00_orignal_log 기준 스냅샷
+      │
+[engine/realtime_monitor.py] ──► 화면 3분할 (로그 / 체크리스트 / 원인 분석) + 우측 하단 경고 토스트
+```
+
+### 화면 구성
+- **좌측**: 장비별 실시간 CLI 캡처. `탭 보기`는 한 장비씩, `분할 보기`는 장비 박스를 위아래로 쌓습니다.
+  각 장비 박스는 스크롤되지 않고 최신 줄만 보여주며, 박스 목록 전체만 스크롤됩니다.
+- **우측 상단**: 실시간 오류 분석. 단순 나열이 아니라 인과로 묶습니다 — 설정 변경 명령 뒤에 DOWN이
+  따라오면 "작업 명령이 통신 단절을 유발"로, 변경 없이 DOWN만 나면 "대향 장비/물리 경로 의심"으로 분류합니다.
+- **우측 하단**: 장비 × 7개 항목(VLAN / 인터페이스 / 정적 라우팅 / 라우팅 인접 / 링크 / STP·MLAG / 위험 명령)
+  체크리스트. 이상 항목이 위로 정렬되고, 그룹을 클릭하면 세부 경고 이력이 열립니다.
+- 좌우·상하 **구분선은 드래그로 비율 조절**되며, 그 값과 보기 모드·선택 장비는
+  `config/realtime_watch.yaml`에 저장돼 프로그램을 다시 켜도 유지됩니다.
+- **프로그램 실행 시 자동 시작** 체크박스를 켜면 앱을 띄우는 즉시 감시가 시작됩니다.
+- **우클릭 컨텍스트 메뉴**: 로그 박스, 체크리스트, 분석 결과 항목을 우클릭하여 특정 장비나 규칙의 경고를 숨김 처리할 수 있습니다.
+- **고정 카드 및 표시 설정**: 중요한 항목(예: 특정 장비의 특정 장애)을 상단에 고정 카드로 띄울 수 있으며, 설정 모달을 통해 관리할 수 있습니다.
+
+### 감지 항목
+| 구분 | 감지 대상 | 판정 |
+|---|---|---|
+| 설정 삭제 | `no vlan` · `no ip route` · `no interface` · `no neighbor` · `no router bgp` | Baseline에 있던 대상이면 CRITICAL |
+| 인터페이스 차단 | `shutdown` (config 문맥에서 대상 인터페이스 추적) | Baseline 등록 인터페이스면 CRITICAL |
+| 위험 운영 명령 | `reload` · `write erase` · `erase startup-config` 등 | CRITICAL |
+| 상태 변화 | `BGP/OSPF-5-ADJCHANGE` · `LINEPROTO-5-UPDOWN` · `MLAG` · `STP` | DOWN이면 CRITICAL, 복구면 WARNING |
+
+### 로그 파일 ↔ 장비 매칭
+SecureCRT는 세션 로그 파일명을 장비명이 아니라 **접속 IP**로 남기는 경우가 많고(`192.168.205.101_20260803_152204.txt`),
+기본 파일명이 `session.log`인 환경도 있습니다. 그래서 다음 순서로 판정합니다:
+
+1. 파일명 토큰이 장비 목록의 장비명과 일치
+2. 파일명에 든 IP가 장비 목록의 관리 IP와 일치
+3. 로그 내용의 `! device: X` 헤더 (`show running-config` 출력에 항상 있음)
+4. 로그 내용의 프롬프트 `X#` / `X>`
+
+그래도 실패하면 **파일 진단** 버튼으로 파일별 매칭 근거를 확인할 수 있습니다. 감시 중 식별하지 못한 파일이
+있으면 화면 상단에 안내 줄이 표시됩니다.
+
+> **참고**: 감시를 시작하기 전부터 파일에 있던 내용은 화면에만 흐리게 채워지고(`--:--:--` 표시) 경고를
+> 발생시키지 않습니다. 어제 실행한 명령이 오늘 감시를 켠 순간 CRITICAL로 튀어나오면 알림을 신뢰할 수
+> 없기 때문입니다. 감시 중에 새로 열린 세션 로그는 첫 줄부터 판정합니다.
+
+---
+
+## 주요 설정 파일 (Configuration Files)
+
+애플리케이션 전역 설정 및 스케줄러 일정은 파일 단위로 관리됩니다:
+
+- `ai_config.yaml`: AI 분석 제공자 (Cloud Gemini, Local LLM, NVIDIA NIM, DeepSeek, OpenAI 호환 등 10종) 및 API 키/모델/엔드포인트/`local_batching` 설정
+- `connection.yaml`: SSH 접속 타임아웃, 재시도 횟수 및 공통 기본 계정 설정
+- `config/scheduler.yaml`: 무인 정기점검 백그라운드 크론(Cron) 주기 및 대상 설정
+- `ai_settings.yaml`: 프롬프트 서식 및 분석 출력 옵션 설정
+- `config/realtime_watch.yaml`: 실시간 감시 자동 시작 여부, 화면 구분선 비율·보기 모드·선택 장비·필터 및 고정 카드 영속화 설정
+- `config/log_rules.json`: 실시간 감시 서명 패턴, L2/L3/Overlay 규칙, 연쇄 상관규칙 및 상태 취소 추적 패턴 정의
+
+---
+
+## 아키텍처 및 파이프라인 개요 (Architecture & Pipeline Summary)
+
+`engine/grading.py` 실행 시 `pipeline/`에 정의된 개별 파이프라인 단계(Step)들이 순차적으로 구동됩니다:
+
+```
+[1. CollectorStep]   장비 SSH 접속 및 raw CLI 출력 수집 (engine/collector.py)
+        │
+[2. ParserStep]      VendorDriver 기반 CLI 출력 구조화 파싱 (parsers/)
+        │
+[3. RuleEngineStep]  target_state 대조 및 PASS/FAIL/UNKNOWN 판정 (rule_engine/)
+        │
+[4. ScorerStep]      Stage 단위 점수 집계 (engine/scorer.py)
+        │
+[5. HistoryStep]     이력 저장 및 직전 회차 대비 Diff 분석 (engine/history.py)
+        │
+[6. AlarmStep]       Critical Finding 알림 통보 (alarm/)
+        │
+[7. AIAnalysisStep]  AI 요약 및 조치 권고안 생성 (core/ai/)
+        │
+[8. ReportStep]      Markdown/HTML/Excel/PDF/PPTX 리포트 내보내기 (report/ 및 report/inspection_pdf.py)
+```
+
+> **상세 개발자 안내**: 파이프라인 확장 방법, 5대 워크스페이스 매니저 구조, API 계층 믹스인 설계 등은 [ARCHITECTURE.md](ARCHITECTURE.md) 문서를 참고하세요.
+
+---
+
+## 프로젝트 디렉터리 구조 (Directory Structure)
+
+```
+main.py                 # 앱 유일 진입점 (pywebview 생성 및 Api 믹스인 합성)
+web_ui/                 # Material Design 3 프런트엔드 (HTML/CSS/JS 및 에셋)
+api/                    # GUI-Engine 간 비즈니스 API 믹스인 레이어
+engine/                 # 장비 수집, 워크스페이스, 리포트, 스케줄러 핵심 로직
+pipeline/               # 점검/채점 파이프라인 실행기 및 단계(Step) 정의
+rule_engine/            # 판정 규칙 평가 엔진
+parsers/                # 벤더별(Cisco, Arista) CLI 파싱 구현체
+plugins/                # 벤더 드라이버 및 파서 레지스트리
+core/                   # 공통 I/O, 원자적 쓰기(atomic_io), 경로 해석, AI 서비스, 로깅 infrastructure, 타임스탬프 유틸리티
+ai_analysis/            # AI 로그 분석 라우터 및 vEOS-lab 프롬프트 템플릿
+report/                 # Markdown, HTML, Excel, PDF, PPTX 렌더러 및 내보내기 플러그인
+labs/                   # 랩 정의 (stages, target_state, catalog 등)
+data/<customer>/<profile>/  # 정기점검 실행 워크스페이스 (raw, masked, parsed, reports)
+```
+
+---
+
+## 알려진 제약 사항 (Known Constraints)
+
+- **네트워크 접근성**: 실제 장비 수집 및 채점은 대상 네트워크 장비 또는 EVE-NG 등 가상 실습망에 SSH 접근이 가능한 환경에서 동작합니다.
+- **벤더 드라이버 지원 범위**: Arista vEOS 및 physical 드라이버가 풀 기능 기준으로 지원되며, Cisco 드라이버는 부분 구현되어 있습니다.
+- **후속 과제**: 구조적 리팩토링 항목 및 기술 부채 관련사항은 [ARCHITECTURE.md](ARCHITECTURE.md)의 *Known follow-ups* 섹션을 참고하세요.
+
+---
+
+## 개발자 참고 문서 & 라이선스 (Developer Resources & License)
+
+- **버전 변경 이력**: [CHANGELOG.md](CHANGELOG.md)
+- **시스템 아키텍처 상세**: [ARCHITECTURE.md](ARCHITECTURE.md)
+- **개발자 작업 가이드**: [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)
+- **워크스페이스 데이터 배치**: [WORKSPACE_STRUCTURE.md](WORKSPACE_STRUCTURE.md)
+
+**License**: Internal / Proprietary. All rights reserved.
