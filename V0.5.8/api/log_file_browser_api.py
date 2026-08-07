@@ -94,6 +94,9 @@ class LogFileBrowserApiMixin:
         분석 결과 이름 규칙은 engine/log_analysis.run_analysis()·start_ai_log_analysis()의
         "{접두어}{stamp}_{device}_problems.txt", 마스킹은 "{원본이름}_masked.txt"."""
         device, stamp = parse_inspection_log_name(fname)
+        # 마스킹 결과 이름의 앞부분 = 확장자를 뗀 원본 파일명.
+        # engine/log_masking.py 의 os.path.splitext(basename)[0] + "_masked.txt" 와 같은 규칙이다.
+        body = os.path.splitext(fname)[0]
 
         targets = []
         problem_names = []
@@ -269,8 +272,18 @@ class LogFileBrowserApiMixin:
             fname = os.path.basename(abs_path)
             # 지울 대상: 요청 경로 + 사본이 있을 수 있는 모든 디렉터리의 같은 이름
             #            + 이 원본에서 파생된 분석/마스킹 결과.
-            targets = ([abs_path] + [os.path.join(d, fname) for d in copy_dirs]
-                       + self._derived_output_paths(fname))
+            #
+            # 파생 결과 경로 계산이 실패해도 **요청한 파일은 지운다.** 이 순서가 중요한 이유:
+            # 예전에는 _derived_output_paths() 안의 NameError 가 targets 를 만드는 도중에 터져서
+            # os.remove 가 한 번도 불리지 않았고, 예외가 JS 브릿지까지 올라가 호출부가 중단되는
+            # 바람에 오류 메시지도 안 떴다 — 버튼을 눌러도 아무 일도 일어나지 않는 것처럼 보였다.
+            # 부수적인 정리 작업이 본래 요청을 삼켜서는 안 된다.
+            try:
+                derived = self._derived_output_paths(fname)
+            except Exception as exc:
+                derived = []
+                print(f"[로그 삭제] 파생 결과 경로 계산 실패({fname}): {exc}")
+            targets = [abs_path] + [os.path.join(d, fname) for d in copy_dirs] + derived
             primary_ok, primary_err, seen = False, None, set()
             for target in targets:
                 key = os.path.normcase(target)

@@ -61,7 +61,19 @@ async function call(fn, ...args) {
     console.error(`[AutoCheck] API 메서드 '${fn}' 없음 — api/*.py의 mixin이 Api 클래스에 합성됐는지 확인하세요.`);
     return null;
   }
-  return await api[fn](...args);
+  try {
+    return await api[fn](...args);
+  } catch (err) {
+    // 파이썬 쪽에서 예외가 나면 pywebview 가 이 프라미스를 reject 한다. 예전에는 그것을 그냥
+    // 흘려보냈고, 호출부는 대개 await 한 줄이라 함수가 그 자리에서 중단됐다 — 화면에는 아무
+    // 일도 일어나지 않고 오류 메시지도 뜨지 않았다. 실제로 '로그 삭제 버튼이 동작하지 않는다'의
+    // 원인이 이것이었다(api/log_file_browser_api.py 의 NameError 하나가 조용히 삼켜졌다).
+    // 이제 어떤 API 예외든 화면에 드러내고, 호출부는 null 을 받아 계속 진행한다.
+    const detail = (err && (err.message || err.toString())) || '알 수 없는 오류';
+    console.error(`[AutoCheck] API '${fn}' 호출 실패:`, err);
+    if (typeof showToast === 'function') showToast(`'${fn}' 처리 중 오류: ${detail}`, 'error');
+    return null;
+  }
 }
 
 // ===== 리플 효과 =====
