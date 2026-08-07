@@ -84,6 +84,7 @@ from api.terminal_api import TerminalApiMixin
 from api.log_viewer_api import LogViewerApiMixin
 from api.masking_api import MaskingApiMixin
 from api.logs_api import LogsApiMixin
+from api.topology_api import TopologyApiMixin
 from api.workspace_api import WorkspaceApiMixin
 from api.window_ref import set_window
 from core.app_logger import install_print_capture, log_event
@@ -95,7 +96,8 @@ class Api(BaseApiMixin, ProjectApiMixin, DashboardApiMixin, GradeApiMixin,
           ReportApiMixin, InspectionReportApiMixin,
           CatalogApiMixin, InventoryApiMixin, ConnectionApiMixin,
           KnowledgeApiMixin, SettingsApiMixin,
-          TerminalApiMixin, LogViewerApiMixin, MaskingApiMixin, LogsApiMixin, WorkspaceApiMixin):
+          TerminalApiMixin, LogViewerApiMixin, MaskingApiMixin, LogsApiMixin,
+          TopologyApiMixin, WorkspaceApiMixin):
     """pywebview에 노출되는 최종 API — 실제 로직은 전부 api/*.py의 mixin에 있음."""
     pass
 

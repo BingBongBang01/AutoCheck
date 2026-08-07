@@ -35,6 +35,48 @@ def parse_counters_errors(raw_output):
     return result
 
 
+# show interfaces status 의 Vlan 열에 'in Po2048' 로 Port-Channel 소속이 적힌다:
+#     Et3        core_agg_mlag connected    in Po2048 full   1G     EbraTestPhyPort
+# 구성도(engine/topology_builder.py)가 병렬 링크를 하나의 묶음으로 접는 근거가 이것이다 —
+# 안 묶으면 Core↔Agg 사이에 선 4개가 겹쳐 그려져 읽을 수 없다.
+_PO_MEMBER_RE = re.compile(r"^(\S+)\s+.*?\bin\s+Po(\d+)\b", re.IGNORECASE)
+# show interfaces description 의 4열 형태:
+#     Interface   Status   Protocol   Description
+#     Et3         up       up         core_agg_mlag
+_DESCRIPTION_RE = re.compile(r"^(\S+)\s+(\S+)\s+(\S+)(?:\s+(.*))?$")
+_DESCRIPTION_HEADER_RE = re.compile(r"^\s*Interface\b", re.IGNORECASE)
+
+
+def parse_port_channel_membership(raw_output):
+    """반환: {interface: "Port-ChannelNNNN"} — 소속이 없는 포트는 담지 않는다."""
+    result = {}
+    for line in raw_output.splitlines():
+        m = _PO_MEMBER_RE.match(line.strip())
+        if m:
+            result[m.group(1)] = f"Port-Channel{m.group(2)}"
+    return result
+
+
+def parse_descriptions(raw_output):
+    """`show interfaces description` -> {interface: description}. 설명이 빈 포트는 담지 않는다.
+
+    설명은 사람이 붙인 것이라 구성도 링크 라벨로 가장 유용하다('core_agg_mlag' 처럼 그 링크가
+    무엇인지 작업자가 이미 적어 둔 경우가 많다).
+    """
+    result = {}
+    for line in raw_output.splitlines():
+        stripped = line.rstrip()
+        if not stripped.strip() or _DESCRIPTION_HEADER_RE.match(stripped):
+            continue
+        m = _DESCRIPTION_RE.match(stripped)
+        if not m:
+            continue
+        description = (m.group(4) or "").strip()
+        if description:
+            result[m.group(1)] = description
+    return result
+
+
 def parse_counters_discards(raw_output):
     result = {}
     for line in raw_output.splitlines():

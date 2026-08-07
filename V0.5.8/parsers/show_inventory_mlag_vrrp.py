@@ -20,15 +20,34 @@ def parse_inventory(raw_output):
 
 # --- MLAG ---
 MLAG_FIELD_RE = re.compile(r"^\s*(State|Negotiation status|Peer-Link status|Local-int status)\s*:\s*(\S+)", re.IGNORECASE)
+# 'MLAG Configuration:' 절의 값들 — 상태가 아니라 '무엇과 짝인지'를 말해 준다.
+# 네트워크 구성도(engine/topology_builder.py)가 MLAG 쌍을 찾는 근거가 peer-link 의 Po 다:
+#     peer-link  :  Port-Channel4093
+# 이 Po 에 속한 물리 포트의 LLDP 이웃이 곧 peer 장비다.
+# 'Peer-Link status' 와 구별해야 하므로 status 로 끝나지 않는 것만 잡는다.
+MLAG_CONFIG_FIELD_RE = re.compile(
+    r"^\s*(domain-id|local-interface|peer-link|peer-address)\s*:\s*(\S+)", re.IGNORECASE)
 
 
 def parse_mlag(raw_output):
+    """반환 예: {"state": "Active", "negotiation_status": "Connected",
+                 "peer_link_status": "Up", "peer_link": "Port-Channel4093",
+                 "peer_address": "10.10.10.3", "is_active_full": bool}
+
+    config 절 키(peer_link/peer_address/domain_id/local_interface)는 나중에 더한 것이다 —
+    기존 소비자(engine/comparators/mlag.py, engine/state_poller.py)는 상태 키만 읽으므로
+    키가 늘어도 영향이 없다.
+    """
     result = {}
     for line in raw_output.splitlines():
         m = MLAG_FIELD_RE.match(line)
         if m:
             key = m.group(1).lower().replace(" ", "_").replace("-", "_")
             result[key] = m.group(2)
+            continue
+        m = MLAG_CONFIG_FIELD_RE.match(line)
+        if m:
+            result[m.group(1).lower().replace("-", "_")] = m.group(2)
     result["is_active_full"] = (result.get("state", "").lower() == "active" and
                                  result.get("negotiation_status", "").lower() == "connected")
     return result

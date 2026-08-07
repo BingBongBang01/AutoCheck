@@ -1535,3 +1535,102 @@ table.dtable tbody tr.dash-clickable:hover .dash-goto { visibility: visible; }
   font-size: 10px; font-weight: 700; border-radius: 999px; padding: 2px 8px;
   white-space: nowrap;
 }
+
+/* ===== 네트워크 구성도 (web_ui/js/topology.js) =====
+   SVG 자체는 engine/topology_svg.py 가 만든다. 여기서는 그 SVG 의 클래스에 색만 입힌다 —
+   화면은 앱 테마(라이트/다크) 토큰을 따라가고, 파일로 내보낼 때는 렌더러가 값을 인라인으로
+   심는다(같은 렌더러, 다른 색 출처). */
+/* 높이는 뷰포트 계산이 아니라 명시적 픽셀로 준다 — 이 앱의 #content 는 grid 영역이라
+   부모 높이가 auto 이고, 그러면 %/flex 기반 높이가 접힌다(실시간 감시 패널도 로그 박스에
+   픽셀 높이를 주는 이유가 같다). 캔버스가 높이의 단일 출처다. */
+.tp-card { padding: 0; overflow: hidden; }
+.tp-toolbar-wrap { padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--sidebar); }
+.tp-toolbar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tp-status { font-size: 11px; color: var(--sub); }
+.tp-status-ok { color: var(--success); }
+.tp-status-warn { color: var(--warning); }
+.tp-status-bad { color: var(--critical); font-weight: 600; }
+.tp-warn-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 8px; }
+.tp-warn { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; line-height: 1.4;
+  color: var(--warning); background: var(--hover); border-radius: var(--radius-sm); padding: 3px 8px; }
+.tp-warn .material-symbols-rounded { font-size: 14px; }
+.tp-warn-unregistered { color: var(--major); }
+
+.tp-body { display: flex; gap: 10px; padding: 10px 12px 12px; align-items: stretch; }
+.tp-canvas { position: relative; flex: 1; min-width: 0; height: 620px; overflow: hidden; cursor: grab;
+  background: var(--input-bg); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.tp-canvas.tp-panning { cursor: grabbing; }
+.tp-canvas.tp-dragging { cursor: move; }
+.tp-stage { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+.tp-stage svg { display: block; }
+.tp-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  text-align: center; color: var(--sub); font-size: 12px; padding: 20px; }
+.tp-empty .material-symbols-rounded { font-size: 40px; opacity: .5; }
+.tp-empty-hint, .tp-detail-hint { font-size: 10.5px; color: var(--sub); line-height: 1.6; margin-top: 6px; }
+
+.tp-detail { width: 290px; flex-shrink: 0; height: 620px; overflow-y: auto; font-size: 11px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; background: var(--card); }
+.tp-detail-empty { color: var(--sub); }
+.tp-detail-head { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+.tp-detail-head h3 { font-size: 13px; margin: 0; }
+.tp-detail-block { border-top: 1px solid var(--border); padding-top: 7px; margin-top: 7px; }
+.tp-detail-block h4 { font-size: 11px; margin: 0 0 5px; color: var(--sub); }
+.tp-kv { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
+.tp-kv span { color: var(--sub); }
+.tp-kv em { font-style: normal; font-weight: 600; text-align: right; word-break: break-all; }
+.tp-kv-sub { font-size: 10px; color: var(--sub); padding-bottom: 4px; }
+.tp-chip { font-size: 9.5px; padding: 1px 6px; border-radius: 9px; background: var(--hover); color: var(--sub); }
+.tp-chip-warn { color: var(--warning); }
+.tp-chip-bad { color: var(--critical); }
+.tp-ok { color: var(--success); }
+.tp-bad { color: var(--critical); }
+.tp-link-row { display: flex; justify-content: space-between; gap: 8px; padding: 3px 5px;
+  border-left: 2px solid var(--success); border-radius: 2px; margin-bottom: 3px; background: var(--input-bg); }
+.tp-link-row em { font-style: normal; color: var(--sub); font-size: 10px; white-space: nowrap; }
+.tp-state-down { border-left-color: var(--critical); }
+.tp-state-degraded { border-left-color: var(--warning); }
+.tp-state-unknown { border-left-color: var(--sub); }
+.tp-chip.tp-state-down { color: var(--critical); }
+.tp-chip.tp-state-degraded { color: var(--warning); }
+
+.tp-modal-card { width: min(760px, 92vw); max-height: 84vh; display: flex; flex-direction: column; }
+.tp-modal-body { overflow-y: auto; font-size: 11px; }
+.tp-diag-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+.tp-diag-table th, .tp-diag-table td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--border); }
+.tp-diag-table th { color: var(--sub); font-weight: 600; font-size: 10.5px; }
+.tp-diag-bad td { color: var(--warning); }
+.tp-diag-warn { color: var(--warning); font-size: 10.5px; line-height: 1.6; }
+
+/* --- SVG 내부 요소 (engine/topology_svg.py 가 붙이는 클래스) --- */
+.tp-svg { font-family: inherit; }
+.tp-icon-body { fill: var(--card); stroke: var(--text); stroke-width: 1.4; }
+.tp-icon-dashed { stroke-dasharray: 4 3; stroke: var(--sub); }
+.tp-icon-glyph { fill: none; stroke: var(--text); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.tp-icon-question { fill: var(--sub); font-size: 20px; font-weight: 700; }
+.tp-node { cursor: move; }
+.tp-node-name { fill: var(--text); font-size: 12px; font-weight: 700; }
+.tp-node-ip { fill: var(--sub); font-size: 10px; }
+.tp-node-unregistered .tp-node-name { fill: var(--sub); }
+.tp-node.tp-selected .tp-icon-body { stroke: var(--primary); stroke-width: 2.4; }
+.tp-tier-label { fill: var(--sub); font-size: 11px; font-weight: 600; letter-spacing: .04em; }
+.tp-tier-line { stroke: var(--border); stroke-width: 1; stroke-dasharray: 2 6; }
+.tp-link { fill: none; stroke: var(--success); stroke-width: 1.6; stroke-linecap: round; }
+.tp-link-bundle { stroke-width: 3.4; }
+.tp-link-down { stroke: var(--critical); }
+.tp-link-degraded { stroke: var(--warning); }
+.tp-link-unknown { stroke: var(--sub); }
+.tp-link-onesided { stroke-dasharray: 7 4; }
+.tp-link-group { cursor: pointer; }
+.tp-link-group:hover .tp-link { stroke-width: 4.2; }
+.tp-link-group.tp-selected .tp-link { stroke: var(--primary); stroke-width: 4.6; }
+.tp-port { fill: var(--sub); font-size: 9px; }
+.tp-bundle-label { fill: var(--text); font-size: 10px; font-weight: 600; }
+.tp-link-desc { fill: var(--sub); font-size: 9px; font-style: italic; }
+.tp-mark-down { stroke: var(--critical); stroke-width: 2; fill: none; }
+.tp-mark-degraded { stroke: var(--warning); stroke-width: 2; fill: var(--card); }
+.tp-pair-box { fill: none; stroke: var(--sub); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.tp-pair-label { fill: var(--sub); font-size: 9px; font-weight: 600; }
+.tp-pair-box-bad { stroke: var(--critical); }
+.tp-legend-box { fill: var(--card); stroke: var(--border); stroke-width: 1; }
+.tp-legend-title { fill: var(--text); font-size: 10px; font-weight: 700; }
+.tp-legend-text { fill: var(--sub); font-size: 9px; }

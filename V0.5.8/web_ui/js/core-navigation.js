@@ -50,6 +50,7 @@ async function navigate(page) {
     // collection은 사이드바에 항목이 없다 — 채점 실행(run_grade) 화면이라 남겨 둔 라우터 키다.
     collection: renderCollection,
     realtimewatch: renderRealtimeWatch,
+    topology: renderTopology,
     inspectionlog: renderInspectionLog,
     loganalysis: renderLogAnalysis,
     logmasking: renderLogMasking,
