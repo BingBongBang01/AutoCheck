@@ -61,10 +61,11 @@ def render_svg(topology, layout_info, *, standalone=False, title=""):
     parts.append(_defs())
     parts.append(_tier_bands(layout_info))
     # 쌍 상자 -> 링크 -> 노드 순서. 노드가 마지막이어야 선이 기호 밑으로 지나간다.
-    parts.append(_pair_boxes(topology, nodes))
-    parts.append(_links(topology, nodes))
+    pair_markup, pair_labels = _pair_boxes(topology, nodes)
+    parts.append(pair_markup)
+    parts.append(_links(topology, nodes, pair_labels))
     parts.append(_nodes(topology))
-    parts.append(_legend(height))
+    parts.append(_legend(topology, width, height))
     parts.append("</svg>")
     return "".join(p for p in parts if p)
 
@@ -127,8 +128,10 @@ def _export_style():
 .tp-icon-dashed{{stroke-dasharray:4 3;stroke:{p['sub']}}}
 .tp-icon-glyph{{fill:none;stroke:{p['text']};stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}}
 .tp-icon-question{{fill:{p['sub']};font-size:20px;font-weight:700}}
-.tp-node-name{{fill:{p['text']};font-size:12px;font-weight:700}}
-.tp-node-ip{{fill:{p['sub']};font-size:10px}}
+.tp-node-name{{fill:{p['text']};font-size:12px;font-weight:700;
+  paint-order:stroke;stroke:{p['bg']};stroke-width:3px;stroke-linejoin:round}}
+.tp-node-ip{{fill:{p['sub']};font-size:10px;
+  paint-order:stroke;stroke:{p['bg']};stroke-width:3px;stroke-linejoin:round}}
 .tp-node-unregistered .tp-node-name{{fill:{p['sub']}}}
 .tp-tier-label{{fill:{p['sub']};font-size:11px;font-weight:600;letter-spacing:.04em}}
 .tp-tier-line{{stroke:{p['border']};stroke-width:1;stroke-dasharray:2 6}}
@@ -142,6 +145,8 @@ def _export_style():
 .tp-port{{fill:{p['sub']};font-size:9px}}
 .tp-bundle-label{{fill:{p['text']};font-size:10px;font-weight:600}}
 .tp-link-desc{{fill:{p['sub']};font-size:9px;font-style:italic}}
+.tp-port,.tp-bundle-label,.tp-link-desc,.tp-pair-label{{
+  paint-order:stroke;stroke:{p['bg']};stroke-width:2.5px;stroke-linejoin:round}}
 .tp-mark-down{{stroke:{p['down']};stroke-width:2;fill:none}}
 .tp-mark-degraded{{stroke:{p['degraded']};stroke-width:2;fill:{p['bg']}}}
 .tp-pair-box{{fill:none;stroke:{p['sub']};stroke-width:1.2;stroke-dasharray:5 4}}
@@ -169,8 +174,11 @@ def _tier_bands(layout_info):
 
 # ---------- MLAG 쌍 상자 ----------
 def _pair_boxes(topology, nodes):
-    """이중화 쌍을 점선 상자로 감싼다 — 두 장비가 하나의 논리 장비처럼 동작한다는 표시."""
-    out = []
+    """이중화 쌍을 점선 상자로 감싼다 — 두 장비가 하나의 논리 장비처럼 동작한다는 표시.
+
+    반환: (마크업, 쌍 이름표가 차지한 자리) — 자리는 링크 라벨이 그 위에 겹치지 않게 넘겨준다.
+    """
+    out, reserved = [], []
     for pair in topology.get("pairs") or []:
         a, b = nodes.get(pair.get("a")), nodes.get(pair.get("b"))
         if not a or not b or "x" not in a or "x" not in b:
@@ -182,40 +190,45 @@ def _pair_boxes(topology, nodes):
         right = max(a["x"], b["x"]) + NODE_W / 2 + pad
         top = min(a["y"], b["y"]) - pad
         bottom = max(a["y"], b["y"]) + NODE_H + pad_bottom
+        # 쌍이 나란히 있지 않으면(계층 판정이 엇갈렸거나 사용자가 끌어 옮겼다) 상자가 사이의
+        # 다른 장비까지 감싼다 — 그러면 '이 셋이 한 쌍'으로 읽힌다. 그럴 땐 상자를 그리지 않는다.
+        others = [(n["x"] - NODE_W / 2, n["y"], NODE_W, NODE_H) for n in nodes.values()
+                  if n["id"] not in (pair.get("a"), pair.get("b")) and "x" in n]
+        if any(_boxes_overlap((left, top, right - left, bottom - top), box) for box in others):
+            continue
         bad = "" if pair.get("healthy", True) else " tp-pair-box-bad"
         label = f"MLAG {pair.get('domain') or ''}".strip()
+        reserved.append(_text_box(label, 9, left + 6 + _text_box(label, 9, 0, 0)[2] / 2, top - 4))
         out.append(
             f'<g class="tp-pair" data-tp-pair={quoteattr(f"{pair.get('a')}|{pair.get('b')}")}>'
             f'<rect class="tp-pair-box{bad}" x="{left:.0f}" y="{top:.0f}" '
             f'width="{right - left:.0f}" height="{bottom - top:.0f}" rx="8"/>'
             f'<text class="tp-pair-label" x="{left + 6:.0f}" y="{top - 4:.0f}">{escape(label)}</text>'
             f'</g>')
-    return "".join(out)
+    return "".join(out), reserved
 
 
 # ---------- 링크 ----------
-def _links(topology, nodes):
+def _links(topology, nodes, reserved=()):
     geometry = _link_geometry(topology, nodes)
-    label_slots = _label_slots(geometry)
+    placer = _LabelPlacer(topology, reserved)
     out = []
     for edge in topology.get("edges") or []:
-        coords = geometry.get(edge["id"])
-        if coords is None:
+        geom = geometry.get(edge["id"])
+        if geom is None:
             continue
-        x1, y1, x2, y2 = coords
         state = edge.get("state") or "unknown"
         classes = ["tp-link", f"tp-link-{state}"]
         if edge.get("count", 1) > 1:
             classes.append("tp-link-bundle")
         if edge.get("one_sided"):
             classes.append("tp-link-onesided")
-        body = [f'<line class="{" ".join(classes)}" x1="{x1:.0f}" y1="{y1:.0f}" '
-                f'x2="{x2:.0f}" y2="{y2:.0f}"/>']
+        body = [f'<path class="{" ".join(classes)}" d="{_path_d(geom)}"/>']
         if edge.get("count", 1) > 1:
-            body.append(_bracket(x1, y1, x2, y2, state))
-        body.append(_port_labels(edge, x1, y1, x2, y2))
-        body.append(_midpoint_label(edge, x1, y1, x2, y2, label_slots.get(edge["id"], 0.5)))
-        body.append(_state_mark(state, x1, y1, x2, y2))
+            body.append(_bracket(geom, state))
+        body.append(_port_labels(edge, geom, placer))
+        body.append(_midpoint_label(edge, geom, placer))
+        body.append(_state_mark(state, geom))
         out.append(f'<g class="tp-link-group" data-tp-link={quoteattr(edge["id"])}>'
                    + "".join(p for p in body if p) + "</g>")
     return "".join(out)
@@ -223,10 +236,12 @@ def _links(topology, nodes):
 
 _FAN_SPREAD = 34        # 위/아래로 나가는 링크를 펼칠 폭
 _FAN_SPREAD_LEVEL = 20  # 좌/우로 나가는 링크를 펼칠 높이
+_AVOID_MARGIN = 15      # 남의 기호를 비껴갈 때 남기는 여유
+_MAX_BOW = 260          # 아무리 멀리 돌아가도 이만큼까지 — 화면 밖으로 나가면 더 나쁘다
 
 
 def _link_geometry(topology, nodes):
-    """각 링크의 시작·끝 좌표. 반환: {edge_id: (x1, y1, x2, y2)}
+    """각 링크의 기하. 반환: {edge_id: (x1, y1, x2, y2, cx, cy)} — cx 가 None 이면 직선.
 
     같은 노드에서 같은 방향으로 나가는 링크들을 **기호 가장자리에 부채꼴로 펼친다.**
     한 점에서 모두 나가면 선이 겹쳐 몇 개인지 보이지 않고, 포트 라벨도 같은 자리에 쌓인다
@@ -234,6 +249,11 @@ def _link_geometry(topology, nodes):
     실제 도면에서 연결점을 장비 면에 나눠 그리는 것과 같은 이유다.
 
     펼치는 순서는 '상대 노드의 x 좌표' 순이다 — 그래야 선이 불필요하게 교차하지 않는다.
+
+    그리고 **직선이 남의 장비를 관통하면 그 장비를 비껴 휘게 한다**(_route). 계층형 배치는
+    위아래 이웃 계층 사이만 곧게 이을 수 있다. 링·풀메시처럼 같은 계층끼리 잇는 구성이나
+    계층을 건너뛰는 직결(Core→Access, 방화벽→관리망)에서는 직선이 중간 장비 위를 그대로
+    지나가 '어디에 붙은 선인지' 읽을 수 없게 된다 — 실제 도면에서 선을 돌려 그리는 이유다.
     """
     positioned = {n["id"]: n for n in (topology.get("nodes") or []) if "x" in n}
     edges = [e for e in (topology.get("edges") or [])
@@ -253,8 +273,102 @@ def _link_geometry(topology, nodes):
         a, b = positioned[edge["a"]], positioned[edge["b"]]
         x1, y1 = _anchor(a, b, slots, edge["id"], "a")
         x2, y2 = _anchor(b, a, slots, edge["id"], "b")
-        geometry[edge["id"]] = (x1, y1, x2, y2)
+        # 피해 갈 대상은 **기호 상자만** 이다. 장비명 줄까지 피하게 하면 촘촘한 Access 줄에서
+        # 선이 크게 돌다가 오히려 다른 기호를 지나간다(실측). 이름 위를 지나가는 선은
+        # 이름에 배경색 테두리를 둘러 읽히게 한다(style.css 의 .tp-node-name).
+        blockers = [_icon_box(n) for n in positioned.values()
+                    if n["id"] not in (edge["a"], edge["b"])]
+        cx, cy = _route(x1, y1, x2, y2, blockers)
+        geometry[edge["id"]] = (x1, y1, x2, y2, cx, cy)
     return geometry
+
+
+def _icon_box(node):
+    return (node["x"] - _ICON_HALF, node["y"], ICON_SIZE, ICON_SIZE)
+
+
+def _node_boxes(node):
+    """기호 상자 + 그 아래 장비명·IP 줄. 선과 라벨은 둘 다 피해야 한다 —
+    이름 위로 선이 지나가면 이름을 못 읽고, 이름은 기호보다 넓은 경우가 대부분이다."""
+    bx, by, bw, bh = _icon_box(node)
+    text_w = max(_text_box(node.get("name") or "", 12, 0, 0)[2],
+                 _text_box(node.get("ip") or "", 10, 0, 0)[2], ICON_SIZE) + 8
+    return [(bx, by, bw, bh), (node["x"] - text_w / 2, by + bh, text_w, 30)]
+
+
+def _route(x1, y1, x2, y2, blockers):
+    """직선이 남의 기호를 지나면 비껴갈 2차 베지어 제어점을 돌려준다. 안 지나면 (None, None).
+
+    2차 베지어는 t 에서 현(弦)으로부터 `2t(1-t)·(C-M)` 만큼 휜다(M 은 현의 중점). 그래서
+    '이 장비를 이만큼 비켜야 한다'는 요구를 제어점 거리로 바로 환산할 수 있다. 어느 쪽으로
+    휘는지는 **덜 휘어도 되는 쪽**으로 정한다 — 결정적이고, 불필요하게 크게 돌지 않는다.
+    """
+    import math
+
+    length = math.hypot(x2 - x1, y2 - y1)
+    if length < 1:
+        return None, None
+    ux, uy = (x2 - x1) / length, (y2 - y1) / length
+    nx, ny = -uy, ux
+    need_pos = need_neg = 0.0
+    for box in blockers:
+        if not _segment_hits_box(x1, y1, x2, y2, box):
+            continue
+        bx, by, bw, bh = box
+        mx, my = bx + bw / 2, by + bh / 2
+        along = ((mx - x1) * ux + (my - y1) * uy) / length
+        along = min(0.88, max(0.12, along))
+        profile = 2 * along * (1 - along)               # 그 지점에서의 휨 비율
+        side = (mx - x1) * nx + (my - y1) * ny          # 부호 있는 거리
+        reach = abs(nx) * bw / 2 + abs(ny) * bh / 2 + _AVOID_MARGIN
+        need_pos = max(need_pos, (side + reach) / profile)
+        need_neg = max(need_neg, (reach - side) / profile)
+    if not need_pos and not need_neg:
+        return None, None
+    bow = need_pos if need_pos <= need_neg else -need_neg
+    mx, my = (x1 + x2) / 2, (y1 + y2) / 2
+    # 휘게 했더니 **다른** 장비를 지나는 경우가 있다(피한 쪽에 또 장비가 있는 배치).
+    # 곡선을 실제로 훑어 보고, 아직 걸리면 조금 더 크게 돌린다.
+    for _ in range(4):
+        bow = max(-_MAX_BOW, min(_MAX_BOW, bow))
+        cx, cy = mx + nx * bow, my + ny * bow
+        if not _curve_hits_any((x1, y1, x2, y2, cx, cy), blockers):
+            return cx, cy
+        if abs(bow) >= _MAX_BOW:
+            break
+        bow += 46 if bow >= 0 else -46
+    return cx, cy
+
+
+def _curve_hits_any(geom, blockers):
+    """곡선을 훑어 남의 기호 안으로 들어가는지 본다(제어점 하나짜리라 촘촘히 볼 필요는 없다)."""
+    points = [_point_at(geom, i / 24) for i in range(1, 24)]
+    for bx, by, bw, bh in blockers:
+        if any(bx <= px <= bx + bw and by <= py <= by + bh for px, py in points):
+            return True
+    return False
+
+
+def _segment_hits_box(x1, y1, x2, y2, box):
+    """선분이 사각형을 지나는가 — Liang-Barsky 절단."""
+    bx, by, bw, bh = box
+    dx, dy = x2 - x1, y2 - y1
+    t0, t1 = 0.0, 1.0
+    for p, q in ((-dx, x1 - bx), (dx, bx + bw - x1), (-dy, y1 - by), (dy, by + bh - y1)):
+        if p == 0:
+            if q < 0:
+                return False
+            continue
+        r = q / p
+        if p < 0:
+            if r > t1:
+                return False
+            t0 = max(t0, r)
+        else:
+            if r < t0:
+                return False
+            t1 = min(t1, r)
+    return t0 <= t1
 
 
 def _direction(near, far):
@@ -282,74 +396,136 @@ def _anchor(near, far, slots, edge_id, end):
     return x, center_y + offset
 
 
-def _label_slots(geometry):
-    """중앙 라벨이 겹치지 않게 선 위에서의 위치(0~1)를 어긋나게 정한다.
-
-    이중화 구성에서는 대각선 두 개가 정확히 같은 점에서 교차한다(Core1→Agg2 와 Core2→Agg1).
-    두 라벨이 같은 자리에 겹쳐 찍히면 둘 다 못 읽으므로, 중점이 같은 칸에 떨어지는 링크들은
-    각자의 선 위에서 조금씩 다른 지점에 라벨을 놓는다. 결정적이어야 하므로 edge_id 정렬 순서를
-    쓴다(무작위 흔들기는 폴링마다 그림이 달라진다).
-    """
-    buckets = {}
-    for edge_id, (x1, y1, x2, y2) in geometry.items():
-        cell = (round((x1 + x2) / 2 / 56), round((y1 + y2) / 2 / 34))
-        buckets.setdefault(cell, []).append(edge_id)
-    slots = {}
-    for members in buckets.values():
-        members.sort()
-        total = len(members)
-        for index, edge_id in enumerate(members):
-            if total == 1:
-                slots[edge_id] = 0.5
-            else:
-                # 0.36 ~ 0.68 사이에 고르게 — 양 끝의 노드 라벨과 포트 라벨을 피하는 범위다.
-                slots[edge_id] = 0.36 + (index / (total - 1)) * 0.32
-    return slots
+# ---------- 곡선 위의 점 ----------
+def _path_d(geom):
+    x1, y1, x2, y2, cx, cy = geom
+    if cx is None:
+        return f"M{x1:.1f} {y1:.1f} L{x2:.1f} {y2:.1f}"
+    return f"M{x1:.1f} {y1:.1f} Q{cx:.1f} {cy:.1f} {x2:.1f} {y2:.1f}"
 
 
-def _bracket(x1, y1, x2, y2, state):
-    """묶음 표시 — 선의 양 끝에 짧은 직교 눈금을 넣는다(LAG 관례)."""
+def _point_at(geom, t):
+    x1, y1, x2, y2, cx, cy = geom
+    if cx is None:
+        return x1 + (x2 - x1) * t, y1 + (y2 - y1) * t
+    k = 1 - t
+    return (k * k * x1 + 2 * k * t * cx + t * t * x2,
+            k * k * y1 + 2 * k * t * cy + t * t * y2)
+
+
+def _unit_at(geom, t):
+    """그 지점에서의 진행 방향(단위 벡터)."""
     import math
 
-    length = math.hypot(x2 - x1, y2 - y1) or 1
-    nx, ny = -(y2 - y1) / length * 5, (x2 - x1) / length * 5
+    x1, y1, x2, y2, cx, cy = geom
+    if cx is None:
+        dx, dy = x2 - x1, y2 - y1
+    else:
+        k = 1 - t
+        dx = 2 * k * (cx - x1) + 2 * t * (x2 - cx)
+        dy = 2 * k * (cy - y1) + 2 * t * (y2 - cy)
+    length = math.hypot(dx, dy) or 1
+    return dx / length, dy / length
+
+
+def _chord(geom):
+    import math
+
+    return math.hypot(geom[2] - geom[0], geom[3] - geom[1]) or 1
+
+
+def _bracket(geom, state):
+    """묶음 표시 — 선의 양 끝에 짧은 직교 눈금을 넣는다(LAG 관례)."""
     ticks = []
     for t in (0.12, 0.88):
-        cx, cy = x1 + (x2 - x1) * t, y1 + (y2 - y1) * t
-        ticks.append(f'<line class="tp-link tp-link-{state}" x1="{cx - nx:.0f}" y1="{cy - ny:.0f}" '
-                     f'x2="{cx + nx:.0f}" y2="{cy + ny:.0f}"/>')
+        px, py = _point_at(geom, t)
+        ux, uy = _unit_at(geom, t)
+        nx, ny = -uy * 5, ux * 5
+        ticks.append(f'<line class="tp-link tp-link-{state}" x1="{px - nx:.0f}" y1="{py - ny:.0f}" '
+                     f'x2="{px + nx:.0f}" y2="{py + ny:.0f}"/>')
     return "".join(ticks)
 
 
-_PORT_LABEL_INSET = 18      # 끝점에서 선을 따라 안쪽으로 들어가는 거리
+# ---------- 라벨 자리 잡기 ----------
+# 라벨은 선 위 어디에 놓아도 되지만, **겹치면 하나도 못 읽는다.** 팬아웃이 큰 구성
+# (Core 1대에 Access 24대)에서는 고정 위치로는 반드시 쌓인다. 그래서 후보 지점을 선을 따라
+# 여러 개 만들어 두고 이미 놓인 라벨·기호와 겹치지 않는 첫 자리를 고른다. 순서가 고정돼 있어
+# (edges 는 빌더에서 정렬돼 온다) 같은 입력에 같은 그림이 나온다.
 _PORT_LABEL_OFFSET = 6      # 선에서 직각으로 비키는 거리
+# 끝점에서 선을 따라 들어가는 거리 후보 — 앞쪽이 우선. 팬아웃이 큰 장비(Core 1대에 Access
+# 24대)에서는 가까운 자리가 금방 차므로 멀리까지 후보를 둔다.
+_PORT_LABEL_STEPS = (16, 27, 38, 49, 60, 72, 86, 100, 116, 134, 154)
+_MID_LABEL_SLOTS = (0.5, 0.42, 0.58, 0.34, 0.66, 0.28, 0.72, 0.22, 0.78)
 
 
-def _port_labels(edge, x1, y1, x2, y2):
+class _LabelPlacer:
+    """이미 놓인 글자 상자와 장비 기호를 기억했다가 겹치지 않는 자리를 고른다."""
+
+    def __init__(self, topology, reserved=()):
+        self.taken = list(reserved)
+        for node in topology.get("nodes") or []:
+            if "x" in node:
+                # 기호와 장비명·IP 줄 — 라벨이 이 위에 얹히면 둘 다 못 읽는다.
+                self.taken.extend(_node_boxes(node))
+
+    def place(self, candidates):
+        """candidates: [(x, y, w, h)] 우선순위 순. 겹치지 않는 첫 상자를 잡아 돌려준다.
+
+        전부 겹치면 첫 후보를 그대로 쓴다 — 라벨을 지우면 '어느 포트인지'를 잃는다.
+        겹쳐서라도 그리는 편이 낫고, 그 상태는 노드를 끌어 배치를 고치면 풀린다.
+        """
+        for box in candidates:
+            if not any(_boxes_overlap(box, other) for other in self.taken):
+                self.taken.append(box)
+                return box
+        self.taken.append(candidates[0])
+        return candidates[0]
+
+
+def _boxes_overlap(a, b):
+    return (a[0] < b[0] + b[2] and b[0] < a[0] + a[2]
+            and a[1] < b[1] + b[3] and b[1] < a[1] + a[3])
+
+
+def _text_box(text, size, cx, baseline):
+    """가운데 정렬된 글자의 대략적인 상자. 한글은 폭이 글자 크기와 거의 같다."""
+    width = sum(size * (1.0 if ord(ch) > 0x2E80 else 0.56) for ch in text)
+    return (cx - width / 2, baseline - size * 0.8, width, size + 2)
+
+
+def _port_labels(edge, geom, placer):
     """양 끝 인터페이스명 — 어느 포트에 꽂혀 있는지가 도면의 핵심 정보다.
 
-    끝점에 그대로 쓰면 장비 기호 위에 얹혀 둘 다 안 읽힌다. 선을 따라 안쪽으로 조금
-    들어온 지점에 놓고, 선과 겹치지 않게 직각 방향으로 비킨다.
+    끝점에 그대로 쓰면 장비 기호 위에 얹혀 둘 다 안 읽힌다. 선을 따라 안쪽으로 들어온
+    지점에 놓고, 선과 겹치지 않게 직각 방향으로 비킨다. 그 자리가 이미 찼으면 더 안쪽으로
+    물러난다 — 한 장비에서 여러 링크가 나가면 첫 자리는 서로 겹칠 수밖에 없다.
     """
-    import math
-
-    length = math.hypot(x2 - x1, y2 - y1) or 1
-    ux, uy = (x2 - x1) / length, (y2 - y1) / length     # 단위 방향 벡터
-    nx, ny = -uy, ux                                    # 직각 방향
-    # 라벨을 선의 어느 쪽에 둘지는 링크마다 일정해야 한다(양 끝이 반대쪽이면 지그재그로 보인다).
-    inset = min(_PORT_LABEL_INSET, length / 2 - 2) if length > 8 else 0
+    chord = _chord(geom)
     out = []
-    for port, (px, py), direction in ((edge.get("a_port"), (x1, y1), 1),
-                                      (edge.get("b_port"), (x2, y2), -1)):
+    for port, from_start in ((edge.get("a_port"), True), (edge.get("b_port"), False)):
         if not port:
             continue
-        cx = px + ux * inset * direction + nx * _PORT_LABEL_OFFSET
-        cy = py + uy * inset * direction + ny * _PORT_LABEL_OFFSET
-        # 거의 수평인 선은 글자가 선에 닿으므로 위로 한 번 더 올린다(글자는 baseline 기준).
-        if abs(uy) < 0.35:
-            cy -= 3
-        out.append(f'<text class="tp-port" x="{cx:.0f}" y="{cy:.0f}" '
-                   f'text-anchor="middle">{escape(_short_port(port))}</text>')
+        text = _short_port(port)
+        candidates = []
+        for step in _PORT_LABEL_STEPS:
+            if step > chord * 0.45 and candidates:
+                break
+            t = min(0.45, step / chord)
+            t = t if from_start else 1 - t
+            px, py = _point_at(geom, t)
+            ux, uy = _unit_at(geom, t)
+            # 선의 양쪽, 두 가지 거리 — 팬아웃이 큰 장비에서는 한쪽 줄만으로는 자리가 모자란다.
+            for offset in (_PORT_LABEL_OFFSET, -_PORT_LABEL_OFFSET,
+                           _PORT_LABEL_OFFSET + 9, -_PORT_LABEL_OFFSET - 9):
+                cx = px - uy * offset
+                cy = py + ux * offset
+                # 거의 수평인 선은 글자가 선에 닿으므로 위로 한 번 더 올린다(글자는 baseline 기준).
+                if abs(uy) < 0.35:
+                    cy -= 3 if offset > 0 else -3
+                candidates.append(_text_box(text, 9, cx, cy))
+        box = placer.place(candidates)
+        out.append(f'<text class="tp-port" x="{box[0] + box[2] / 2:.0f}" '
+                   f'y="{box[1] + 7.2:.0f}" text-anchor="middle">{escape(text)}</text>')
     return "".join(out)
 
 
@@ -364,26 +540,42 @@ def _short_port(port):
     return port
 
 
-def _midpoint_label(edge, x1, y1, x2, y2, slot=0.5):
-    """묶음 이름과 링크 설명을 선 위에 — 둘 다 있으면 두 줄. slot 은 겹침을 피한 위치(0~1)."""
+def _midpoint_label(edge, geom, placer):
+    """묶음 이름과 링크 설명을 선 위에 — 둘 다 있으면 두 줄.
+
+    Po 이름이 없어도 병렬 링크면 개수(×N)는 반드시 적는다. 병렬 링크는 한 선으로 접히므로
+    개수가 없으면 굵은 선 하나로 보이고, 이중화가 몇 가닥인지 도면에서 사라진다. 시스코의
+    `show interfaces status` 에는 Po 소속 열이 없어 **묶음 이름 없이 접히는 경우가 흔하다.**
+    """
     lines = []
+    count = edge.get("count", 1)
     if edge.get("bundle"):
-        lines.append(("tp-bundle-label", f"{_short_port(edge['bundle'])} ×{edge.get('count', 1)}"))
+        lines.append(("tp-bundle-label", 10, f"{_short_port(edge['bundle'])} ×{count}"))
+    elif count > 1:
+        lines.append(("tp-bundle-label", 10, f"×{count}"))
     if edge.get("label"):
-        lines.append(("tp-link-desc", edge["label"]))
+        lines.append(("tp-link-desc", 9, edge["label"]))
     if not lines:
         return ""
-    cx, cy = x1 + (x2 - x1) * slot, y1 + (y2 - y1) * slot
+
+    block_h = 11 * (len(lines) - 1) + 12
+    candidates = []
+    for slot in _MID_LABEL_SLOTS:
+        cx, cy = _point_at(geom, slot)
+        widest = max(_text_box(text, size, cx, cy)[2] for _cls, size, text in lines)
+        candidates.append((cx - widest / 2, cy - 11, widest, block_h))
+    box = placer.place(candidates)
+    cx, top = box[0] + box[2] / 2, box[1]
     out = []
-    for index, (cls, text) in enumerate(lines):
-        out.append(f'<text class="{cls}" x="{cx:.0f}" y="{cy + index * 11 - 3:.0f}" '
+    for index, (cls, _size, text) in enumerate(lines):
+        out.append(f'<text class="{cls}" x="{cx:.0f}" y="{top + 8 + index * 11:.0f}" '
                    f'text-anchor="middle">{escape(text)}</text>')
     return "".join(out)
 
 
-def _state_mark(state, x1, y1, x2, y2):
+def _state_mark(state, geom):
     """DOWN 은 ✕, 일부 DOWN 은 반쪽 원 — 색만으로 구별하면 색약/흑백 인쇄에서 사라진다."""
-    cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+    cx, cy = _point_at(geom, 0.5)
     if state == "down":
         r = 5
         return (f'<g class="tp-mark-down">'
@@ -448,13 +640,26 @@ _LEGEND_ROWS = (
 )
 
 
-def _legend(height):
-    """범례 — 기호를 쓰는 그림에 이것이 없으면 규칙이 전달되지 않는다."""
+def _legend(topology, width, height):
+    """범례 — 기호를 쓰는 그림에 이것이 없으면 규칙이 전달되지 않는다.
+
+    자리는 왼쪽 아래가 기본이지만 **장비를 덮으면 다른 모서리로 옮긴다.** 노드를 끌어 배치할 수
+    있으므로 어느 모서리든 비어 있다는 보장이 없다 — 범례가 장비를 가리면 둘 다 못 읽는다.
+    """
     col_w, row_h = 168, 17
     rows_per_col = 5
     cols = (len(_LEGEND_ROWS) + rows_per_col - 1) // rows_per_col
     box_w, box_h = col_w * cols + 16, row_h * rows_per_col + 24
-    x0, y0 = 16, height - box_h - 12
+    occupied = [(n["x"] - NODE_W / 2, n["y"], NODE_W, NODE_H)
+                for n in topology.get("nodes") or [] if "x" in n]
+    corners = [(16, height - box_h - 12), (width - box_w - 16, height - box_h - 12),
+               (width - box_w - 16, 16), (16, 16)]
+    x0, y0 = corners[0]
+    for corner in corners:
+        if not any(_boxes_overlap((corner[0], corner[1], box_w, box_h), box)
+                   for box in occupied):
+            x0, y0 = corner
+            break
     out = ['<g class="tp-legend">',
            f'<rect class="tp-legend-box" x="{x0}" y="{y0}" width="{box_w}" height="{box_h}" rx="6"/>',
            f'<text class="tp-legend-title" x="{x0 + 10}" y="{y0 + 15}">범례</text>']

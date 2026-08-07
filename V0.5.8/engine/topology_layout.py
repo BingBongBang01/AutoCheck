@@ -25,6 +25,8 @@ TIER_GAP = 190
 NODE_GAP = 56
 PAIR_GAP = 18
 MARGIN_X, MARGIN_TOP, MARGIN_BOTTOM = 60, 56, 96   # 아래쪽은 범례 자리
+# 끌어 옮긴 노드 때문에 캔버스를 늘릴 때 아래에 남기는 자리 — 장비명 줄 + 범례 상자가 들어간다.
+LEGEND_RESERVE = 230
 
 
 def layout(topology, manual=None):
@@ -69,15 +71,20 @@ def layout(topology, manual=None):
     for node in nodes:
         point = manual.get(node["id"])
         if point:
-            node["x"], node["y"] = float(point[0]), float(point[1])
+            # 왼쪽/위로 끌면 좌표가 음수가 되는데 SVG 는 (0,0)부터 그리므로 그대로 두면 장비가
+            # 화면 밖으로 잘려 사라진다(끌어 옮긴 것이 저장되므로 다음에 열어도 안 보인다).
+            # 캔버스를 왼쪽으로 늘릴 수는 없으니 안쪽으로 붙여 세운다.
+            node["x"] = max(NODE_W / 2 + 8, float(point[0]))
+            node["y"] = max(8.0, float(point[1]))
             node["manual"] = True
             moved = True
         else:
             node["manual"] = False
     if moved:
         # 끌어다 놓은 노드가 캔버스 밖이면 그림이 잘린다 — 캔버스를 늘린다.
+        # 아래쪽은 범례 자리까지 함께 확보한다(안 그러면 범례가 그 장비를 덮는다).
         width = max(width, max(n["x"] for n in nodes) + NODE_W / 2 + MARGIN_X)
-        height = max(height, max(n["y"] for n in nodes) + NODE_H + MARGIN_BOTTOM)
+        height = max(height, max(n["y"] for n in nodes) + NODE_H + LEGEND_RESERVE)
 
     return {"width": round(width), "height": round(height), "rows": rows}
 

@@ -8,13 +8,14 @@
 출력 형태**다. 벤더 출력 형태를 상상해서 만든 테스트는 현장에서 한 줄도 못 읽는 파서를
 통과시킨다 — 실제로 이 프로젝트의 기존 BGP/OSPF 파서가 그 상태였다.
 """
+import re
 import xml.etree.ElementTree as ET
 
 import pytest
 
 from engine.topology_builder import (KIND_L2, KIND_L3, TIER_ACCESS, TIER_AGG, TIER_CORE,
                                      TIER_UNKNOWN, build_topology)
-from engine.topology_layout import layout
+from engine.topology_layout import ICON_SIZE, NODE_H, NODE_W, layout
 from engine.topology_svg import render_svg
 from parsers.show_lldp_neighbors import parse_lldp_neighbors
 
@@ -330,6 +331,178 @@ def test_unregistered_node_uses_the_dashed_symbol(lab):
     svg = render_svg(topology, layout(topology))
     assert "tp-sym-unknown" in svg
     assert "tp-node-unregistered" in svg
+
+
+# ---------- 랩과 다른 구성 ----------
+# 이 프로젝트가 실제로 본 구성은 Core/Agg/Access 3계층 하나뿐이다. 현장에는 링, 스타,
+# 스파인-리프, 체인, 풀메시, 계층을 건너뛰는 직결이 다 있고 **그 구성들에서 그림이 깨졌다**
+# (같은 계층 링크가 중간 장비를 관통, 팬아웃이 큰 장비에서 포트 라벨이 한 자리에 쌓임,
+# 왼쪽 위로 끌어 놓은 노드가 잘림). 아래는 그 구성들을 로그 형태로 만들어 다시 확인한다.
+
+def lldp_table(rows):
+    """[(로컬포트, 이웃, 이웃포트)] -> `show lldp neighbors` 출력."""
+    head = ["Port Neighbor Device ID Neighbor Port ID TTL",
+            "---- ------------------ ---------------- ---"]
+    return "\n".join(head + [f"{a}  {b}  {c}  120" for a, b, c in rows]) + "\n"
+
+
+def wire(links):
+    """[(장비A, 포트A, 장비B, 포트B)] -> {장비: sections} — 양쪽 LLDP 표에 모두 넣는다."""
+    tables = {}
+    for a, ap, b, bp in links:
+        tables.setdefault(a, []).append((ap, b, bp))
+        tables.setdefault(b, []).append((bp, a, ap))
+    return {name: sections(lldp_table(rows)) for name, rows in tables.items()}
+
+
+def draw(names, links, manual=None):
+    """장비 이름과 링크로 구성도를 만들어 (topology, layout, svg) 를 돌려준다."""
+    devices = [device(n) for n in names]
+    topology = build_topology(devices, wire(links))
+    info = layout(topology, manual)
+    return topology, info, render_svg(topology, info)
+
+
+def path_points(svg, edge_id, steps=80):
+    """SVG 안 링크 선(직선/곡선)을 점열로 — '어디를 지나가는가'를 검사하기 위한 것."""
+    root = ET.fromstring(svg)
+    for group in root.findall(".//*[@data-tp-link]"):
+        if group.get("data-tp-link") != edge_id:
+            continue
+        d = group.find("{http://www.w3.org/2000/svg}path").get("d")
+        nums = [float(v) for v in re.findall(r"-?\d+(?:\.\d+)?", d)]
+        if "Q" in d:
+            x1, y1, cx, cy, x2, y2 = nums[:6]
+            return [((1 - t) ** 2 * x1 + 2 * (1 - t) * t * cx + t * t * x2,
+                     (1 - t) ** 2 * y1 + 2 * (1 - t) * t * cy + t * t * y2)
+                    for t in (i / steps for i in range(steps + 1))]
+        x1, y1, x2, y2 = nums[:4]
+        return [(x1 + (x2 - x1) * i / steps, y1 + (y2 - y1) * i / steps)
+                for i in range(steps + 1)]
+    raise AssertionError(f"링크 {edge_id} 가 그려지지 않았다")
+
+
+def crossed_devices(topology, svg):
+    """자기 양끝이 아닌 장비의 기호 위를 지나가는 링크가 있는가."""
+    hits = []
+    nodes = [n for n in topology["nodes"] if "x" in n]
+    for edge in topology["edges"]:
+        points = path_points(svg, edge["id"])
+        for node in nodes:
+            if node["id"] in (edge["a"], edge["b"]):
+                continue
+            left, top = node["x"] - ICON_SIZE / 2, node["y"]
+            if any(left <= px <= left + ICON_SIZE and top <= py <= top + ICON_SIZE
+                   for px, py in points):
+                hits.append(f'{edge["a"]}↔{edge["b"]} 가 {node["id"]} 위를 지난다')
+    return hits
+
+
+def test_ring_topology_does_not_draw_lines_through_other_devices():
+    """링 구성에서는 첫 장비와 마지막 장비가 이어진다 — 곧게 그으면 사이의 장비를 전부 관통한다."""
+    names = [f"AccessR{i}" for i in range(1, 7)]
+    links = [(f"AccessR{i}", "Ethernet1", f"AccessR{i % 6 + 1}", "Ethernet2") for i in range(1, 7)]
+    topology, _info, svg = draw(names, links)
+    assert len(topology["edges"]) == 6
+    assert crossed_devices(topology, svg) == []
+
+
+def test_full_mesh_of_one_tier_stays_readable():
+    """같은 계층 풀메시는 한 줄에 놓이므로 모든 링크가 가로선이 된다."""
+    names = [f"Core{i}" for i in range(1, 6)]
+    links = [(f"Core{i}", f"Ethernet{j}", f"Core{j}", f"Ethernet{i}")
+             for i in range(1, 6) for j in range(i + 1, 6)]
+    topology, _info, svg = draw(names, links)
+    assert len(topology["edges"]) == 10
+    assert crossed_devices(topology, svg) == []
+
+
+def test_link_that_skips_a_tier_avoids_the_devices_in_between():
+    """Core 에서 Access 로 바로 내려가는 직결(관리망·임시 배선)은 중간 계층을 지나간다."""
+    links = [("Core1", "Ethernet1", "Agg1", "Ethernet1"),
+             ("Agg1", "Ethernet2", "Access1", "Ethernet1"),
+             ("Core1", "Ethernet9", "Access1", "Ethernet9")]
+    topology, _info, svg = draw(["Core1", "Agg1", "Access1"], links)
+    assert crossed_devices(topology, svg) == []
+
+
+def test_port_labels_do_not_pile_up_on_a_hub():
+    """Core 1대에 Access 12대 — 링크가 한 점에서 나가므로 라벨이 같은 자리에 쌓이기 쉽다."""
+    names = ["Core1"] + [f"Access{i}" for i in range(1, 13)]
+    links = [("Core1", f"Ethernet{i}", f"Access{i}", "Ethernet1") for i in range(1, 13)]
+    topology, _info, svg = draw(names, links)
+    root = ET.fromstring(svg)
+    boxes = []
+    for text in root.iter():
+        if text.get("class") != "tp-port":
+            continue
+        width = len(text.text) * 5.1
+        boxes.append((float(text.get("x")) - width / 2, float(text.get("y")) - 7, width, 9))
+    assert len(boxes) == 24
+    overlaps = [(i, j) for i in range(len(boxes)) for j in range(i + 1, len(boxes))
+                if (boxes[i][0] < boxes[j][0] + boxes[j][2]
+                    and boxes[j][0] < boxes[i][0] + boxes[i][2]
+                    and boxes[i][1] < boxes[j][1] + boxes[j][3]
+                    and boxes[j][1] < boxes[i][1] + boxes[i][3])]
+    assert overlaps == [], "포트 라벨이 겹치면 어느 포트인지 읽을 수 없다"
+
+
+def test_parallel_links_without_a_port_channel_still_show_their_count():
+    """Po 로 묶이지 않은 병렬 링크도 한 선으로 접힌다 — 개수가 없으면 몇 가닥인지 사라진다.
+
+    시스코의 `show interfaces status` 에는 Po 소속 열이 없어 이 경우가 흔하다.
+    """
+    links = [("Core1", "Ethernet1", "Access1", "Ethernet1"),
+             ("Core1", "Ethernet2", "Access1", "Ethernet2")]
+    topology, _info, svg = draw(["Core1", "Access1"], links)
+    edge = topology["edges"][0]
+    assert edge["count"] == 2 and edge["bundle"] is None
+    assert "×2" in svg
+
+
+def test_node_dragged_past_the_left_edge_stays_on_the_canvas():
+    """왼쪽·위로 끌면 좌표가 음수가 된다. SVG 는 (0,0)부터 그리므로 그대로 두면 잘려 사라지고,
+    그 좌표가 저장되므로 다시 열어도 안 보인다."""
+    links = [("Core1", "Ethernet1", "Access1", "Ethernet1")]
+    topology, info, _svg = draw(["Core1", "Access1"], links, manual={"Access1": [-80, -40]})
+    node = next(n for n in topology["nodes"] if n["id"] == "Access1")
+    assert node["x"] - NODE_W / 2 >= 0 and node["y"] >= 0
+    assert node["x"] + NODE_W / 2 <= info["width"]
+
+
+def test_legend_moves_out_of_the_way_of_a_dragged_node():
+    """범례 자리는 왼쪽 아래다 — 거기로 장비를 끌어다 놓으면 둘 다 못 읽는다."""
+    links = [("Core1", "Ethernet1", "Access1", "Ethernet1")]
+    topology, info, svg = draw(["Core1", "Access1"], links, manual={"Access1": [90, 380]})
+    root = ET.fromstring(svg)
+    legend = root.find(".//*[@class='tp-legend']").find("{http://www.w3.org/2000/svg}rect")
+    lx, ly = float(legend.get("x")), float(legend.get("y"))
+    lw, lh = float(legend.get("width")), float(legend.get("height"))
+    for node in topology["nodes"]:
+        assert not (node["x"] - NODE_W / 2 < lx + lw and lx < node["x"] + NODE_W / 2
+                    and node["y"] < ly + lh and ly < node["y"] + NODE_H), \
+            f'범례가 {node["id"]} 를 덮는다'
+    assert info["height"] > 0
+
+
+@pytest.mark.parametrize("names,links", [
+    (["SW1", "SW2", "SW3"], [("SW1", "Ethernet2", "SW2", "Ethernet1"),
+                             ("SW2", "Ethernet2", "SW3", "Ethernet1")]),
+    (["Spine1", "Spine2", "Leaf1", "Leaf2", "Leaf3"],
+     [(f"Spine{s}", f"Ethernet{l}", f"Leaf{l}", f"Ethernet{s}")
+      for s in (1, 2) for l in (1, 2, 3)]),
+    (["Core1"], []),
+    ([], []),
+])
+def test_other_topologies_render_completely_and_deterministically(names, links):
+    """구성이 달라져도 (1) 예외 없이 (2) 같은 그림이 (3) 빠짐없이 나와야 한다."""
+    topology, _info, svg = draw(names, links)
+    again = draw(names, links)[2]
+    assert svg == again, "같은 입력에 다른 그림이 나오면 회차 비교가 불가능하다"
+    root = ET.fromstring(svg)
+    assert len(root.findall(".//*[@data-tp-node]")) == len(topology["nodes"])
+    assert len(root.findall(".//*[@data-tp-link]")) == len(topology["edges"])
+    assert 'class="tp-legend"' in svg
 
 
 # ---------- 실시간 상태 오버레이 ----------

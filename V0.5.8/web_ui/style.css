@@ -1608,8 +1608,12 @@ table.dtable tbody tr.dash-clickable:hover .dash-goto { visibility: visible; }
 .tp-icon-glyph { fill: none; stroke: var(--text); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
 .tp-icon-question { fill: var(--sub); font-size: 20px; font-weight: 700; }
 .tp-node { cursor: move; }
-.tp-node-name { fill: var(--text); font-size: 12px; font-weight: 700; }
-.tp-node-ip { fill: var(--sub); font-size: 10px; }
+/* 장비명/IP 는 배경색 테두리를 두른다(paint-order) — 자기 장비에서 아래로 나가는 링크는
+   반드시 이름 줄을 지나가므로, 이게 없으면 선이 이름을 가로지른다. */
+.tp-node-name { fill: var(--text); font-size: 12px; font-weight: 700;
+  paint-order: stroke; stroke: var(--input-bg); stroke-width: 3px; stroke-linejoin: round; }
+.tp-node-ip { fill: var(--sub); font-size: 10px;
+  paint-order: stroke; stroke: var(--input-bg); stroke-width: 3px; stroke-linejoin: round; }
 .tp-node-unregistered .tp-node-name { fill: var(--sub); }
 .tp-node.tp-selected .tp-icon-body { stroke: var(--primary); stroke-width: 2.4; }
 .tp-tier-label { fill: var(--sub); font-size: 11px; font-weight: 600; letter-spacing: .04em; }
@@ -1623,13 +1627,19 @@ table.dtable tbody tr.dash-clickable:hover .dash-goto { visibility: visible; }
 .tp-link-group { cursor: pointer; }
 .tp-link-group:hover .tp-link { stroke-width: 4.2; }
 .tp-link-group.tp-selected .tp-link { stroke: var(--primary); stroke-width: 4.6; }
-.tp-port { fill: var(--sub); font-size: 9px; }
-.tp-bundle-label { fill: var(--text); font-size: 10px; font-weight: 600; }
-.tp-link-desc { fill: var(--sub); font-size: 9px; font-style: italic; }
+/* 링크 라벨도 배경색 테두리를 두른다 — 라벨끼리는 자리를 비켜 놓지만(engine/topology_svg.py
+   의 _LabelPlacer) 다른 링크의 선이 그 위를 지나가는 것까지는 피할 수 없다. */
+.tp-port { fill: var(--sub); font-size: 9px;
+  paint-order: stroke; stroke: var(--input-bg); stroke-width: 2.5px; stroke-linejoin: round; }
+.tp-bundle-label { fill: var(--text); font-size: 10px; font-weight: 600;
+  paint-order: stroke; stroke: var(--input-bg); stroke-width: 2.5px; stroke-linejoin: round; }
+.tp-link-desc { fill: var(--sub); font-size: 9px; font-style: italic;
+  paint-order: stroke; stroke: var(--input-bg); stroke-width: 2.5px; stroke-linejoin: round; }
 .tp-mark-down { stroke: var(--critical); stroke-width: 2; fill: none; }
 .tp-mark-degraded { stroke: var(--warning); stroke-width: 2; fill: var(--card); }
 .tp-pair-box { fill: none; stroke: var(--sub); stroke-width: 1.2; stroke-dasharray: 5 4; }
-.tp-pair-label { fill: var(--sub); font-size: 9px; font-weight: 600; }
+.tp-pair-label { fill: var(--sub); font-size: 9px; font-weight: 600;
+  paint-order: stroke; stroke: var(--input-bg); stroke-width: 2.5px; stroke-linejoin: round; }
 .tp-pair-box-bad { stroke: var(--critical); }
 .tp-legend-box { fill: var(--card); stroke: var(--border); stroke-width: 1; }
 .tp-legend-title { fill: var(--text); font-size: 10px; font-weight: 700; }
