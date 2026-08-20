@@ -1,0 +1,153 @@
+# 범용 정기점검 보고서 템플릿 정의 (report/inspection_excel.py가 읽는다)
+#
+# 첨부된 3개 레거시 보고서(대한전선 Arista / LGES / NC US1 특별점검)의 공통 분모를 뽑아
+# "고객사·벤더에 종속되지 않는" 점검 항목 스키마로 정리한 것이다. 이 파일만 고치면
+# 파이썬 코드를 건드리지 않고 보고서의 점검 항목·기준값·순서를 바꿀 수 있다.
+#
+# check_items[*] 필드
+#   no        : 보고서에 찍히는 항목 번호(비우면 자동 부여)
+#   group     : 왼쪽 '구분' 열. 연속으로 같은 값이면 셀이 자동 병합된다.
+#   name      : '점검항목' 열
+#   commands  : 이 항목을 판정할 때 원본로그에서 찾을 커맨드(부분 문자열, 앞에 있는 것 우선)
+#   criteria  : '기준값' 열에 그대로 출력되는 판정 기준 문구
+#   evaluator : 값 산출 방식. report/inspection_excel.py의 EVALUATORS 키여야 한다.
+#               uptime          - Uptime 문자열
+#               cpu             - CPU 사용률(%)
+#               memory_free     - Free Memory 비율(0~1)
+#               interface_error : FCS/CRC/Runts/Giants 등 0이 아닌 포트만 요약
+#               route_summary   - connected/static/ospf/bgp 라우트 수
+#               log_scan        - 이상 키워드가 걸린 줄 수 요약
+#               keyword_ok      - 이상 키워드 유무로 정상/이상 판정(기본값)
+#   warn_at   : (cpu/memory_free 전용) 이 값을 넘거나 못 미치면 '경고'로 서식 강조
+
+meta:
+  # 표지 제목: "{customer}" / "{profile}" / "{title_suffix}" 3줄로 조립된다.
+  title_suffix: 정기점검 보고서
+  inspector_company: 대원씨티에스㈜
+  # 표지·시트 헤더의 담당자/점검자 기본값. 보고서 탭에서 매 회차 덮어쓸 수 있다.
+  manager:
+    company: ''
+    name: ''
+    contact: ''
+  inspector:
+    company: 대원씨티에스㈜
+    name: ''
+    contact: ''
+
+check_items:
+  - group: H/W 구동 상태
+    name: System Uptime
+    commands: [show version, show processes top]
+    criteria: Uptime 확인
+    evaluator: uptime
+  - group: H/W 구동 상태
+    name: Power 점검
+    commands: [show environment power, show environment all]
+    criteria: Power Supply Status OK 확인
+    evaluator: keyword_ok
+  - group: H/W 구동 상태
+    name: FAN 상태 확인
+    commands: [show environment cooling, show environment all]
+    criteria: Fan Status OK / Speed 80% 미만 확인
+    evaluator: keyword_ok
+  - group: H/W 구동 상태
+    name: Module 상태 확인
+    commands: [show module]
+    criteria: Module Status Ok 확인
+    evaluator: keyword_ok
+  - group: H/W 구동 상태
+    name: Temperature 상태 확인
+    commands: [show environment temperature, show environment all]
+    criteria: Limit 범위 안 Sensor 온도 확인
+    evaluator: keyword_ok
+
+  - group: 시스템 상태 확인
+    name: CPU 사용률
+    commands: [show processes top]
+    criteria: '70% 미만 정상 (70% 이상 주기적 관찰)'
+    evaluator: cpu
+    warn_at: 70
+  - group: 시스템 상태 확인
+    name: Free Memory
+    commands: [show processes top, show version]
+    criteria: Free Memory 30% 이상 확인
+    evaluator: memory_free
+    warn_at: 0.3
+  - group: 시스템 상태 확인
+    name: Flash 잔여 용량
+    # 콜론으로 끝나는 커맨드는 반드시 인용부호로 감싼다 — 그냥 두면 YAML이 매핑 키로 읽는다.
+    commands: ['dir flash:', show file systems]
+    criteria: 여유 공간 확인
+    evaluator: keyword_ok
+  - group: 시스템 상태 확인
+    name: Log 확인
+    commands: [show logging, show log]
+    criteria: 특이 로그 확인
+    evaluator: log_scan
+  - group: 시스템 상태 확인
+    name: System Time
+    commands: [show clock, show ntp status]
+    criteria: Clock Source / NTP 동기화 확인
+    evaluator: keyword_ok
+
+  - group: L2/인터페이스
+    name: Cable 연결 상태
+    commands: [show interface status, show interfaces status]
+    criteria: errdisabled 확인
+    evaluator: keyword_ok
+  - group: L2/인터페이스
+    name: Interface 상태
+    commands: [show ip interface brief, show interfaces status]
+    criteria: Interface Status 확인
+    evaluator: keyword_ok
+  - group: L2/인터페이스
+    name: Interface Error
+    commands: [show interfaces counters errors]
+    criteria: Interface Error Count 확인
+    evaluator: interface_error
+  - group: L2/인터페이스
+    name: Transceiver
+    commands: [show interfaces transceiver]
+    criteria: Transceiver 온도 및 광값 정상 범위 확인
+    evaluator: keyword_ok
+  - group: L2/인터페이스
+    name: Port-channel
+    commands: [show port-channel summary, show port-channel dense]
+    criteria: Port-channel Port Status 확인
+    evaluator: keyword_ok
+  - group: L2/인터페이스
+    name: STP 상태
+    commands: [show spanning-tree]
+    criteria: Interface 상태 forwarding 확인
+    evaluator: keyword_ok
+  - group: L2/인터페이스
+    name: MLAG 상태
+    commands: [show mlag]
+    criteria: 멤버포트 active-full 확인
+    evaluator: keyword_ok
+
+  - group: L3/라우팅
+    name: Route Table
+    commands: [show ip route vrf all summary, show ip route summary]
+    criteria: Routing Protocol Count 확인
+    evaluator: route_summary
+  - group: L3/라우팅
+    name: VARP/VRRP 상태
+    commands: [show ip virtual-router, show vrrp brief]
+    criteria: 이중화 게이트웨이 Active 상태 확인
+    evaluator: keyword_ok
+  - group: L3/라우팅
+    name: OSPF Neighbor
+    commands: [show ip ospf neighbor]
+    criteria: Neighbor FULL 상태 확인
+    evaluator: keyword_ok
+  - group: L3/라우팅
+    name: BGP Neighbor
+    commands: [show ip bgp summary, show bgp summary]
+    criteria: BGP Neighborship Established 확인
+    evaluator: keyword_ok
+  - group: L3/라우팅
+    name: EVPN 상태
+    commands: [show bgp evpn summary, show interfaces vxlan 1]
+    criteria: EVPN Neighborship / VTEP 상태 확인
+    evaluator: keyword_ok

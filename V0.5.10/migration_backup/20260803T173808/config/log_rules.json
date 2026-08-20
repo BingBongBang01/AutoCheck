@@ -1,0 +1,425 @@
+{
+  "_comment": "내장 규칙 엔진(engine/log_rule_engine.py)의 판정 데이터. 코드에는 '해석 방법'만 있고 '무엇을 잡을지'는 전부 여기에 있다. scope는 해당 규칙이 유효한 show 명령을 거르는 정규식(생략 시 전체 적용).",
+
+  "anomaly_keywords": [
+    "FAIL", "ERROR", "ERRORS", "CRITICAL", "DOWN", "CRC", "DROPS", "DISCARDS",
+    "ERR-DISABLED", "ERRDISABLE", "TIMEOUT", "UNREACHABLE", "FLAP", "CHURN",
+    "SUSPENDED", "INACTIVE", "MISMATCH"
+  ],
+
+  "benign_phrases": [
+    "action error",
+    "level critical",
+    "idle-timeout",
+    "at the next timeout",
+    "no errors",
+    "errdisable reason",
+    "last clearing of"
+  ],
+
+  "default_severity": "major",
+  "keyword_severity": {
+    "CRITICAL": "critical",
+    "FAIL": "major",
+    "ERROR": "major",
+    "ERRORS": "major",
+    "ERR-DISABLED": "critical",
+    "ERRDISABLE": "critical",
+    "DOWN": "major",
+    "CRC": "major",
+    "DROPS": "major",
+    "DISCARDS": "minor",
+    "TIMEOUT": "major",
+    "UNREACHABLE": "major",
+    "FLAP": "major",
+    "CHURN": "minor",
+    "SUSPENDED": "major",
+    "INACTIVE": "major",
+    "MISMATCH": "major"
+  },
+
+  "counter_columns": [
+    "DROPS", "DISCARDS", "ERRORS", "ERROR", "CRC", "FCS", "ALIGN", "SYMBOL",
+    "RUNTS", "GIANTS", "COLLISIONS", "OVERRUNS", "UNDERRUNS", "BABBLES", "LATECOLL"
+  ],
+
+  "suppressions": [
+    {
+      "id": "errdisable_feature_table",
+      "pattern": "^\\s*[\\w.\\-]+\\s+(Disabled|Enabled)\\s+(\\d+|N/A)\\s*$",
+      "reason": "errdisable recovery 기능 목록표(상태 열)라 장애가 아님"
+    },
+    {
+      "id": "errdisable_pending_none",
+      "pattern": "Interfaces that will be enabled at the next timeout",
+      "reason": "errdisable 복구 대기 목록 안내문(뒤에 항목이 없으면 정상)"
+    },
+    {
+      "id": "portchannel_flag_legend",
+      "pattern": "^\\s+\\S{1,3}\\s+-\\s+(In Use|Down|Out-of-Sync|Individual|ShortTimeout|Inactive)",
+      "reason": "port-channel 플래그 범례"
+    },
+    {
+      "id": "table_column_header",
+      "pattern": "^\\s*(Port|Interface|Intf)\\s+.*\\b(Status|Protocol|Errors|Drops|Description)\\b",
+      "reason": "표 헤더 줄"
+    },
+    {
+      "id": "zero_status_summary",
+      "pattern": "\\b(0|no)\\s+(interfaces?|ports?|neighbors?|sessions?)\\s+(are\\s+)?(down|inactive|failed)",
+      "reason": "집계값이 0인 요약 줄"
+    },
+    {
+      "id": "shutdown_config_intent",
+      "pattern": "^\\s+(no\\s+)?shutdown\\s*$",
+      "reason": "설정 원문의 shutdown 지시어(상태가 아님)"
+    },
+    {
+      "id": "help_text",
+      "pattern": "^\\s*<?(cr|WORD|LINE)>?\\s",
+      "reason": "CLI 도움말 출력"
+    },
+    {
+      "id": "status_field_negative",
+      "pattern": "^\\s*[\\w][\\w \\-()/.]*:\\s*(0|False|No|None|never|N/?A|Disabled|Not configured)\\s*$",
+      "reason": "'항목 : 값' 상태 필드인데 값이 정상/미발생(0·False·never 등)"
+    },
+    {
+      "id": "label_only_line",
+      "pattern": "^\\s*[\\w\\-]+:\\s*$",
+      "reason": "값이 없는 라벨 줄"
+    },
+    {
+      "id": "timer_setting_value",
+      "pattern": "(timeout|interval|timer|hold-time)\\s*:?\\s*\\d+\\s*(ms|s|sec|secs|seconds|min|minutes)?\\s*$",
+      "reason": "타이머 설정값(이벤트가 아님)"
+    }
+  ],
+
+  "signatures": [
+    {
+      "id": "command_rejected",
+      "pattern": "^%\\s*(Invalid input|Incomplete command|Unavailable command|Ambiguous command|Unrecognized)",
+      "severity": "minor",
+      "category": "collection",
+      "title": "점검 명령이 장비에서 거부됨 — 해당 항목은 미수집 상태"
+    },
+    {
+      "id": "resource_absent",
+      "pattern": "There seem to be no (power supplies|fans|sensors)",
+      "severity": "info",
+      "category": "collection",
+      "title": "해당 하드웨어 리소스 없음(가상 장비일 가능성) — 점검 항목 미적용"
+    },
+    {
+      "id": "ntp_not_synced",
+      "pattern": "(NTP is disabled|not synchroni[sz]ed|unsynchroni[sz]ed|clock is unsynchronized)",
+      "severity": "major",
+      "category": "time",
+      "title": "NTP 미동기 — 장비 간 로그 타임스탬프 상관분석이 불가능해짐"
+    },
+    {
+      "id": "unexpected_reload",
+      "pattern": "rebooted due to (unknown reasons|power loss|kernel panic|watchdog)",
+      "severity": "major",
+      "category": "availability",
+      "title": "비정상 재기동 이력"
+    },
+    { "_comment": "signatures는 배열 순서대로 먼저 맞는 것이 이긴다. 아래 4개는 뒤쪽의 일반 규칙(interface_line_down / mlag_peer_problem / mlag_partial_bundle)에 가려지므로 반드시 그보다 앞에 있어야 한다 — 상관규칙이 이 구체적인 id들을 참조하기 때문이다." },
+    {
+      "id": "svi_down",
+      "pattern": "(^Vlan\\d+\\s+is\\s+down|Interface\\s+Vlan\\d+,?\\s*changed\\s+state\\s+to\\s+down|^\\s*Vlan\\d+\\s+\\S*\\s*down\\s+down\\b|%SVI-\\d-\\w*DOWN)",
+      "severity": "critical",
+      "category": "svi",
+      "title": "SVI(Vlan 인터페이스) 다운 — 해당 세그먼트의 L3 게이트웨이 소실"
+    },
+    {
+      "id": "mlag_peerlink_down",
+      "pattern": "(peer-?link\\s+(?:status\\s*:?\\s*)?(?:is\\s+)?down|%MLAG-\\d-\\w*PEER_?LINK\\w*.*(?:DOWN|FAIL)|mlag.*peer-?link.*\\b(?:down|failed|inactive)\\b)",
+      "severity": "critical",
+      "category": "mlag",
+      "title": "MLAG peer-link 다운 — split-brain 직전 상태"
+    },
+    {
+      "id": "mlag_dual_active",
+      "pattern": "(\\bdual-?active\\b|%MLAG-\\d-\\w*(?:DUAL_?ACTIVE|SPLIT)|peer\\s+(?:is\\s+)?not\\s+detected.*mlag)",
+      "severity": "critical",
+      "category": "mlag",
+      "title": "MLAG dual-active(split-brain) — 두 피어가 서로를 죽은 것으로 보고 각자 active 동작"
+    },
+    {
+      "id": "mlag_member_partial_promoted",
+      "pattern": "(active-partial|\\bmlag\\s+\\d+\\s+.*partial)",
+      "severity": "major",
+      "category": "mlag",
+      "title": "MLAG 멤버 포트가 active-partial로 승격 — 한쪽 피어만으로 트래픽을 받는 중"
+    },
+
+    {
+      "id": "interface_admin_down",
+      "pattern": "\\bis administratively down\\b",
+      "severity": "info",
+      "category": "interface",
+      "title": "관리자가 의도적으로 내린 인터페이스"
+    },
+    {
+      "id": "interface_line_down",
+      "pattern": "^\\S+ is down, line protocol is (down|lowerlayerdown|notconnect|errdisabled)",
+      "severity": "major",
+      "category": "interface",
+      "title": "인터페이스 링크 다운"
+    },
+    {
+      "id": "interface_oper_down",
+      "pattern": "^\\s*\\S+\\s+(\\S+\\s+)?(down|notconnect)\\s+(down|lowerlayerdown|notconnect|errdisabled)\\b",
+      "severity": "major",
+      "category": "interface",
+      "title": "인터페이스 비정상 down(관리자 shutdown이 아님)"
+    },
+    {
+      "id": "link_state_down",
+      "pattern": "%LINEPROTO-\\d-UPDOWN.*changed state to (down|lowerlayerdown)",
+      "severity": "major",
+      "category": "interface",
+      "title": "링크 프로토콜 다운 이벤트 — syslog 등급(5)은 낮지만 실제 통신 단절"
+    },
+    {
+      "id": "errdisable_active",
+      "pattern": "%ETH-\\d-ERRDISABLE|\\berrdisabled\\b|error detected on",
+      "severity": "critical",
+      "category": "interface",
+      "title": "errdisable 발동 — 포트가 강제 차단된 상태"
+    },
+    {
+      "id": "lacp_member_removed",
+      "pattern": "%LAG-\\d-MEMBER_REMOVED|has left Port-Channel",
+      "severity": "major",
+      "category": "lag",
+      "title": "LAG 멤버 이탈 — 대역폭/이중화 축소"
+    },
+    {
+      "id": "lacp_churn",
+      "pattern": "%LACP-\\d-(ACTOR|PARTNER)_CHURN",
+      "severity": "major",
+      "category": "lag",
+      "title": "LACP 협상 불안정(churn)"
+    },
+    {
+      "id": "mlag_peer_problem",
+      "pattern": "%MLAG-[0-4]-\\w+|MLAG \\d+ is inactive|is link down on the MLAG peer",
+      "severity": "critical",
+      "category": "mlag",
+      "title": "MLAG 피어 이상 — 이중화 상실 위험"
+    },
+    {
+      "id": "mlag_partial_bundle",
+      "pattern": "\\b(active-partial|inactive-partial|configured-inactive)\\b",
+      "severity": "major",
+      "category": "mlag",
+      "title": "MLAG 포트채널이 한쪽 피어에서만 활성(partial) — 이중화 미완성"
+    },
+    {
+      "id": "protocol_not_running",
+      "pattern": "^%\\s*(BGP|OSPF|ISIS|PIM|VXLAN)\\s+(inactive|not (running|enabled|configured))",
+      "severity": "info",
+      "category": "collection",
+      "title": "해당 라우팅/오버레이 프로토콜 미구성 — 점검 항목 미적용"
+    },
+    {
+      "id": "vrrp_state_change",
+      "pattern": "%VRRP-\\d-STATECHANGE",
+      "severity": "major",
+      "category": "fhrp",
+      "title": "VRRP 상태 전환 — 게이트웨이 절체 발생"
+    },
+    {
+      "id": "routing_adjacency_lost",
+      "pattern": "%(OSPF|BGP|ISIS)-\\d-\\w*(DOWN|ADJCHG|NBR|LOST)",
+      "severity": "critical",
+      "category": "routing",
+      "title": "라우팅 인접성 상실"
+    },
+    {
+      "id": "stp_topology_change",
+      "pattern": "%(SPANTREE|STP)-\\d-\\w*(ROOT|LOOP|BLOCK|TOPOLOGY)",
+      "severity": "major",
+      "category": "stp",
+      "title": "STP 토폴로지 변화 — 루프/루트 변경 가능성"
+    },
+    {
+      "id": "auth_failure",
+      "pattern": "(authentication failure|login failed|%SECURITY-\\d|Invalid (user|password)|access denied)",
+      "severity": "major",
+      "category": "security",
+      "title": "인증 실패 — 반복 시 무차별 대입 시도 의심"
+    },
+    {
+      "id": "config_changed",
+      "pattern": "%SYS-\\d-CONFIG_(I|E)|Configured from",
+      "severity": "minor",
+      "category": "change",
+      "title": "점검 구간 내 설정 변경 이력"
+    },
+    {
+      "id": "high_cpu",
+      "pattern": "%Cpu\\(s\\):\\s+(9\\d|100)(\\.\\d+)?\\s+us",
+      "severity": "major",
+      "category": "resource",
+      "title": "CPU 사용률 90% 이상"
+    },
+
+    { "_comment": "--- 이하 v0.5.4 추가: L2/L3/Overlay 연쇄를 추적하기 위한 서명 ---" },
+
+    {
+      "id": "vlan_removed",
+      "pattern": "(^\\s*no\\s+vlan\\s+[\\d,\\-]+|%VLAN-\\d-\\w*(REMOV|DELET)|VLAN\\s+\\d+\\s+(?:has been\\s+)?(?:removed|deleted))",
+      "severity": "critical",
+      "category": "vlan",
+      "title": "VLAN 삭제 — 해당 VLAN의 트렁크 허용목록과 SVI가 함께 무효화됨"
+    },
+    {
+      "id": "trunk_vlan_pruned",
+      "pattern": "(not\\s+in\\s+(?:the\\s+)?(?:allowed|active)\\s+vlan|vlan[s]?\\s+\\d+[\\d,\\-]*\\s+(?:pruned|removed\\s+from\\s+trunk)|%TRUNK-\\d-\\w+|allowed\\s+vlan[s]?\\s*:?\\s*none)",
+      "severity": "major",
+      "category": "vlan",
+      "title": "트렁크에서 VLAN이 제외(pruning)됨 — 해당 VLAN 트래픽이 상단으로 못 넘어감"
+    },
+    {
+      "id": "varp_inactive",
+      "pattern": "(virtual-router\\s+address.*\\b(?:inactive|not\\s+active)\\b|%VARP-\\d-\\w+|varp.*\\b(?:down|inactive)\\b)",
+      "severity": "major",
+      "category": "fhrp",
+      "title": "VARP 가상 게이트웨이 비활성 — 서브넷의 기본 게이트웨이 응답 중단"
+    },
+    {
+      "id": "vrrp_master_down",
+      "pattern": "(%VRRP-\\d-\\w*(?:MASTER_DOWN|BACKUP)|VRRP.*(?:Master\\s*->\\s*Backup|transition(?:ed)?\\s+to\\s+Backup)|vrrp.*state\\s+(?:is\\s+)?(?:init|backup)\\b)",
+      "severity": "critical",
+      "category": "fhrp",
+      "title": "VRRP Master 상실 — 게이트웨이 이중화가 절체되었거나 양쪽 모두 비정상"
+    },
+    {
+      "id": "nve_vtep_change",
+      "pattern": "(^\\s*no\\s+interface\\s+(?:Nve|Vxlan)\\d*|%NVE-\\d-\\w+|(?:Nve|Vxlan)\\d*\\s+is\\s+down|vxlan\\s+source-interface.*\\b(?:down|removed)\\b|%VXLAN-\\d-\\w+)",
+      "severity": "critical",
+      "category": "overlay",
+      "title": "NVE/VTEP 인터페이스 변경 또는 다운 — VXLAN 터널 전체가 영향받음"
+    },
+    {
+      "id": "vxlan_tunnel_down",
+      "pattern": "(vxlan.*(?:tunnel|peer).*\\b(?:down|unreachable|inactive)\\b|VTEP\\s+\\S+\\s+(?:is\\s+)?(?:down|unreachable))",
+      "severity": "critical",
+      "category": "overlay",
+      "title": "VXLAN 터널/원격 VTEP 도달 불가 — 오버레이 L2 확장 단절"
+    },
+    {
+      "id": "evpn_adjacency_lost",
+      "pattern": "(evpn.*(?:neighbor|peer).*\\b(?:down|lost|idle)\\b|%BGP-\\d-\\w*.*\\bl2vpn[\\s-]?evpn\\b.*\\b(?:Down|Idle)\\b|address-family\\s+(?:l2vpn\\s+)?evpn.*\\b(?:down|idle|not\\s+established)\\b)",
+      "severity": "critical",
+      "category": "overlay",
+      "title": "EVPN BGP 인접 상실 — MAC/IP 광고가 끊겨 오버레이 학습이 중단됨"
+    }
+  ],
+
+  "correlation_rules": [
+    {
+      "id": "errdisable_induced_outage",
+      "title": "errdisable 발동 직후 동일 인터페이스 링크 다운 — 포트 강제 차단으로 인한 실제 단절",
+      "all_of": ["errdisable_active", "link_state_down"],
+      "window_seconds": 120,
+      "severity": "critical",
+      "category": "interface"
+    },
+    {
+      "id": "lag_degradation_chain",
+      "title": "LAG 멤버 이탈과 LACP churn 동시 발생 — 포트채널 협상 실패로 이중화 붕괴 진행 중",
+      "all_of": ["lacp_member_removed", "lacp_churn"],
+      "window_seconds": 300,
+      "severity": "critical",
+      "category": "lag"
+    },
+    {
+      "_comment": "peer-link 다운 줄이 이제 더 구체적인 mlag_peerlink_down으로 잡히므로, mlag_peer_problem만 요구하면 이 규칙이 발동하지 않는다. MLAG 쪽은 any_of로 열어 둔다.",
+      "id": "mlag_gateway_impact",
+      "title": "MLAG 피어 이상과 게이트웨이 절체 동시 발생 — 이중화 경로 손상",
+      "all_of": ["vrrp_state_change"],
+      "any_of": ["mlag_peer_problem", "mlag_peerlink_down", "mlag_dual_active"],
+      "window_seconds": 600,
+      "scope": "global",
+      "severity": "critical",
+      "category": "mlag"
+    },
+    {
+      "id": "link_flapping",
+      "title": "동일 인터페이스에서 링크 상태 변화가 반복됨 — 물리 링크/광 모듈 플래핑 의심",
+      "all_of": ["link_state_down"],
+      "window_seconds": 3600,
+      "min_count": 4,
+      "severity": "critical",
+      "category": "interface"
+    },
+
+    {
+      "_comment": "이하 v0.5.4 추가 — 설정 변경이 2차/3차 피해로 번지는 연쇄를 한 건으로 묶는다. scope:global인 규칙은 인터페이스 이름이 안 붙는 줄(피어링/오버레이)이 많아 인터페이스별로 쪼개면 조건이 모이지 않기 때문이다."
+    },
+    {
+      "id": "vlan_pruning_cascade",
+      "title": "VLAN 삭제가 트렁크 pruning → SVI 다운 → 게이트웨이 상실로 번졌습니다",
+      "root_cause_intent": "VLAN 삭제(또는 트렁크 허용목록 변경)가 이 세그먼트의 L3 게이트웨이까지 내렸습니다. 원인은 설정 변경이며 물리 장애가 아닙니다.",
+      "all_of": ["svi_down"],
+      "any_of": ["vlan_removed", "trunk_vlan_pruned"],
+      "window_seconds": 300,
+      "scope": "global",
+      "severity": "critical",
+      "category": "vlan"
+    },
+    {
+      "id": "vlan_gateway_outage",
+      "title": "VLAN/SVI 변경 직후 게이트웨이 이중화(VRRP/VARP)가 내려갔습니다",
+      "root_cause_intent": "SVI가 내려가면 그 위에 얹힌 VRRP/VARP가 함께 죽습니다. 단말은 기본 게이트웨이를 잃습니다.",
+      "all_of": ["svi_down"],
+      "any_of": ["vrrp_master_down", "varp_inactive", "vrrp_state_change"],
+      "window_seconds": 300,
+      "scope": "global",
+      "severity": "critical",
+      "category": "fhrp"
+    },
+    {
+      "id": "mlag_split_brain_cascade",
+      "title": "MLAG peer-link 장애 → dual-active → 멤버 포트 active-partial 승격 (split-brain 진행)",
+      "root_cause_intent": "peer-link가 끊겨 두 피어가 서로를 죽은 것으로 판단했습니다. 이 상태에서 설정을 바꾸면 양쪽 설정이 갈라져 복구가 어려워집니다.",
+      "all_of": ["mlag_peerlink_down"],
+      "any_of": ["mlag_dual_active", "mlag_member_partial_promoted", "mlag_partial_bundle"],
+      "window_seconds": 300,
+      "scope": "global",
+      "severity": "critical",
+      "category": "mlag"
+    },
+    {
+      "id": "vxlan_evpn_outage",
+      "title": "NVE/VTEP 변경이 EVPN BGP 인접 상실로 이어졌습니다 — 오버레이 전체 단절",
+      "root_cause_intent": "VTEP source-interface를 건드리면 EVPN 세션이 끊기고, 세션이 끊기면 MAC/IP 광고가 사라져 오버레이 L2가 통째로 멈춥니다.",
+      "all_of": ["nve_vtep_change"],
+      "any_of": ["evpn_adjacency_lost", "vxlan_tunnel_down", "routing_adjacency_lost"],
+      "window_seconds": 600,
+      "scope": "global",
+      "severity": "critical",
+      "category": "overlay"
+    },
+    {
+      "id": "overlay_underlay_split",
+      "title": "언더레이 링크 다운과 EVPN/VXLAN 단절이 함께 발생 — 오버레이가 언더레이 장애를 그대로 물려받았습니다",
+      "root_cause_intent": "오버레이만 보고 판단하면 원인을 놓칩니다. 먼저 언더레이(물리 링크/라우팅)를 복구해야 합니다.",
+      "all_of": ["link_state_down"],
+      "any_of": ["evpn_adjacency_lost", "vxlan_tunnel_down"],
+      "window_seconds": 600,
+      "scope": "global",
+      "severity": "critical",
+      "category": "overlay"
+    }
+  ],
+
+  "throttle": {
+    "max_samples_per_group": 3
+  }
+}

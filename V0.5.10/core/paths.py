@@ -1,0 +1,217 @@
+"""
+애플리케이션 전역 경로 해석을 한 곳에 모은 중앙 모듈.
+
+이전에는 app-root 판단(exe 패키징 대응)과 폴더명 안전화 로직이
+engine/log_storage.py와 engine/project_manager.py에 따로따로(그리고 서로 다른 규칙으로)
+구현돼 있었다. 이 모듈이 그 중복을 없애는 단일 출처(Single Source of Truth)다.
+
+프로그램 코드/자산(패키지 내부)과 고객사별 데이터(data/)를 분리하는 것이 목적이므로,
+data_root()가 가리키는 트리 밖의 파일은 절대 프로그램 코드로 취급하지 않는다.
+"""
+import re
+import shutil
+import sys
+from pathlib import Path
+
+_INVALID_NAME_CHARS_RE = re.compile(r'[\\/:*?"<>|]')
+_RESERVED_WINDOWS_NAMES = {
+    "CON", "PRN", "AUX", "NUL",
+    *(f"COM{i}" for i in range(1, 10)),
+    *(f"LPT{i}" for i in range(1, 10)),
+}
+
+
+class AppPaths:
+    """실행 파일(exe)/스크립트 위치를 기준으로 앱 루트와 최상위 디렉터리를 계산.
+
+    exe로 패키징된 경우 프로그램 코드 자산(web_ui 등)은 sys.executable(또는 bundle_root)에서 읽고,
+    사용자의 작업 데이터/설정/로그는 Windows 사용자 문서 폴더(Documents/AutoCheck)에 저장하여
+    exe 파일이 있는 폴더(바탕화면 등)가 지저분해지는 것을 방지한다.
+    """
+
+    _root = None
+    _user_data_root = None
+    # 이미 mkdir 을 호출한 경로들 — _ensure() 가 프로세스당 한 번만 시스콜을 내게 한다.
+    _ensured = set()
+    # 하위 폴더 접근자가 돌려줄 Path 객체 캐시. mkdir 을 건너뛰어도 매 호출 Path 를 새로
+    # 조립하면(user_data_root() / "data") 여전히 3 us 가 든다 — 객체까지 캐시해야 0.2 us 가 된다.
+    _subdir_cache = {}
+
+    @classmethod
+    def app_root(cls) -> Path:
+        if cls._root is None:
+            if getattr(sys, "frozen", False):
+                cls._root = Path(sys.executable).resolve().parent
+            else:
+                cls._root = Path(__file__).resolve().parent.parent
+        return cls._root
+
+    @classmethod
+    def bundle_root(cls) -> Path:
+        """PyInstaller로 번들링된 자산(web_ui, static assets 등)의 위치.
+        frozen 상태면 sys._MEIPASS(또는 app_root), 개발 상태면 app_root()를 반환한다."""
+        if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+            return Path(sys._MEIPASS)
+        return cls.app_root()
+
+    @classmethod
+    def user_data_root(cls) -> Path:
+        """사용자의 작업 데이터/설정/로그 최상위 루트 디렉터리.
+
+        기본값: C:\\Users\\<사용자>\\Documents\\AutoCheck
+        포터블 예외: app_root() 아래 autocheck_data 폴더나 portable.txt 가 존재할 경우 해당 폴더 사용.
+        """
+        if cls._user_data_root is None:
+            portable_dir = cls.app_root() / "autocheck_data"
+            portable_flag = cls.app_root() / "portable.txt"
+            if portable_dir.exists() or portable_flag.exists():
+                cls._user_data_root = portable_dir
+            else:
+                cls._user_data_root = Path.home() / "Documents" / "AutoCheck"
+            
+            cls._ensure(cls._user_data_root)
+            cls._init_user_data_templates(cls._user_data_root)
+        return cls._user_data_root
+
+    @classmethod
+    def _init_user_data_templates(cls, user_root: Path):
+        """최초 실행 시 bundled 템플릿 설정 파일(ai_config.yaml 등) 및 기본 config 폴더를 복사한다."""
+        bundle = cls.bundle_root()
+        
+        # 복사 대상 루트 파일들
+        for filename in ("ai_config.yaml", "ai_settings.yaml", "connection.yaml"):
+            target_file = user_root / filename
+            src_file = bundle / filename
+            if not target_file.exists() and src_file.exists():
+                try:
+                    shutil.copy2(src_file, target_file)
+                except OSError:
+                    pass
+
+        # 복사 대상 config 디렉터리 (개발용 잔재 파일 active_project.yaml, customers.yaml 제외)
+        target_config = user_root / "config"
+        src_config = bundle / "config"
+        if not target_config.exists() and src_config.exists():
+            try:
+                def _ignore_legacy(dir, files):
+                    return [f for f in files if f in ("active_project.yaml", "customers.yaml")]
+                shutil.copytree(src_config, target_config, ignore=_ignore_legacy, dirs_exist_ok=True)
+            except OSError:
+                pass
+
+        # 최초 실행 시 CRTlog 폴더 자동 생성 보장
+        cls._ensure(user_root / "CRTlog")
+
+    @staticmethod
+    def _ensure(path: Path) -> Path:
+        """폴더를 보장하고 돌려준다 — 같은 경로에 대해 mkdir 은 프로세스당 한 번만 호출한다.
+
+        왜 캐시하는가: data_root() / config_root() / logs_root() / crt_log_root() 같은 접근자는
+        호출될 때마다 mkdir(parents=True, exist_ok=True) 시스콜을 냈다. 실측 9.2~9.8 us/call
+        (Linux) / 64.8 us/call (이전 측정, Windows) 인데, 이미 캐시돼 있는 app_root() 는
+        0.1 us 다. 폴링 경로(0.8초 주기의 get_realtime_monitor_state 등)가 이 접근자를 여러 번
+        부르므로, 앱이 유휴 상태에서도 계속 디스크에 쓰기를 시도하고 있었다.
+
+        절감폭 자체는 작다(폴링 1회당 수십 us). 이 변경의 진짜 값은 "아무 일도 안 할 때
+        디스크를 건드리지 않는다"는 것이다 — 과대평가하지 말 것.
+
+        받아들이는 대가: 앱이 도는 중에 사용자가 탐색기에서 폴더를 지우면 이 함수는 다시
+        만들어 주지 않는다. 실제 쓰기 경로는 각자 makedirs 를 하므로(core/atomic_io.py,
+        engine/realtime_monitor.save_snapshot, engine/log_storage.open_in_file_explorer)
+        데이터가 유실되지는 않고, 읽기/감시 경로는 폴더가 없으면 조용히 건너뛴다.
+        """
+        key = str(path)
+        if key not in AppPaths._ensured:
+            path.mkdir(parents=True, exist_ok=True)
+            AppPaths._ensured.add(key)
+        return path
+
+    @classmethod
+    def forget_ensured(cls):
+        """폴더 생성 캐시를 비운다 — 테스트가 임시 디렉터리로 루트를 바꿀 때 필요하다.
+
+        운영 코드에서 부를 일은 없다. 캐시를 비우면 다음 접근자 호출이 다시 mkdir 을 한다.
+        """
+        cls._ensured.clear()
+        cls._subdir_cache.clear()
+
+    @classmethod
+    def _subdir(cls, name: str) -> Path:
+        """user_data_root()/<name> 을 보장하고 돌려준다 — Path 객체까지 캐시한다.
+
+        이 접근자들은 폴링 경로에서 반복 호출되므로(0.8초 주기) mkdir 뿐 아니라 Path 조립
+        비용도 없애야 의미가 있다. 실측: mkdir 만 캐시 3.1 us -> Path 까지 캐시 0.2 us.
+        """
+        cached = cls._subdir_cache.get(name)
+        if cached is None:
+            cached = cls._ensure(cls.user_data_root() / name)
+            cls._subdir_cache[name] = cached
+        return cached
+
+    @classmethod
+    def data_root(cls) -> Path:
+        """고객사별 데이터(프로파일/인벤토리/커맨드/베이스라인/실행기록) 최상위 루트."""
+        return cls._subdir("data")
+
+    @classmethod
+    def labs_root(cls) -> Path:
+        """(레거시) 채점 프로젝트 정의(stages.yaml/target_state.yaml 등) 저장 위치."""
+        return cls._subdir("labs")
+
+    @classmethod
+    def config_root(cls) -> Path:
+        return cls._subdir("config")
+
+    @classmethod
+    def history_root(cls) -> Path:
+        """(레거시) 채점 모드(grading) 세션 히스토리."""
+        return cls._subdir("history")
+
+    @classmethod
+    def logs_root(cls) -> Path:
+        return cls._subdir("logs")
+
+    @classmethod
+    def raw_logs_root(cls) -> Path:
+        """(레거시) 수집 파이프라인이 남긴 원본 로그. 읽기 폴백 전용이라 없으면 만들지 않는다."""
+        return cls.user_data_root() / "raw_logs"
+
+    @classmethod
+    def terminal_sessions_dir(cls, project_id) -> Path:
+        """세션 터미널이 저장하는 원본 로그(AutoCheck_{장비}_{시각}.txt).
+
+        보고서·Findings·AI 분석·점검 로그 목록이 전부 여기를 읽는다. 예전엔 호출부마다
+        os.path.join("labs", project_id, "terminal_sessions")로 직접 조립했는데, CWD 상대경로라
+        앱을 다른 폴더에서 실행하면 로그가 멀쩡히 있는데도 "장비 없음"으로 보였다.
+        """
+        return cls.labs_root() / str(project_id) / "terminal_sessions"
+
+    @classmethod
+    def crt_log_root(cls) -> Path:
+        """SecureCRT 세션 로그 자동 연동용 글로벌 저장소 위치.
+        Documents/AutoCheck/CRTlog/ 에 쌓인 로그들을 활성 프로파일로 자동 매핑/복사한다."""
+        return cls._subdir("CRTlog")
+
+
+def sanitize_component(name: str) -> str:
+    """경로 구분자 등 위험 문자만 치환하는 최소 방어용 함수(기존 폴더와의 호환 목적).
+    사용자가 새로 입력한 이름을 검증할 때는 validate_name()을 쓸 것."""
+    name = (name or "").strip()
+    name = _INVALID_NAME_CHARS_RE.sub("_", name)
+    return name or "미지정"
+
+
+def validate_name(name: str) -> str:
+    """고객사명/프로파일명 등 사용자 입력을 폴더명으로 쓰기 전에 엄격히 검증한다.
+    유효하면 앞뒤 공백을 제거한 이름을 그대로 반환하고, 아니면 ValueError를 낸다."""
+    cleaned = (name or "").strip()
+    if not cleaned:
+        raise ValueError("이름을 입력하세요.")
+    match = _INVALID_NAME_CHARS_RE.search(cleaned)
+    if match:
+        raise ValueError(f'다음 문자는 사용할 수 없습니다: \\ / : * ? " < > |  (입력값: "{cleaned}")')
+    if cleaned in (".", "..") or cleaned.upper() in _RESERVED_WINDOWS_NAMES:
+        raise ValueError(f'"{cleaned}"은(는) 예약된 이름이라 사용할 수 없습니다.')
+    if cleaned.endswith(".") or cleaned.endswith(" "):
+        raise ValueError("이름 끝에 마침표나 공백을 쓸 수 없습니다.")
+    return cleaned

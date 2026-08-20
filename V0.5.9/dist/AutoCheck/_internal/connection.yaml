@@ -1,0 +1,10 @@
+network:
+  mode: internal
+  pre_flight_check: true
+  check_target_node: Core1
+  check_port: 22
+  check_timeout_sec: 3
+ssh:
+  connect_timeout_sec: 20
+  retry_count: 3
+  retry_delay_sec: 5

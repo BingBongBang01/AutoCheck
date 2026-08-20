@@ -1,0 +1,11 @@
+# 개발/테스트 전용 의존성 — 최종 사용자는 설치할 필요가 없다.
+#
+# requirements.txt 와 반드시 분리해 둔다: main.py 의 ensure_requirements() 가 실행마다
+# requirements.txt 를 훑어 미설치 패키지를 자동으로 pip install 하므로, 여기 있는 것을
+# 그쪽에 넣으면 최종 사용자 PC 에도 테스트 도구가 깔린다.
+#
+# 설치:  pip install -r requirements-dev.txt
+# 실행:  python -m pytest tests/ -q
+#        python -m tools.bench_log_analysis --check
+
+pytest>=7.0.0

@@ -1,0 +1,35 @@
+# AutoCheck 세션 로그 파일명 규칙 설정
+# 지원 변수:
+#   {device}     - 장비명 (예: Core1) [필수]
+#   {ip}         - 장비 IP (예: 192.168.205.101)
+#   {timestamp}  - 고정폭 일시 (%Y%m%d_%H%M%S, 예: 20260818_140000)
+#   {date}       - 날짜 (%Y%m%d, 예: 20260818)
+#   {time}       - 시간 (%H%M%S, 예: 140000)
+#   {kind}       - 로그 종류 (raw, problem, masked)
+#   {customer}   - 활성 고객사명
+#   {profile}    - 활성 정기점검 프로파일명
+#   {ext}        - 확장자 (기본 txt)
+
+template: "{timestamp}_{kind}_{device}.txt"
+
+presets:
+  - id: "standard"
+    name: "표준 (기본값)"
+    pattern: "{timestamp}_{kind}_{device}.txt"
+    description: "시간순 정렬에 최적화된 기본 규격 (예: 20260818_140000_raw_Core1.txt)"
+  - id: "device_first"
+    name: "장비명 우선형"
+    pattern: "{device}_{timestamp}_{kind}.txt"
+    description: "장비명으로 정렬할 때 편리한 규격 (예: Core1_20260818_140000_raw.txt)"
+  - id: "date_time_split"
+    name: "날짜·시간 분리형"
+    pattern: "{date}_{time}_{device}_{kind}.log"
+    description: "날짜와 시간을 분리하고 .log 확장자 사용 (예: 20260818_140000_Core1_raw.log)"
+  - id: "customer_profile"
+    name: "고객사·프로파일 포함형"
+    pattern: "{customer}_{profile}_{device}_{timestamp}.txt"
+    description: "고객사 및 회차명이 포함된 상세 규격 (예: ACME_202608_Core1_20260818_140000.txt)"
+  - id: "device_ip"
+    name: "장비명·IP 결합형"
+    pattern: "{device}_{ip}_{timestamp}.txt"
+    description: "장비명과 IP를 함께 기록하는 규격 (예: Core1_192.168.205.101_20260818_140000.txt)"

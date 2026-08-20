@@ -1,0 +1,21 @@
+# UI — 진입점 (python main.py 실행 필수)
+pywebview>=4.0.0
+
+# 설정 / 장비 SSH 접속
+pyyaml>=6.0
+netmiko>=4.0.0
+paramiko>=2.11.0
+
+# 보고서 내보내기 (보고서 탭: Excel, PPTX, PDF, Word)
+openpyxl>=3.0.0
+pandas>=1.5.0
+python-pptx>=0.6.21
+python-docx>=0.8.11
+reportlab>=3.6.0
+
+# 이미지 처리 (빌드 시 아이콘 변환용)
+Pillow>=9.0.0
+
+# EXE 빌드 및 배포 (선택 / 개발자용)
+pyinstaller>=5.0.0
+

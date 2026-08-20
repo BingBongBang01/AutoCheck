@@ -1,0 +1,922 @@
+﻿C:\Users\USER\Documents\github\AutoCheck\V0.5.7\build_exe.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\build_exe.py: import subprocess
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\build_exe.py: import sys
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\build_exe.py: from PIL import Image
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\gui_web.py: from main import Api, main
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: import webview
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: from api.base import BaseApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: from api.project_api import ProjectApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: from api.dashboard_api import DashboardApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: from api.grade_api import GradeApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: from api.report_api import ReportApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: from api.inspection_report_api import InspectionReportApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: from api.catalog_api import CatalogApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: from api.inventory_api import InventoryApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: from api.connection_api import ConnectionApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: from api.knowledge_api import KnowledgeApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: from api.settings_api import SettingsApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: from api.terminal_api import TerminalApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: from api.log_viewer_api import LogViewerApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: from api.masking_api import MaskingApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: from api.logs_api import LogsApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: from api.workspace_api import WorkspaceApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: from api.window_ref import set_window
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: from core.app_logger import install_print_capture, log_event
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: from core.paths import AppPaths
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py: from engine.migration_manager import migrate_if_needed
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\main.py:     import time
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\findings_analyzer.py: import json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\findings_analyzer.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\findings_analyzer.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\findings_analyzer.py: import urllib.request
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\findings_analyzer.py: from core import cloud_providers
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\findings_analyzer.py:     from ai_analysis import rule_based
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\findings_analyzer.py: except ImportError:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\findings_analyzer.py:     import sys, os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\findings_analyzer.py:     from ai_analysis import rule_based
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\findings_analyzer.py:     from core.sanitizer import mask_findings_with_mapping
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\findings_analyzer.py:     from core.ai_context_builder import build_context, make_batches
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\raw_log_analyzer.py: import json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\raw_log_analyzer.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\raw_log_analyzer.py: import time
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\raw_log_analyzer.py: import urllib.request
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\raw_log_analyzer.py: import urllib.error
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\raw_log_analyzer.py: from core import cloud_providers
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\raw_log_analyzer.py:     "You are a Senior Network Engineer analyzing raw CLI logs from an Arista vEOS-lab virtual platform.\n"
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\router.py:     from ai_analysis.findings_analyzer import analyze
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\router.py:     from ai_analysis.raw_log_analyzer import analyze_raw_log_text
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\router.py: except ImportError:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\router.py:     import sys, os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\router.py:     from ai_analysis.findings_analyzer import analyze
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\ai_analysis\router.py:     from ai_analysis.raw_log_analyzer import analyze_raw_log_text
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\alarm\base.py: from abc import ABC, abstractmethod
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\alarm\console_handler.py:     from alarm.base import AlarmHandler, register
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\alarm\console_handler.py: except ImportError:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\alarm\console_handler.py:     import sys, os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\alarm\console_handler.py:     from alarm.base import AlarmHandler, register
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\alarm\file_handler.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\alarm\file_handler.py: import json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\alarm\file_handler.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\alarm\file_handler.py:     from alarm.base import AlarmHandler, register
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\alarm\file_handler.py: except ImportError:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\alarm\file_handler.py:     import sys
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\alarm\file_handler.py:     from alarm.base import AlarmHandler, register
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\alarm\__init__.py: plugins.vendors/report.reporters와 동일한 패턴 — 이 패키지를 import하면
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\alarm\__init__.py: from alarm import console_handler, file_handler  # noqa: F401 (import 자체가 register() 부작용을 일으킴)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\ai_order_api.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\ai_order_api.py: from core.app_settings import ai_order_path
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\ai_order_api.py: from core.atomic_io import dump_yaml_atomic
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\ai_order_api.py:         import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\ai_order_api.py:         import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\base.py: from engine import project_manager as pm
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\base.py: from engine import command_catalog as cc
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\base.py:         from engine import device_inventory as di
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\base.py:         from core.paths import AppPaths
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\catalog_api.py:         from engine import command_catalog as cc
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\catalog_api.py:         from engine import command_catalog as cc
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\catalog_api.py:         from engine import command_catalog as cc
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\catalog_api.py:         from engine import command_catalog as cc
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\catalog_api.py:         from engine import command_catalog as cc
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\catalog_api.py:         from engine import command_catalog as cc
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\catalog_api.py:         from engine import command_catalog as cc
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\catalog_api.py:         from engine import command_catalog as cc
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\catalog_api.py:         import webview
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\catalog_api.py:         from api.window_ref import get_window
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\catalog_api.py:         from engine import log_storage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\catalog_api.py:         from engine import command_catalog as cc
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\catalog_api.py:     def import_catalog_excel(self):
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\catalog_api.py:         import webview
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\catalog_api.py:         from api.window_ref import get_window
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\catalog_api.py:         from engine import log_storage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\catalog_api.py:         from engine import command_catalog as cc
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\catalog_api.py:             catalog = cc.import_from_excel(src)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\cloud_ai_api.py: from core import cloud_providers
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\cloud_ai_api.py: from core.atomic_io import dump_yaml_atomic
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\cloud_ai_api.py:         import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\cloud_ai_api.py:         import urllib.request
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\cloud_ai_api.py:         import urllib.error
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\cloud_ai_api.py:         import uuid
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\connection_api.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\connection_api.py: from core.app_settings import connection_path
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\connection_api.py: from core.atomic_io import dump_yaml_atomic
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\connection_api.py:         import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\connection_api.py:         import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\customer_profile_api.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\customer_profile_api.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\customer_profile_api.py: from engine import project_manager as pm
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\customer_profile_api.py: from engine.profile_manager import profile_manager as prm
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\customer_profile_api.py: from core.paths import validate_name
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\customer_profile_api.py: from core.atomic_io import dump_yaml_atomic
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\customer_profile_api.py: from core.context_cache import workspace_cache
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\customer_profile_api.py: from core.utils import format_iso
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\customer_profile_api.py:     from engine import device_inventory as di
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\customer_profile_api.py:     result = di.copy_from_inventory(src, dst)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\customer_profile_api.py:         from engine import customer_manager as cm
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\customer_profile_api.py:             import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\customer_profile_api.py:         from engine import customer_manager as cm
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\customer_profile_api.py:         from engine import customer_manager as cm
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\customer_profile_api.py:         import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\customer_profile_api.py:         from engine import customer_manager as cm
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\customer_profile_api.py:         import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\customer_profile_api.py:                 "copied_from": (previous or {}).get("profile_name") if copied else None,
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\customer_profile_api.py:         import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\customer_profile_api.py:         import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\dashboard_api.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\dashboard_api.py: import time
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\dashboard_api.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\dashboard_api.py: from collections import Counter
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\dashboard_api.py: from engine import project_manager as pm
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\dashboard_api.py:         from engine import log_storage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\dashboard_api.py:         from api.report_api import _latest_terminal_log_paths_by_device
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\dashboard_api.py:         from api.log_file_browser_api import _read_text_auto
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\dashboard_api.py:         from engine.log_analysis import analyze_text
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\dashboard_api.py:                 "collected_at": datetime.datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S"),
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\dashboard_api.py:         from engine import device_inventory as di
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\dashboard_api.py:             "latest_at": datetime.datetime.fromtimestamp(latest_mtime).strftime("%Y-%m-%d %H:%M:%S")
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\dashboard_api.py:         from engine.history import load_latest
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\dashboard_api.py:         from core.health_score import score_project
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\dashboard_api.py:         from ai_analysis.rule_based import analyze
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\grade_api.py: import io
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\grade_api.py: import threading
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\grade_api.py: import contextlib
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\grade_api.py:             from engine import grading
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\grade_api.py:         from core import progress_engine
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\grade_api.py:         from engine import grading
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\grade_api.py:                     from engine.run_manager import run_manager
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\grade_api.py:                     from core.history_manager import history_manager
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\grade_api.py:         from core.job_manager import job_manager
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\grade_api.py:         from core.job_manager import job_manager
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\grade_api.py:         from core.job_manager import job_manager
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\grade_api.py:         from core.history_manager import history_manager
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inspection_report_api.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inspection_report_api.py: from engine import log_storage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inspection_report_api.py: from engine import inspection_report_builder as builder
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inspection_report_api.py: from engine.inspection_report_builder import InspectionReportError
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         from engine import device_inventory as di
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         from engine import device_inventory as di
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         from engine import device_inventory as di
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:     def import_devices(self, overwrite=False):
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         """파일 선택 다이얼로그로 CSV/YAML/JSON/Excel import."""
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         import webview
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         from api.window_ref import get_window
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         from engine import log_storage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         from engine import device_inventory as di
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         importers = {".csv": di.import_csv, ".yaml": di.import_yaml, ".yml": di.import_yaml,
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:                      ".json": di.import_json, ".xlsx": di.import_excel}
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         importer = importers.get(ext)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         if not importer:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         imported = importer(path)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         result = di.merge_imported(inv, imported, overwrite=overwrite)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         import webview
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         from api.window_ref import get_window
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         from engine import log_storage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         from engine import device_inventory as di
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         import webview
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         from api.window_ref import get_window
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         from engine import device_inventory as di
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         from engine import device_inventory as di
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         from engine import device_probe
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         from engine import device_probe
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         from engine import device_inventory as di
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         from engine import project_manager as pm
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         from engine import device_inventory as di
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:     def copy_devices_from_profile(self, source_project_id, overwrite=False):
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         from engine import project_manager as pm
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         from engine import device_inventory as di
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         result = di.copy_from_inventory(src, dst, overwrite=overwrite)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\inventory_api.py:         from engine import device_inventory as di
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\job_runner.py: import threading
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\job_runner.py: import time
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\knowledge_api.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\local_ai_api.py: from core.atomic_io import dump_yaml_atomic
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\local_ai_api.py:         from core.app_settings import ai_config_path
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\local_ai_api.py:         import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\local_ai_api.py:         import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\local_ai_api.py:         import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\local_ai_api.py:         import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\local_ai_api.py:         import urllib.request
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\local_ai_api.py:         import json as _json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\local_ai_api.py:         import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\local_ai_api.py:         import urllib.request
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\local_ai_api.py:         import json as _json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\local_ai_api.py:         import urllib.request
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\local_ai_api.py:         import urllib.request
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\local_ai_api.py:         import json as _json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\local_ai_api.py:         import time
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\logs_api.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\logs_api.py: import shutil
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\logs_api.py: from typing import Any, Dict, Optional, Union
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\logs_api.py:         from core.app_logger import get_recent_logs as _get_recent_logs
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\logs_api.py:         from core.app_logger import read_session_log_chunk
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\logs_api.py:         import webview
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\logs_api.py:         from api.window_ref import get_window
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\logs_api.py:         from core.app_logger import get_session_file_path, flush_logs
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py: import glob
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py: import time
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py: import threading
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py: from api.log_file_browser_api import _read_text_auto
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py: from core.paths import AppPaths
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py: from api.job_runner import JobRunner
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:             from engine.baseline_store import BaselineStore
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:             from engine.realtime_monitor import RealtimeMonitor
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:         from engine import log_storage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:         from engine import realtime_monitor as rtm
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:         from engine import realtime_monitor as rtm
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:         import json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:         from api import window_ref
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:         from core.crt_stream_watcher import CRTStreamWatcher
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:         from engine.baseline_diff_engine import BaselineDiffEngine
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:         from engine.stream_device_matcher import StreamDeviceMatcher
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:         from engine.stream_device_matcher import StreamDeviceMatcher
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:         from core.crt_stream_watcher import DEFAULT_EXTENSIONS
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:                 row["mtime_str"] = datetime.datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:         import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:         from core.atomic_io import dump_yaml_atomic
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:         from engine.realtime_monitor import CHECK_ITEMS
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:         from engine.log_rule_engine import load_rules
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:         import json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:         import json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:         from api import window_ref
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:             from engine import log_analysis
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:             from ai_analysis.router import analyze_raw_log_text
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_analysis_run_api.py:             from engine.log_analysis import extract_suspicious_context
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_file_browser_api.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_file_browser_api.py: import glob
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_file_browser_api.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_file_browser_api.py: import shutil
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_file_browser_api.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_file_browser_api.py: from api.report_api import _latest_terminal_logs_by_device
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_file_browser_api.py: from core.paths import AppPaths
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_file_browser_api.py:         from engine import log_storage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_file_browser_api.py:         from engine import log_storage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_file_browser_api.py:         from engine import log_storage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_file_browser_api.py:             f["mtime_str"] = datetime.datetime.fromtimestamp(f["mtime"]).strftime("%Y-%m-%d %H:%M:%S")
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_file_browser_api.py:         from engine import project_manager as pm
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_file_browser_api.py:         from engine import device_inventory as di
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_file_browser_api.py:             from engine import log_storage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_file_browser_api.py:         from engine import log_storage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_file_browser_api.py:         from report.textfsm_parser import split_raw_log
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_viewer_api.py: from api.log_file_browser_api import LogFileBrowserApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\log_viewer_api.py: from api.log_analysis_run_api import LogAnalysisRunApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\masking_api.py:         from engine import log_masking
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\masking_api.py:         import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\masking_api.py:         from engine import log_masking
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\project_api.py: from api.project_core_api import ProjectCoreApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\project_api.py: from api.customer_profile_api import CustomerProfileApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\project_core_api.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\project_core_api.py: from engine import project_manager as pm
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\project_core_api.py:         import shutil
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\project_core_api.py:         from engine import log_storage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\project_core_api.py:         import webview
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\project_core_api.py:         import zipfile
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\project_core_api.py:         from api.window_ref import get_window
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\project_core_api.py:     def import_project(self):
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\project_core_api.py:         import webview
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\project_core_api.py:         import zipfile
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\project_core_api.py:         import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\project_core_api.py:         from api.window_ref import get_window
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py: import glob
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:     from engine import log_storage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:     from api.log_file_browser_api import _parse_terminal_session_filename
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:     customer_name, profile_name = log_storage.resolve_names_from_project(project_id)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:     from api.log_file_browser_api import _read_text_auto
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py: from engine.log_analysis import ANOMALY_KEYWORDS as _ANOMALY_KEYWORDS
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:     from report.textfsm_parser import split_raw_log
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:     from engine.log_rule_engine import ContextTracker, get_engine
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         from engine import log_storage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:             from engine.profile_manager import profile_manager
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         from engine.history import load_latest
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         from ai_analysis.router import analyze as ai_analyze
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         from report.markdown_report import build_markdown_report
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         from report.reporters import MarkdownReporter
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         from engine.history import load_latest
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         from ai_analysis.router import analyze as ai_analyze
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         from report.reporters import get_reporter
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         from report.base_reporter import list_formats
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         import report.reporters  # 플러그인(reporter)들을 시스템에 등록하기 위해 모듈 로드
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         from report.base_reporter import list_formats  # 실제 반환할 함수는 베이스 모듈에서 로드
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         from report.textfsm_parser import build_report_dataset
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         from report.excel_report import write_into_template
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         from engine.history import load_latest
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         from engine import project_manager as pm
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         from ai_analysis.rule_based import suggest_action, analyze as rule_based_analyze
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         from ai_analysis.router import analyze as ai_analyze
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         from core.health_score import score_project
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         import webview
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         from api.window_ref import get_window
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         from report.excel_report import build_full_report_workbook
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         from report.textfsm_parser import build_report_dataset
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\report_api.py:         from report.pptx_report import build_placeholder_map, apply_placeholders_to_pptx, build_blank_template
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\settings_api.py: from api.ai_order_api import AiOrderApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\settings_api.py: from api.local_ai_api import LocalAiApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\settings_api.py: from api.cloud_ai_api import CloudAiApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\settings_api.py: from api.terminal_ui_settings_api import TerminalUiSettingsApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_api.py: from api.terminal_session_api import TerminalSessionApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_api.py: from api.terminal_inspection_api import TerminalInspectionApiMixin
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_inspection_api.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_inspection_api.py: import glob
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_inspection_api.py: import time
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_inspection_api.py: import shutil
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_inspection_api.py: import threading
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_inspection_api.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_inspection_api.py: from core.ansi_sanitizer import clean_terminal_log, strip_ansi
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_inspection_api.py: from api.terminal_session_api import _sessions, _sessions_lock, _wait_for_settled_output, _PROMPT_TAIL_RE
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_inspection_api.py: from core.paths import AppPaths
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_inspection_api.py:         from engine import command_catalog as cc
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_inspection_api.py:         from engine import log_storage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_inspection_api.py:         from engine.run_manager import run_manager
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_inspection_api.py:                         from engine import log_analysis
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_inspection_api.py:                         from api.log_file_browser_api import _parse_terminal_session_filename, _read_text_auto
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_inspection_api.py:                         import uuid
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_session_api.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_session_api.py: import time
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_session_api.py: import threading
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_session_api.py: from core.ansi_sanitizer import strip_ansi
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_session_api.py: from engine import ssh_client
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_session_api.py:         from engine import device_inventory as di
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_session_api.py:     def auto_rename_device_from_session(self, session_id):
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_ui_settings_api.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_ui_settings_api.py: from core.atomic_io import dump_yaml_atomic
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_ui_settings_api.py:         from core.app_settings import terminal_ui_path
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_ui_settings_api.py:         import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\terminal_ui_settings_api.py:         import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\window_ref.py: 필요한데, 모듈을 쪼개면서 전역변수를 직접 import하기보다 이 작은 참조 홀더를 통해 공유한다.
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\workspace_api.py: from engine.profile_manager import profile_manager as prm
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\workspace_api.py: from engine.run_manager import run_manager as rmgr, RunManagerError
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\workspace_api.py: from engine.log_manager import log_manager as lmgr
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\workspace_api.py: from engine.report_manager import report_manager as repmgr, ReportManagerError
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\workspace_api.py: from core.storage_service import storage_service
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\workspace_api.py: from engine.log_storage import open_in_file_explorer
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\workspace_api.py: from api.job_runner import JobRunner
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\api\workspace_api.py:         from core.paths import AppPaths
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\ai_context_builder.py:     import json as _json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\ai_context_builder.py:     from core.finding import Finding
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\ansi_sanitizer.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\app_logger.py: import builtins
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\app_logger.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\app_logger.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\app_logger.py: import queue
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\app_logger.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\app_logger.py: import threading
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\app_logger.py: from collections import deque
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\app_logger.py: from typing import Any, Dict, List, Optional, Union
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\app_logger.py: from core.paths import AppPaths
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\app_logger.py: import atexit
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\app_logger.py:     """Detect log level from raw printed string."""
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\app_settings.py: from core.paths import AppPaths
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\atomic_io.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\atomic_io.py: import tempfile
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\atomic_io.py: import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\context.py: from dataclasses import dataclass, field
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\context.py: from typing import Optional
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\context.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\context_cache.py: import threading
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\context_cache.py: from typing import Any, Callable, Dict, List, Optional
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\crt_stream_watcher.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\crt_stream_watcher.py: import threading
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\crt_stream_watcher.py:         import time
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\crt_stream_watcher.py:     from engine.baseline_store import device_from_filename
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\crt_stream_watcher.py:     return device_from_filename(path)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\event.py: from dataclasses import dataclass, field, asdict
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\event.py: from typing import Optional, List, Any
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\event_bus.py: import threading
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\event_bus.py: import time
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\event_bus.py: from collections import defaultdict, deque
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\finding.py: from dataclasses import dataclass, field, asdict
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\finding.py: from datetime import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\finding.py: from typing import Optional, Any
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\finding.py:     def from_verdict(cls, project_id, session_id, category, verdict, severity=None):
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\health_score.py:     from core.finding import Finding
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\history_manager.py: import json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\history_manager.py: from core.paths import AppPaths
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\history_manager.py: from core.storage_service import storage_service
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\history_manager.py: from core.event_bus import bus as event_bus
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\history_manager.py: from engine.profile_manager import profile_manager
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\history_manager.py: from engine.run_manager import run_manager
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\job_manager.py: import queue
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\job_manager.py: import threading
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\job_manager.py: import time
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\job_manager.py: import uuid
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\job_manager.py: from core.event_bus import bus as event_bus
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\paths.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\paths.py: import shutil
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\paths.py: import sys
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\paths.py: from pathlib import Path
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\progress_engine.py: import threading
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\progress_engine.py: import time
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\root_cause.py: from dataclasses import dataclass, field, asdict
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\root_cause.py: from datetime import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\root_cause.py: from typing import Optional, List, Any
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\sanitizer.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\sanitizer.py: import copy
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\sanitizer.py:     from core.finding import Finding
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\storage_service.py: import csv
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\storage_service.py: import io
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\storage_service.py: import json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\storage_service.py: import logging
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\storage_service.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\storage_service.py: import shutil
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\storage_service.py: from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypeVar, Union
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\storage_service.py:     from engine.profile_manager import RunHandle
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\storage_service.py: import tempfile
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\storage_service.py: import uuid
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\storage_service.py: from dataclasses import dataclass
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\storage_service.py: from pathlib import Path
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\storage_service.py:         from openpyxl import Workbook
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\storage_service.py:         from engine.profile_manager import RUN_SUBDIRS, RunHandle
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\storage_service.py:         from core.utils import format_run_id, format_iso, current_datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\structured_log.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\structured_log.py: import json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\structured_log.py: import threading
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\structured_log.py: from core.paths import AppPaths
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\structured_log.py:         from core.app_logger import log_event as app_log_event
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\worker_pool.py: from concurrent.futures import ThreadPoolExecutor, as_completed
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\worker_pool.py:     import time
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\ai\provider.py: from abc import ABC, abstractmethod
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\ai\provider.py: from typing import Any, Dict, Optional
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\ai\provider.py:         """Generate text response from prompt."""
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\ai\service.py: from typing import Dict, Any, Optional
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\ai\service.py: from core.ai.provider import BaseAIProvider, CloudAIProvider, LocalAIProvider
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\ai\__init__.py: from core.ai.provider import BaseAIProvider, CloudAIProvider, LocalAIProvider
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\ai\__init__.py: from core.ai.service import AIService, ai_service
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\utils\datetime.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\utils\datetime.py: from typing import Optional, Union
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\utils\datetime.py:         return datetime.datetime.fromisoformat(dt_str)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\core\utils\__init__.py: from core.utils.datetime import (
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\baseline_diff_engine.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\baseline_diff_engine.py: import time
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\baseline_diff_engine.py: import itertools
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\baseline_diff_engine.py: from core.ansi_sanitizer import strip_ansi
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\baseline_diff_engine.py: from engine.baseline_store import normalize_interface
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\baseline_diff_engine.py:     (re.compile(r'OSPF-\d-ADJCH(?:G|ANGE).*?\b(?:from|to)\b.*', re.IGNORECASE), "NEIGHBOR_STATE"),
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\baseline_diff_engine.py:                 # 'from LOADING to FULL' 은 down 단어가 없지만, 'from FULL to DOWN' 처럼
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\baseline_store.py: import glob
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\baseline_store.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\baseline_store.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\baseline_store.py: from core.ansi_sanitizer import clean_terminal_log
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\baseline_store.py: def device_from_filename(filename):
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\baseline_store.py:             from engine import log_storage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\baseline_store.py:             device = device_from_filename(path)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\baseline_store.py:                 from api.log_file_browser_api import _read_text_auto
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\collector.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\collector.py: import socket
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\collector.py: import time
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\collector.py: import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\collector.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\collector.py: from pathlib import Path
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\collector.py: from engine import device_inventory as di
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\collector.py: from core.ansi_sanitizer import clean_terminal_log
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\collector.py: from core.storage_service import storage_service, PathTarget
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\collector.py: from core.worker_pool import WorkerPool
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\collector.py: from core import progress_engine
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\collector.py: from core.structured_log import log_event as slog_event
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\collector.py: from core.event_bus import bus as event_bus
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\collector.py:     from netmiko import ConnectHandler
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\collector.py: except ImportError:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\collector.py:                 from engine.log_manager import log_manager
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\collector.py:         from core.app_settings import connection_path as default_connection_path
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\collector.py:         from engine.run_manager import run_manager
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\collector.py:         from core.paths import AppPaths
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\collector.py:         from engine.session_timeline import write_session_timeline
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\command_catalog.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\command_catalog.py: import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\command_catalog.py: from core.atomic_io import dump_yaml_atomic
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\command_catalog.py: import pandas as pd
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\command_catalog.py: from core.paths import AppPaths
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\command_catalog.py:         import openpyxl
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\command_catalog.py:     except ImportError:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\command_catalog.py: def import_from_excel(path):
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\command_catalog.py:         import openpyxl
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\command_catalog.py:     except ImportError:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\comparator.py: from engine.comparators.vlan import compare_vlan_stage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\comparator.py: from engine.comparators.stp import compare_stp_stage, build_vlan_index, EOS_DEFAULT_BRIDGE_PRIORITY
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\comparator.py: from engine.comparators.lacp import compare_lacp_stage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\comparator.py: from engine.comparators.mlag import compare_mlag_stage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\comparator.py: from engine.comparators.ospf import compare_ospf_stage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\comparator.py: from engine.comparators.vrrp import compare_vrrp_stage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\comparator.py: from engine.comparators.acl import compare_acl_stage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\comparator.py: from engine.comparators.ntp import compare_ntp_stage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\comparator.py: from engine.comparators.snmp import compare_snmp_stage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\customer_manager.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\customer_manager.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\customer_manager.py: import uuid
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\customer_manager.py: import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\customer_manager.py: from core.paths import AppPaths
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory.py: 전체 코드베이스가 `from engine import device_inventory as di` 형태로 이 모듈 전체를
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory.py:   - device_inventory_import_export.py: CSV/YAML/JSON/Excel 불러오기·엑셀 내보내기
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory.py: from engine.device_inventory_core import (
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory.py: from engine.device_inventory_import_export import (
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory.py:     import_csv, import_yaml, import_json, import_excel, merge_imported,
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory.py:     copy_from_inventory, export_to_excel, EXCEL_HEADERS,
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory.py: from engine.device_inventory_reachability import check_reachability
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory.py:     "import_csv", "import_yaml", "import_json", "import_excel", "merge_imported",
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory.py:     "copy_from_inventory", "export_to_excel", "EXCEL_HEADERS", "check_reachability",
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_core.py: Import/Export는 device_inventory_import_export.py, 도달가능성 체크는
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_core.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_core.py: import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_core.py: from core.atomic_io import dump_yaml_atomic
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_core.py: def _migrate_from_legacy(lab_meta_path, ip_allocation_path):
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_core.py:         migrated = _migrate_from_legacy(lab_meta_path, ip_allocation_path)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_import_export.py: import csv
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_import_export.py: import json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_import_export.py: import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_import_export.py: from engine.device_inventory_core import _normalize_device, update_device
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_import_export.py: # ---------- Import ----------
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_import_export.py: def import_csv(path):
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_import_export.py: def import_yaml(path):
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_import_export.py: def import_json(path):
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_import_export.py: def import_excel(path):
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_import_export.py:         import openpyxl
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_import_export.py:     except ImportError:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_import_export.py:         print("[안내] openpyxl 미설치 — Excel import는 건너뜀 (pip install openpyxl로 추가 가능)")
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_import_export.py: def merge_imported(inventory, imported_devices, overwrite=False):
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_import_export.py:     """import된 장비를 기존 inventory에 합침. overwrite=True면 동명 장비 덮어씀, 아니면 건너뜀."""
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_import_export.py:     for imp in imported_devices:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_import_export.py: def copy_from_inventory(src_inventory, dst_inventory, overwrite=False):
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_import_export.py:     파일에서 불러오는 것(import_csv 등)과 완전히 같은 병합 규칙을 쓴다 —
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_import_export.py:     result = merge_imported(dst_inventory, devices, overwrite=overwrite)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_import_export.py:         import openpyxl
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_import_export.py:     except ImportError:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_reachability.py: import socket as _socket
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_inventory_reachability.py: from engine.device_inventory_core import resolve_credentials
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_probe.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_probe.py: import socket
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_probe.py: from core.ansi_sanitizer import strip_ansi
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_probe.py: from engine.device_inventory_core import resolve_credentials
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_probe.py:     import time
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_probe.py:     from engine.ssh_client import connect
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\device_probe.py:     from core.worker_pool import WorkerPool
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\event_extractor.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\event_extractor.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\event_extractor.py: import glob
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\event_extractor.py: from core.event import DeviceEvent
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\grading.py: from pathlib import Path
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\grading.py: import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\grading.py: from engine.project_manager import (list_projects, get_active_project, set_active_project,
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\grading.py:     from engine.collector import collect_all
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\grading.py:     from engine.command_catalog import load_catalog, get_enabled_commands
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\grading.py:     from engine.device_inventory import load_inventory
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\grading.py:     import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\grading.py:     from pipeline.pipeline import Pipeline
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\grading.py:     from pipeline.steps import (CollectorStep, ParserStep, RuleEngineStep, ScorerStep,
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\grading.py:     from core.context import ProjectContext, SessionContext
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\history.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\history.py: import json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\history.py: import glob
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\history.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\history.py: from core.paths import AppPaths
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\history.py:                     "from": prev_result, "to": r["result"],
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\inspection_report_builder.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\inspection_report_builder.py: import json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\inspection_report_builder.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\inspection_report_builder.py: from pathlib import Path
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\inspection_report_builder.py: from core.paths import sanitize_component
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\inspection_report_builder.py: from engine.profile_manager import profile_manager
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\inspection_report_builder.py: from report.inspection_excel import (
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\inspection_report_builder.py:     from engine import log_storage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\inspection_report_builder.py:                 collected = datetime.datetime.fromtimestamp(path.stat().st_mtime)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\inspection_report_builder.py:         from engine import project_manager as pm
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\inspection_report_builder.py:         from engine import device_inventory as di
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\inspection_report_builder.py:     from engine import log_storage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\inspection_report_builder.py:                 "mtime_str": datetime.datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_analysis.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_analysis.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_analysis.py: import glob
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_analysis.py: from engine.log_rule_engine import (
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_analysis.py: # report_api.py가 하이라이트용으로 이 이름을 그대로 import 한다 — 유지.
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_manager.py: import difflib
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_manager.py: import gzip
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_manager.py: import hashlib
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_manager.py: import shutil
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_manager.py: from pathlib import Path
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_manager.py: from typing import Optional
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_manager.py: from core.storage_service import storage_service
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_manager.py: from report.textfsm_parser import split_raw_log
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_manager.py: from engine.log_masking import apply_masking, MASK_KEY_ORDER
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_manager.py:             fromfile=f"{getattr(run_a, 'run_id', 'run_a')}/{command}",
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_masking.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_masking.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_masking.py: import glob
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_masking.py: from pathlib import Path
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_masking.py:     from core.storage_service import storage_service, PathTarget
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_rule_engine.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_rule_engine.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_rule_engine.py: import json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_storage.py:     03_CMD (커맨드 카탈로그 export/import)              -> commands/
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_storage.py:     04_device_list (장비목록 export/import)             -> inventory/
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_storage.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_storage.py: import sys
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_storage.py: import shutil
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_storage.py: from core.paths import AppPaths, sanitize_component
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_storage.py: from engine.profile_manager import profile_manager as _pm
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_storage.py:     """명령어 카탈로그 export/import 기본 위치: data/<고객사>/<프로파일>/commands."""
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_storage.py:     """장비목록 export/import 기본 위치: data/<고객사>/<프로파일>/inventory."""
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_storage.py: def resolve_names_from_project(project_id):
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_storage.py:     import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_storage.py:     from engine.run_manager import run_manager
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_storage.py:     import glob as _glob
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_storage.py:         import subprocess
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\log_storage.py:         import subprocess
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\migration_manager.py:   labs/<lab_name>/device_inventory.yaml   -> data/legacy_import/<lab_name>/inventory/device_inventory.yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\migration_manager.py:   labs/<lab_name>/commands_catalog.yaml   -> data/legacy_import/<lab_name>/commands/commands_catalog.yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\migration_manager.py:   labs/<lab_name>/target_state.yaml       -> data/legacy_import/<lab_name>/baselines/target_state.yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\migration_manager.py:                                            -> data/legacy_import/<lab_name>/archive/legacy_lab_meta/<file>
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\migration_manager.py:   labs/<lab_name>/terminal_sessions/*.txt -> data/legacy_import/<lab_name>/history/legacy_terminal_sessions/<file>
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\migration_manager.py:   history/<lab_name>/*.json               -> data/legacy_import/<lab_name>/history/legacy_grading_history/<file>
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\migration_manager.py:   config_snapshots/**                     -> data/legacy_import/_unclassified_logs/cache/config_snapshots/**
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\migration_manager.py:   raw_logs/**                             -> data/legacy_import/_unclassified_logs/cache/raw_logs/**
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\migration_manager.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\migration_manager.py: import json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\migration_manager.py: import shutil
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\migration_manager.py: import time
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\migration_manager.py: import traceback
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\migration_manager.py: from pathlib import Path
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\migration_manager.py: from core.paths import AppPaths, sanitize_component
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\migration_manager.py: from engine.profile_manager import profile_manager
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\migration_manager.py: LEGACY_CUSTOMER = "legacy_import"
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\migration_manager.py: def apply_upgrades(from_version: int) -> None:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\migration_manager.py:     for version in range(from_version, MIGRATION_VERSION):
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\network_discovery.py: import ipaddress
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\network_discovery.py: import socket
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\network_discovery.py: from concurrent.futures import ThreadPoolExecutor, as_completed
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\profile_manager.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\profile_manager.py: import json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\profile_manager.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\profile_manager.py: import shutil
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\profile_manager.py: import uuid
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\profile_manager.py: from dataclasses import dataclass
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\profile_manager.py: from pathlib import Path
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\profile_manager.py: from core.paths import AppPaths, validate_name
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\profile_manager.py:         from engine.run_manager import run_manager
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\profile_manager.py:     def migrate_credentials_from_yaml(self, customer_name: str, profile_name: str, source_yaml_path) -> bool:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\profile_manager.py:         import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\project_manager.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\project_manager.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\project_manager.py: import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\project_manager.py: import shutil
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\project_manager.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\project_manager.py: from core.paths import AppPaths
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\project_manager.py: from core.atomic_io import dump_yaml_atomic
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\project_manager.py:     from engine.command_catalog import load_catalog
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\project_manager.py:     from engine.device_inventory import save_inventory, DEFAULT_PROJECT_DEFAULTS
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\project_manager.py:             from engine.profile_manager import profile_manager
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\project_manager.py:                 profile_manager.migrate_credentials_from_yaml(
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\realtime_monitor.py: import threading
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\realtime_monitor.py: import time
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\realtime_monitor.py: from collections import OrderedDict, deque
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\realtime_monitor.py:     def _pin_from_alerts_locked(self, device, check_id, rank):
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\realtime_monitor.py:             "pinned": True, "pin_rank": rank, "from_rules": True,
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\realtime_monitor.py:                 pinned.append(self._pin_from_alerts_locked(key[0], key[1], rank))
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\realtime_monitor.py:                     f["from_history"] = True
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\realtime_monitor.py:     import json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\realtime_monitor.py:     import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\realtime_monitor.py:     from core.atomic_io import write_text_atomic
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\realtime_monitor.py:     import json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\realtime_monitor.py:     import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py: import io
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py: import json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py: import tempfile
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py: import zipfile
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py: from pathlib import Path
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py: from core.paths import AppPaths
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py: from core.storage_service import storage_service, PathTarget
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py: from core.health_score import score_project
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py: from engine.log_manager import log_manager
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py:     어떤 모듈도 report/*.py를 직접 import해서 파일을 쓰지 않고 이 클래스를 통해야 한다."""
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py:         from engine.profile_manager import profile_manager
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py:             from report.inspection_report import build_inspection_report
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py:         from report.markdown_report import build_markdown_report
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py:                 from report.markdown_report import save_docx_report
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py:                 from report.pdf_report import save_pdf_report
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py:                 from report.html_report import build_html_report
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py:             from report.excel_report import build_full_report_workbook
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py:         except ImportError as e:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py:             from engine.device_inventory_import_export import export_to_excel
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py:             from engine.command_catalog import export_to_excel
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report_manager.py:         """engine.device_inventory_import_export.export_to_excel/engine.command_catalog.export_to_excel는
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\run_manager.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\run_manager.py: import getpass
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\run_manager.py: from dataclasses import dataclass, asdict
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\run_manager.py: from enum import Enum
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\run_manager.py: from pathlib import Path
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\run_manager.py: from typing import Optional
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\run_manager.py: from core.paths import AppPaths
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\run_manager.py: from core.storage_service import storage_service
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\run_manager.py: from engine.profile_manager import profile_manager, RunHandle
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\run_manager.py:     def from_dict(cls, data: dict) -> "RunSession":
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\run_manager.py:     def from_dict(cls, data: dict) -> "RunMetadata":
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\run_manager.py:         return RunSession.from_dict(data)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\run_manager.py:         return RunMetadata.from_dict(storage_service.load_json(run, "metadata.json", default={}))
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\run_manager.py:             start = datetime.datetime.fromisoformat(session.start_time)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\run_manager.py:             session.duration_sec = (datetime.datetime.fromisoformat(session.end_time) - start).total_seconds()
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\scheduler.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\scheduler.py: import time
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\scheduler.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\scheduler.py: import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\scheduler.py:     from engine import grading
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\scheduler.py:     from engine import log_storage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\scheduler.py:     customer_name, profile_name = log_storage.resolve_names_from_project(project_id)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\scheduler.py:     import sys
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\session_timeline.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\session_timeline.py: import glob
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\session_timeline.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\session_timeline.py: from pathlib import Path
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\session_timeline.py: from engine.event_extractor import extract_events
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\session_timeline.py:     from core.storage_service import storage_service, PathTarget
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\ssh_client.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\ssh_client.py: import tempfile
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\ssh_client.py: import paramiko
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\ssh_client.py:             return key_cls.from_private_key_file(path, password=passphrase)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\stream_device_matcher.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\stream_device_matcher.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\stream_device_matcher.py:         device = (self._from_filename(path)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\stream_device_matcher.py:                   or self._from_content(head_text))
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\stream_device_matcher.py:     def _from_filename(self, path):
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\stream_device_matcher.py:     def _from_content(self, head_text):
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\stream_device_matcher.py:         by_name = self._from_filename(path)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\stream_device_matcher.py:         by_content = self._from_content(head_text)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\stream_device_matcher.py:             "from_filename": by_name,
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\stream_device_matcher.py:             "from_content": by_content,
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\comparators\acl.py:     from parsers.show_acl import acl_exists, has_explicit_deny_any
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\comparators\lacp.py:     from parsers.show_port_channel import has_degraded_member
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\comparators\vrrp.py:     from parsers.show_inventory_mlag_vrrp import check_vrrp_split_brain
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report\aggregator.py: from typing import Any, Dict, Optional
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report\aggregator.py: from core.storage_service import storage_service
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report\aggregator.py:     """Aggregates execution run data from storage service."""
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report\exporter.py: from typing import Any
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report\exporter.py: from core.storage_service import storage_service
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report\renderer.py: from typing import Any, Dict
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report\__init__.py: from engine.report.aggregator import ReportDataAggregator
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report\__init__.py: from engine.report.renderer import ReportRenderer
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\engine\report\__init__.py: from engine.report.exporter import ReportExporter
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\parsers\show_acl.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\parsers\show_environment.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\parsers\show_interfaces_status.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\parsers\show_inventory_mlag_vrrp.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\parsers\show_ntp.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\parsers\show_port_channel.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\parsers\show_processes.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\parsers\show_routing_neighbor.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\parsers\show_snmp.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\parsers\show_spanning_tree.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\parsers\show_vlan.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\pipeline.py: from core.event_bus import bus as default_bus
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\step.py: from abc import ABC, abstractmethod
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py: import time
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:     from pipeline.step import PipelineStep
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:     from plugins.vendors.base import get_driver
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:     import plugins.vendors.arista  # noqa: F401 (import 자체가 register() 부작용을 일으킴)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:     import plugins.vendors.cisco  # noqa: F401
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:     from plugins.parsers.cache import parse_cached
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:     from rule_engine.rules import run_vlan_stp_rules, run_extended_stage_rules, run_inspection_rules, findings_to_verdicts
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:     from rule_engine import registry as rule_registry
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:     from engine.scorer import score_all, print_scoreboard
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:     from engine.history import save_history, load_previous, compare_sessions, compare_check_level, compare_findings
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:     from core.structured_log import log_event as slog_event
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py: except ImportError:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:     import sys, os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:     from pipeline.step import PipelineStep
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:     from plugins.vendors.base import get_driver
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:     import plugins.vendors.arista  # noqa: F401
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:     import plugins.vendors.cisco  # noqa: F401
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:     from plugins.parsers.cache import parse_cached
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:     from rule_engine.rules import run_vlan_stp_rules, run_extended_stage_rules, run_inspection_rules, findings_to_verdicts
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:     from rule_engine import registry as rule_registry
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:     from engine.scorer import score_all, print_scoreboard
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:     from engine.history import save_history, load_previous, compare_sessions, compare_check_level, compare_findings
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:     from core.structured_log import log_event as slog_event
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:                 print(f"  [{c['stage']}] {c['check']}: {c['from']} -> {c['to']}")
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:         import alarm  # noqa: F401 (import 자체가 핸들러 register() 부작용을 일으킴)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:         from alarm.base import notify_all
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:         from core.finding import SEVERITY_CRITICAL
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:         from ai_analysis.router import analyze as ai_analyze
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:             import report.reporters  # noqa: F401 (import 자체가 InspectionReporter register() 부작용을 일으킴)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:             from report.base_reporter import get_reporter
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\pipeline\steps.py:         from report.markdown_report import save_markdown_report
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\parsers\cache.py: import hashlib
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\parsers\cache.py:     from plugins.parsers.registry import get_parser
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\parsers\cache.py: except ImportError:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\parsers\cache.py:     import sys, os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\parsers\cache.py:     from plugins.parsers.registry import get_parser
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\parsers\registry.py:     from parsers import show_vlan, show_spanning_tree, show_processes, show_environment
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\parsers\registry.py:     from parsers import show_interfaces_status, show_port_channel, show_inventory_mlag_vrrp
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\parsers\registry.py:     from parsers import show_routing_neighbor, show_acl, show_ntp, show_snmp
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\vendors\arista.py:     from plugins.vendors.base import VendorDriver, register
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\vendors\arista.py: except ImportError:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\vendors\arista.py:     import sys, os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\vendors\arista.py:     from plugins.vendors.base import VendorDriver, register
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\vendors\arista.py:     from plugins.vendors.base import get_driver, list_vendors
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\vendors\base.py: from abc import ABC, abstractmethod
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\vendors\cisco.py:     from plugins.vendors.base import VendorDriver, register
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\vendors\cisco.py: except ImportError:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\vendors\cisco.py:     import sys, os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\vendors\cisco.py:     from plugins.vendors.base import VendorDriver, register
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\vendors\cisco.py:     from plugins.vendors.base import get_driver, list_vendors
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\vendors\__init__.py: plugins.vendors 패키지를 import하면 등록된 VendorDriver들이 자동으로 로드된다.
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\vendors\__init__.py: (base.py의 register()는 각 드라이버 모듈이 실제로 import되어야 실행되는데,
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\vendors\__init__.py: 그동안 base.list_vendors()만 import하는 코드에서는 등록이 누락되는 버그가 있었음 —
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\vendors\__init__.py: 여기서 한 번에 전부 import해서 어디서 호출해도 항상 등록된 상태가 되게 함.)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\vendors\__init__.py: from plugins.vendors import arista  # noqa: F401 (import 자체가 register() 부작용을 일으킴)
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\plugins\vendors\__init__.py: from plugins.vendors import cisco  # noqa: F401
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\base_reporter.py: from abc import ABC, abstractmethod
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\excel_report.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\excel_report.py: import openpyxl
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\excel_report.py: import pandas as pd
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\excel_report.py: from openpyxl.styles import Font, PatternFill, Alignment
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\excel_report.py: from openpyxl.utils import get_column_letter
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\excel_report.py:     df = pd.DataFrame.from_dict(rows, orient="index")
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\html_report.py: import html
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\inspection_excel.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\inspection_excel.py: from pathlib import Path
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\inspection_excel.py: import yaml
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\inspection_excel.py: from openpyxl import Workbook
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\inspection_excel.py: from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\inspection_excel.py: from openpyxl.utils import get_column_letter
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\inspection_excel.py: from core.paths import AppPaths
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\inspection_excel.py: from report.textfsm_parser import split_raw_log
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\inspection_excel.py:     from engine.log_analysis import classify_line
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\inspection_excel.py:     from openpyxl.worksheet.properties import PageSetupProperties
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\inspection_report.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\inspection_report.py: from core.finding import SEVERITY_CRITICAL
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\markdown_report.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\markdown_report.py:         from docx import Document
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\markdown_report.py:     except ImportError:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\markdown_report.py:     import sys, os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\markdown_report.py:     from ai_analysis import rule_based
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\pdf_report.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\pdf_report.py:         from reportlab.lib.pagesizes import A4
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\pdf_report.py:         from reportlab.lib.units import mm
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\pdf_report.py:         from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\pdf_report.py:         from reportlab.lib.styles import getSampleStyleSheet
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\pdf_report.py:         from reportlab.lib import colors
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\pdf_report.py:     except ImportError:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\pptx_report.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\pptx_report.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\pptx_report.py: from pptx import Presentation
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\pptx_report.py:     from pptx.util import Inches, Pt
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\reporters.py:     from report.base_reporter import BaseReporter, register
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\reporters.py:     from report.markdown_report import build_markdown_report, save_docx_report
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\reporters.py: except ImportError:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\reporters.py:     import sys, os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\reporters.py:     from report.base_reporter import BaseReporter, register
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\reporters.py:     from report.markdown_report import build_markdown_report, save_docx_report
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\reporters.py:         from report.html_report import build_html_report
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\reporters.py:         from report.inspection_report import save_inspection_report
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\reporters.py:         from report.pdf_report import save_pdf_report
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\reporters.py:     from report.base_reporter import list_formats, get_reporter
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\textfsm_parser.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\textfsm_parser.py: from report.textfsm_parsers.version import parse_show_version
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\textfsm_parser.py: from report.textfsm_parsers.processes import parse_processes_top
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\textfsm_parser.py: from report.textfsm_parsers.environment import parse_environment_status
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\textfsm_parser.py: from report.textfsm_parsers.interfaces import parse_interface_status, parse_interface_errors
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\textfsm_parsers\environment.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\textfsm_parsers\interfaces.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\textfsm_parsers\processes.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\report\textfsm_parsers\version.py: import re
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\correlation_ai_fallback.py: import json
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\correlation_ai_fallback.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\correlation_ai_fallback.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\correlation_ai_fallback.py: import urllib.request
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\correlation_ai_fallback.py:     from core.root_cause import RootCauseFinding, SOURCE_AI_CLOUD, SOURCE_AI_LOCAL
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\correlation_ai_fallback.py:     from engine.session_timeline import parse_event_ts
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\correlation_ai_fallback.py: except ImportError:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\correlation_ai_fallback.py:     import sys
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\correlation_ai_fallback.py:     from core.root_cause import RootCauseFinding, SOURCE_AI_CLOUD, SOURCE_AI_LOCAL
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\correlation_ai_fallback.py:     from engine.session_timeline import parse_event_ts
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\correlation_ai_fallback.py:     from core.sanitizer import mask_findings_with_mapping
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\correlation_rules.py: from rule_engine.correlation_rule_matcher import CORRELATION_RULES, find_root_causes
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\correlation_rules.py: from rule_engine.correlation_ai_fallback import infer_ambiguous_root_causes
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\correlation_rule_matcher.py: import os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\correlation_rule_matcher.py: import datetime
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\correlation_rule_matcher.py:     from core.root_cause import RootCauseFinding
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\correlation_rule_matcher.py:     from engine.session_timeline import parse_event_ts
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\correlation_rule_matcher.py: except ImportError:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\correlation_rule_matcher.py:     import sys
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\correlation_rule_matcher.py:     from core.root_cause import RootCauseFinding
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\correlation_rule_matcher.py:     from engine.session_timeline import parse_event_ts
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\registry.py:     from engine.comparators.lacp import compare_lacp_stage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\registry.py:     from engine.comparators.mlag import compare_mlag_stage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\registry.py:     from engine.comparators.ospf import compare_ospf_stage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\registry.py:     from engine.comparators.vrrp import compare_vrrp_stage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\registry.py:     from engine.comparators.acl import compare_acl_stage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\registry.py:     from engine.comparators.ntp import compare_ntp_stage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\registry.py:     from engine.comparators.snmp import compare_snmp_stage
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\rules.py:     from core.finding import Finding
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\rules.py:     from engine.comparator import compare_vlan_stage, compare_stp_stage, build_vlan_index
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\rules.py:     from rule_engine import registry as rule_registry
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\rules.py: except ImportError:
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\rules.py:     import sys, os
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\rules.py:     from core.finding import Finding
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\rules.py:     from engine.comparator import compare_vlan_stage, compare_stp_stage, build_vlan_index
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\rules.py:     from rule_engine import registry as rule_registry
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\rules.py:     vlan_findings = [Finding.from_verdict(project_id, session_id, "VLAN", v) for v in vlan_verdicts]
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\rules.py:     stp_findings = [Finding.from_verdict(project_id, session_id, "STP", v) for v in stp_verdicts]
+C:\Users\USER\Documents\github\AutoCheck\V0.5.7\rule_engine\rules.py:         result[stage_id] = [Finding.from_verdict(project_id, session_id, plugin["category"], v) for v in verdicts]
