@@ -1,0 +1,3 @@
+# 이 저장소의 텍스트 파일은 전부 LF 다. Git for Windows 기본값(core.autocrlf=true)이
+# 체크아웃할 때 CRLF 로 바꾸지 않도록 줄바꿈 변환을 끈다 — 파일이 작업 PC 와 바이트 단위로 같게 유지된다.
+* -text

@@ -1,0 +1,16 @@
+# 개발/테스트 전용 의존성 — 최종 사용자는 설치할 필요가 없다.
+#
+# requirements.txt 와 반드시 분리해 둔다: main.py 가 시작할 때 requirements.txt 를 검사해서
+# 빠진 패키지가 있으면 멈추므로(core/requirements_check.py), 여기 있는 것을 그쪽에 넣으면
+# 최종 사용자 PC 에도 테스트 도구를 요구하게 된다.
+#
+# 설치:  pip install -r requirements-dev.txt
+# 실행:  python -m pytest tests/ -q
+#        python -m tools.bench_log_analysis --check
+#
+# JS 동작 테스트(tests/test_adaptive_poller.py, tests/test_realtime_delta_client.py)는 node 가
+# 있어야 돈다. 없으면 건너뛴다(skip) — Node.js LTS 를 설치하면 함께 검증된다.
+#        winget install OpenJS.NodeJS.LTS      (v24 LTS 에서 확인)
+
+-r requirements.txt
+pytest>=7.0.0

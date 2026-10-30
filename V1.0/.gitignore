@@ -1,0 +1,27 @@
+__pycache__/
+*.pyc
+logs/*.log
+logs/
+raw_logs/
+ai_config.yaml
+
+# 실행 중 생성되는 산출물
+migration_report.json
+# 예전 버전의 마이그레이션이 앱 폴더에 남기던 것(이제는 사용자 데이터 폴더에 쓴다)
+migration_backup/
+_workspace_global/
+
+# 포터블 모드 사용자 데이터 — 장비 계정·API 키가 들어 있으므로 절대 커밋하지 않는다
+autocheck_data/
+portable.txt
+
+# PyInstaller 빌드 산출물(python build_exe.py)
+build/
+dist/
+
+# 벤치마크 기준선 — 머신마다 절대값이 3배 이상 다르므로 공유하지 않는다.
+# 각자 `python -m tools.bench_log_analysis --save-baseline` 으로 자기 머신 기준선을 만든다.
+tools/bench_baseline.json
+
+# 테스트 캐시
+.pytest_cache/

@@ -1,0 +1,20 @@
+# 런타임 의존성 — `python main.py` 실행에 필요한 패키지만 둔다.
+# main.py 는 시작할 때 이 목록을 검사해서, 빠졌거나 버전이 낮은 패키지가 있으면 설치 명령을
+# 알려 주고 멈춘다(환경변수 AUTOCHECK_AUTO_INSTALL=1 이면 예전처럼 자동 설치).
+#
+#   검증된 정확한 버전 조합: requirements.lock   (pip install -r requirements.lock)
+#   EXE 빌드 도구:           requirements-build.txt
+#   테스트 도구:             requirements-dev.txt
+
+# UI — 진입점 (python main.py 실행 필수)
+pywebview>=4.0.0
+
+# 설정 / 장비 SSH 접속
+pyyaml>=6.0
+netmiko>=4.0.0
+paramiko>=2.11.0
+
+# 정기점검 보고서 (Excel·PDF)
+openpyxl>=3.0.0
+pandas>=1.5.0
+reportlab>=3.6.0

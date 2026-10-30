@@ -1,0 +1,38 @@
+# 자동 생성 파일 — 직접 고치지 말고 `python -m tools.lock_requirements` 로 다시 만든다.
+# requirements.txt 의 패키지와 전이 의존성을 이 PC 에 설치된 버전으로 고정한 것이다.
+# 생성: 2026-10-27 · Windows 11 · Python 3.14.7
+# 같은 조합 설치:  pip install -r requirements.lock
+
+bcrypt==5.0.0
+bottle==0.13.4
+cffi==2.1.1
+charset-normalizer==3.5.1
+clr_loader==0.3.1
+cryptography==50.0.1
+et_xmlfile==2.0.0
+invoke==3.0.3
+markdown-it-py==4.2.0
+mdurl==0.1.2
+netmiko==4.8.0
+ntc_templates==9.3.0
+numpy==2.5.3
+openpyxl==3.1.5
+pandas==3.0.6
+paramiko==5.0.0
+pillow==12.3.0
+proxy_tools==0.1.0
+pycparser==3.0
+Pygments==2.21.0
+PyNaCl==1.6.2
+pyserial==3.5
+python-dateutil==2.9.0.post0
+pythonnet==3.1.0
+pywebview==6.2.1
+PyYAML==6.0.3
+reportlab==5.0.1
+rich==15.0.0
+scp==0.16.1
+six==1.17.0
+textfsm==2.1.0
+typing_extensions==4.16.0
+tzdata==2026.4

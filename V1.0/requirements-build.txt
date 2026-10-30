@@ -1,0 +1,12 @@
+# EXE 빌드 전용 — `python build_exe.py` 에 필요하다. 최종 사용자는 설치할 필요가 없다.
+# 예전에는 requirements.txt 에 들어 있어서, main.py 가 실행마다 검사·설치하는 목록에 빌드
+# 도구(pyinstaller)까지 섞여 있었다.
+#
+# 설치:  pip install -r requirements-build.txt
+# 빌드:  python build_exe.py
+
+-r requirements.txt
+pyinstaller>=5.0.0
+
+# 앱 아이콘 변환(web_ui/icons/app_icon.jpg -> app_icon.ico)
+Pillow>=9.0.0
